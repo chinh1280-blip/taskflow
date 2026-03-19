@@ -18,49 +18,50 @@ button{cursor:pointer;font-family:'Roboto',sans-serif}
 input,select,textarea{font-family:'Roboto',sans-serif;color:var(--tx)}
 input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
-
 .app{display:flex;height:100vh;overflow:hidden;position:relative}
 .grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,124,255,.03)1px,transparent 1px),linear-gradient(90deg,rgba(79,124,255,.03)1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
-
 /* SIDEBAR */
 .sidebar{width:250px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow-y:auto;flex-shrink:0;z-index:50;position:relative;transition:transform .3s ease}
 .side-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;backdrop-filter:blur(4px)}
 @media(max-width:767px){.sidebar{position:fixed;top:0;left:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.side-overlay.open{display:block}.menu-btn{display:flex!important}}
-.logo{display:flex;align-items:center;gap:12px;padding:18px 16px;border-bottom:1px solid var(--bd)}
-.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(79,124,255,.3);flex-shrink:0}
-.logo-text{font-size:17px;font-weight:700;letter-spacing:-.5px}.logo-text span{color:var(--ac)}
-.close-side{margin-left:auto;background:none;border:none;color:var(--tx3);font-size:22px;display:none}
+.logo{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid var(--bd)}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 18px rgba(79,124,255,.3);flex-shrink:0}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-.5px;flex:1}.logo-text span{color:var(--ac)}
+.close-side{background:none;border:none;color:var(--tx3);font-size:20px;display:none}
 @media(max-width:767px){.close-side{display:block}}
-.side-section{padding:14px 10px 0}
-.side-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--tx3);text-transform:uppercase;padding:0 8px;margin-bottom:8px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:2px;transition:all .15s;border:none;background:none;width:100%;text-align:left}
-.nav-item:hover,.nav-item:active{background:var(--s2);color:var(--tx)}.nav-item.active{background:rgba(79,124,255,.15);color:var(--ac)}
-.ni{font-size:15px;width:20px;text-align:center}.nlabel{flex:1}
-.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center}
+.side-section{padding:12px 10px 0}
+.side-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--tx3);text-transform:uppercase;padding:0 8px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:2px;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--s2);color:var(--tx)}.nav-item.active{background:rgba(79,124,255,.15);color:var(--ac)}
+.ni{font-size:14px;width:18px;text-align:center}.nlabel{flex:1}
+.badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;min-width:18px;text-align:center}
 .b-blue{background:var(--ac);color:#fff}.b-red{background:var(--er);color:#fff}.b-yellow{background:var(--wa);color:#000}
 .proj-item{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:12px;color:var(--tx2);margin-bottom:2px;transition:all .15s;position:relative}
 .proj-item:hover,.proj-item.active{background:var(--s2);color:var(--tx)}
 .proj-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .proj-count{margin-left:auto;font-size:10px;color:var(--tx3)}
-.proj-menu-btn{background:none;border:none;color:var(--tx3);font-size:14px;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity .15s}
+.proj-menu-btn{background:none;border:none;color:var(--tx3);font-size:14px;padding:2px 5px;border-radius:4px;opacity:0;transition:opacity .15s;flex-shrink:0}
 .proj-item:hover .proj-menu-btn{opacity:1}
-.proj-dropdown{position:absolute;right:8px;top:100%;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:4px;z-index:100;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
+.proj-dropdown{position:absolute;right:8px;top:100%;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:4px;z-index:100;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
 .proj-dropdown.open{display:block}
 .proj-dd-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--tx2);border:none;background:none;width:100%;text-align:left}
-.proj-dd-item:hover{background:var(--s3);color:var(--tx)}
-.proj-dd-item.danger:hover{background:rgba(255,79,109,.15);color:var(--er)}
+.proj-dd-item:hover{background:var(--s3);color:var(--tx)}.proj-dd-item.danger:hover{background:rgba(255,79,109,.15);color:var(--er)}
 .add-proj{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px;color:var(--tx3);border:1px dashed var(--bd);margin-top:8px;background:none;width:100%;transition:all .15s}
 .add-proj:hover{border-color:var(--ac);color:var(--ac)}
-.sidebar-footer{margin-top:auto;padding:14px}
-.sync-pill{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px;border-radius:10px;margin-bottom:10px;font-size:12px;min-height:32px;transition:all .3s}
+.sidebar-footer{margin-top:auto;padding:12px}
+.sync-pill{display:flex;align-items:center;justify-content:center;gap:5px;padding:6px;border-radius:9px;margin-bottom:8px;font-size:11px;min-height:28px;transition:all .3s}
 .sync-idle{background:transparent;color:transparent}.sync-loading{background:rgba(79,124,255,.1);color:var(--ac)}.sync-ok{background:rgba(34,211,160,.1);color:var(--ok)}.sync-err{background:rgba(255,79,109,.1);color:var(--er)}
-.clock-box{background:var(--s2);border-radius:12px;padding:12px;text-align:center}
-.clock-time{font-family:'Roboto Mono',monospace;font-size:22px;font-weight:500;color:var(--ac);letter-spacing:2px}
+.clock-box{background:var(--s2);border-radius:11px;padding:11px;text-align:center}
+.clock-time{font-family:'Roboto Mono',monospace;font-size:21px;font-weight:500;color:var(--ac);letter-spacing:2px}
 .clock-date{font-size:10px;color:var(--tx3);margin-top:2px}
-
+.sidebar-btns{display:flex;gap:6px;margin-top:8px}
+.side-btn{flex:1;background:none;border:1px solid var(--bd);color:var(--tx3);border-radius:8px;padding:7px 6px;font-size:11px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px}
+.side-btn:hover{border-color:var(--ac);color:var(--ac)}
+.side-btn.refreshing{animation:spinBtn .6s linear infinite}
+@keyframes spinBtn{to{transform:rotate(360deg)}}
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
-.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bd);background:rgba(13,15,20,.92);backdrop-filter:blur(12px);flex-wrap:wrap;flex-shrink:0}
+.topbar{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--bd);background:rgba(13,15,20,.92);backdrop-filter:blur(12px);flex-wrap:wrap;flex-shrink:0}
 .menu-btn{display:none;background:none;border:none;color:var(--tx2);font-size:22px;padding:4px;align-items:center}
 .page-title{font-size:17px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-row2{display:flex;align-items:center;gap:8px;width:100%}
@@ -69,35 +70,31 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .view-toggle{display:flex;background:var(--s2);border-radius:9px;padding:3px;flex-shrink:0}
 .vbtn{padding:5px 9px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--tx2);border:none;background:none;transition:all .15s}
 .vbtn.active{background:var(--s3);color:var(--tx)}
+/* Refresh btn in topbar */
+.refresh-topbar{width:34px;height:34px;border-radius:9px;border:1px solid var(--bd);background:var(--s2);color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.refresh-topbar:hover{border-color:var(--ac);color:var(--ac)}
+.refresh-topbar.spin{animation:spinIt .7s linear infinite}
+@keyframes spinIt{to{transform:rotate(360deg)}}
 .btn-add{padding:8px 14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;white-space:nowrap;box-shadow:0 0 20px rgba(79,124,255,.25)}
-
 /* CONTENT */
 .content{flex:1;overflow-y:auto;padding:14px}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
 @media(max-width:767px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
-.stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px;position:relative;overflow:hidden;transition:transform .15s}
-.stat-card:hover{transform:translateY(-1px)}
+.stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:13px;position:relative;overflow:hidden}
 .stat-top{position:absolute;top:0;left:0;right:0;height:2px}
-.stat-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);margin-bottom:5px}
-.stat-val{font-size:24px;font-weight:700;line-height:1}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);margin-bottom:4px}
+.stat-val{font-size:23px;font-weight:700;line-height:1}
 .stat-sub{font-size:10px;color:var(--tx3);margin-top:3px}
-.stat-icon{position:absolute;right:10px;top:10px;font-size:18px;opacity:.12}
-
-/* PROGRESS BAR */
-.prog-wrap{margin-bottom:14px}
-.prog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--tx2)}
-.prog-bar{height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
+.stat-icon{position:absolute;right:10px;top:10px;font-size:17px;opacity:.12}
+.prog-wrap{margin-bottom:12px}
+.prog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:12px;color:var(--tx2)}
+.prog-bar{height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
 .prog-fill{height:100%;border-radius:3px;transition:width .6s ease;background:linear-gradient(90deg,var(--ac),var(--ac2))}
 .prog-fill.ok{background:linear-gradient(90deg,var(--ok),#22d3d3)}
-.prog-fill.wa{background:linear-gradient(90deg,var(--wa),#ff8f47)}
-
-/* POMODORO */
-.pomo-banner{background:linear-gradient(135deg,rgba(79,124,255,.15),rgba(124,95,255,.1));border:1px solid rgba(79,124,255,.3);border-radius:13px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.pomo-timer{font-family:'Roboto Mono',monospace;font-size:28px;font-weight:700;color:var(--ac);letter-spacing:2px}
-.pomo-dots{display:flex;gap:3px;margin-top:5px}
+.pomo-banner{background:linear-gradient(135deg,rgba(79,124,255,.15),rgba(124,95,255,.1));border:1px solid rgba(79,124,255,.3);border-radius:13px;padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pomo-timer{font-family:'Roboto Mono',monospace;font-size:26px;font-weight:700;color:var(--ac);letter-spacing:2px}
+.pomo-dots{display:flex;gap:3px;margin-top:4px}
 .pdot{width:7px;height:7px;border-radius:50%;background:var(--s3)}.pdot.on{background:var(--ac);box-shadow:0 0 5px rgba(79,124,255,.6)}
-
-/* FILTERS */
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .chip{padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;border:1px solid var(--bd);color:var(--tx2);background:var(--s1);transition:all .15s;white-space:nowrap}
 .chip.active{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.12)}
@@ -106,144 +103,128 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .sort-sel{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--tx2);border-radius:8px;padding:7px 10px;font-size:12px;outline:none;margin-bottom:12px}
 .sec-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:700}
 .sec-count{font-size:11px;color:var(--tx3);background:var(--s2);padding:2px 8px;border-radius:20px}
-
-/* CARD VIEW */
+/* CARDS */
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
-.task-card{background:var(--s1);border:1px solid var(--bd);border-radius:13px;padding:15px;transition:all .2s;cursor:pointer}
+.task-card{background:var(--s1);border:1px solid var(--bd);border-radius:13px;padding:14px;transition:all .2s;cursor:pointer}
 .task-card:hover{border-color:rgba(79,124,255,.3);box-shadow:0 4px 20px rgba(0,0,0,.3)}
 .task-card.done{opacity:.5}.task-card.ov{border-color:rgba(255,79,109,.4)}.task-card.sn{border-color:rgba(255,179,71,.4)}
-.card-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.card-emoji{font-size:28px;line-height:1;margin-bottom:10px}
+.card-header{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px}
 .card-title{font-size:14px;font-weight:600;flex:1;line-height:1.4}
 .card-title.done{text-decoration:line-through;color:var(--tx3)}
-.card-desc{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:10px}
-.card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.card-desc{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:9px}
+.card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
 .tag{padding:3px 9px;border-radius:20px;font-size:11px;background:var(--s2);color:var(--tx2);border:1px solid var(--bd)}
-.card-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.card-meta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
 .meta{font-size:11px;color:var(--tx3);font-family:'Roboto Mono',monospace}
 .meta.ov{color:var(--er)}.meta.sn{color:var(--wa)}
-.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
+.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:9px;padding-top:9px;border-top:1px solid var(--bd)}
 .proj-pill{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2)}
 .actions{display:flex;gap:4px}
-.abt{width:30px;height:30px;border-radius:8px;border:none;background:var(--s2);color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:13px;transition:background .15s}
+.abt{width:29px;height:29px;border-radius:8px;border:none;background:var(--s2);color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:13px;transition:background .15s}
 .abt:active{background:var(--s3)}
-
-/* LINKS in card */
 .card-links{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
 .link-chip{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;background:rgba(79,124,255,.1);color:var(--ac);border:1px solid rgba(79,124,255,.25);text-decoration:none;cursor:pointer;transition:all .15s}
 .link-chip:hover{background:rgba(79,124,255,.2)}
-
-/* INLINE PROGRESS on card */
-.card-prog{margin-bottom:8px}
-.card-prog-bar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:4px}
+.card-prog{margin-bottom:7px}
+.card-prog-bar{height:3px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:3px}
 .card-prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .4s}
 .card-prog-label{font-size:10px;color:var(--tx3);display:flex;justify-content:space-between}
-
-/* LIST VIEW */
+/* LIST */
 .task-list{display:flex;flex-direction:column;gap:8px}
-.task-row{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;transition:all .15s;cursor:pointer}
-.task-row:hover{border-color:rgba(79,124,255,.3)}
-.task-row.done{opacity:.5}.task-row.ov{border-color:rgba(255,79,109,.3)}.task-row.sn{border-color:rgba(255,179,71,.3)}
-.row-title{flex:1;min-width:100px;font-size:13px;font-weight:500}
-.row-title.done{text-decoration:line-through;color:var(--tx3)}
-
-/* KANBAN VIEW */
+.task-row{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:11px 13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;transition:all .15s;cursor:pointer}
+.task-row:hover{border-color:rgba(79,124,255,.3)}.task-row.done{opacity:.5}.task-row.ov{border-color:rgba(255,79,109,.3)}.task-row.sn{border-color:rgba(255,179,71,.3)}
+.row-title{flex:1;min-width:100px;font-size:13px;font-weight:500}.row-title.done{text-decoration:line-through;color:var(--tx3)}
+/* KANBAN */
 .kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
-.kanban-col{flex-shrink:0;width:260px;background:var(--s2);border-radius:13px;padding:12px;border:1px solid var(--bd)}
-.kanban-col-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;font-weight:600}
+.kanban-col{flex-shrink:0;width:255px;background:var(--s2);border-radius:13px;padding:11px;border:1px solid var(--bd)}
+.kanban-col-header{display:flex;align-items:center;gap:8px;margin-bottom:11px;font-size:13px;font-weight:600}
 .kanban-col-dot{width:8px;height:8px;border-radius:50%}
 .kanban-col-count{margin-left:auto;font-size:11px;color:var(--tx3);background:var(--s3);padding:2px 7px;border-radius:20px}
-.kanban-card{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+.kanban-card{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:11px;margin-bottom:8px;cursor:pointer;transition:all .2s}
 .kanban-card:hover{border-color:rgba(79,124,255,.35);box-shadow:0 3px 12px rgba(0,0,0,.3)}
 .kanban-card.ov{border-color:rgba(255,79,109,.35)}.kanban-card.sn{border-color:rgba(255,179,71,.35)}
+.kanban-emoji{font-size:18px;margin-bottom:5px}
 .kanban-card-title{font-size:13px;font-weight:500;margin-bottom:7px;line-height:1.4}
 .kanban-card-title.done{text-decoration:line-through;color:var(--tx3)}
-.kanban-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-
-/* TASK DETAIL DRAWER */
-.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s}
+.kanban-card-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+/* DRAWER */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:opacity .3s}
 .drawer-overlay.open{opacity:1;pointer-events:all}
-.drawer{position:fixed;top:0;right:0;width:420px;max-width:100vw;height:100vh;background:var(--s1);border-left:1px solid var(--bd);z-index:160;overflow-y:auto;transform:translateX(100%);transition:transform .3s ease;padding:20px}
+.drawer{position:fixed;top:0;right:0;width:420px;max-width:100vw;height:100vh;background:var(--s1);border-left:1px solid var(--bd);z-index:160;overflow-y:auto;transform:translateX(100%);transition:transform .3s ease;padding:18px}
 .drawer.open{transform:translateX(0)}
-.drawer-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.drawer-close{background:none;border:none;color:var(--tx3);font-size:22px;margin-left:auto}
-
-/* SUBTASK */
-.subtask-section{margin-top:16px}
-.subtask-hdr{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.subtask-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--s2);margin-bottom:6px;transition:all .15s}
-.subtask-item:hover{background:var(--s3)}
-.subtask-name{flex:1;font-size:13px;color:var(--tx)}
-.subtask-name.done{text-decoration:line-through;color:var(--tx3)}
-.subtask-del{background:none;border:none;color:var(--tx3);font-size:14px;padding:2px;opacity:0;transition:opacity .15s}
-.subtask-item:hover .subtask-del{opacity:1}
-.subtask-add{display:flex;gap:8px;margin-top:8px}
-.subtask-input{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;outline:none}
-.subtask-input:focus{border-color:var(--ac)}
-.subtask-btn{padding:8px 12px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:500}
-
-/* LINKS SECTION in drawer */
-.links-section{margin-top:16px}
-.link-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--s2);margin-bottom:6px}
-.link-item a{flex:1;font-size:12px;color:var(--ac);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.link-item a:hover{text-decoration:underline}
-.link-del{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer}
-.link-add{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.link-input{flex:1;min-width:150px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12px;outline:none}
-.link-input:focus{border-color:var(--ac)}
-.link-label-input{width:100px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12px;outline:none}
-.link-btn{padding:8px 12px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:500}
-
+.drawer-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px}
+.drawer-close{background:none;border:none;color:var(--tx3);font-size:22px;flex-shrink:0}
+/* SUBTASK + LINKS — draggable */
+.drag-list{list-style:none}
+.drag-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--s2);margin-bottom:6px;transition:all .15s;user-select:none}
+.drag-item.dragging{opacity:.4;background:var(--s3)}
+.drag-item.drag-over{border:1px dashed var(--ac);background:rgba(79,124,255,.08)}
+.drag-handle{color:var(--tx3);font-size:14px;cursor:grab;flex-shrink:0;padding:0 2px}
+.drag-handle:active{cursor:grabbing}
+.drag-item-name{flex:1;font-size:13px;color:var(--tx)}
+.drag-item-name.done{text-decoration:line-through;color:var(--tx3)}
+.drag-item-del{background:none;border:none;color:var(--tx3);font-size:15px;padding:2px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.drag-item:hover .drag-item-del{opacity:1}
+.section-hdr{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.add-row{display:flex;gap:7px;margin-top:7px}
+.add-input{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;outline:none;color:var(--tx)}
+.add-input:focus{border-color:var(--ac)}
+.add-btn{padding:8px 13px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600}
+/* EMOJI PICKER */
+.emoji-picker-wrap{position:relative;display:inline-block}
+.emoji-picker-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border .2s;flex-shrink:0}
+.emoji-picker-btn:hover{border-color:var(--ac)}
+.emoji-panel{position:absolute;top:100%;left:0;margin-top:6px;background:var(--s2);border:1px solid var(--bd);border-radius:14px;padding:12px;z-index:500;width:290px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.emoji-panel.hidden{display:none}
+.emoji-cats{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.emoji-cat-btn{padding:4px 10px;border-radius:20px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer;transition:all .15s}
+.emoji-cat-btn.active{background:var(--ac);color:#fff}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;max-height:180px;overflow-y:auto}
+.emoji-btn{width:30px;height:30px;border-radius:6px;border:none;background:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.emoji-btn:hover{background:var(--s3)}
+.emoji-clear{width:100%;margin-top:8px;padding:6px;border-radius:8px;border:none;background:var(--s3);color:var(--tx2);font-size:12px;cursor:pointer}
+.emoji-clear:hover{background:rgba(255,79,109,.2);color:var(--er)}
 /* MODALS */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;justify-content:center;transition:opacity .3s;pointer-events:none;opacity:0}
 .overlay.open{opacity:1;pointer-events:all}
 .sheet{background:var(--s1);border:1px solid var(--bd);border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 -16px 64px rgba(0,0,0,.6)}
-.sheet-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 18px}
-.sheet-title{font-size:17px;font-weight:700;margin-bottom:18px}
+.sheet-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 16px}
+.sheet-title{font-size:17px;font-weight:700;margin-bottom:16px}
 .fg{margin-bottom:12px}.fl{font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;display:block}
 .fi{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:14px;outline:none;transition:border .2s}
 .fi:focus{border-color:var(--ac)}
 .fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-textarea.fi{min-height:60px;resize:vertical}
-.mactions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+textarea.fi{min-height:58px;resize:vertical}
+.mactions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
 .btn-g{padding:8px 18px;border-radius:10px;border:none;background:var(--s2);color:var(--tx2);font-size:13px;font-weight:500}
 .btn-p{padding:8px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;box-shadow:0 0 20px rgba(79,124,255,.25)}
-.btn-danger{padding:8px 18px;border-radius:10px;border:none;background:rgba(255,79,109,.15);color:var(--er);font-size:13px;font-weight:500;border:1px solid rgba(255,79,109,.3)}
-.color-picker{display:flex;gap:8px;flex-wrap:wrap}
-.cpick{width:30px;height:30px;border-radius:50%;cursor:pointer;box-sizing:border-box;transition:border .15s}
-.config-status{padding:10px 14px;border-radius:10px;font-size:13px;margin-top:10px;display:none}
-.config-status.ok{background:rgba(34,211,160,.12);color:var(--ok);border:1px solid rgba(34,211,160,.3);display:block}
-.config-status.err{background:rgba(255,79,109,.12);color:var(--er);border:1px solid rgba(255,79,109,.3);display:block}
-
-/* CB & BADGES */
+.btn-danger{padding:8px 18px;border-radius:10px;border:1px solid rgba(255,79,109,.3);background:rgba(255,79,109,.1);color:var(--er);font-size:13px;font-weight:500}
+.color-picker{display:flex;gap:7px;flex-wrap:wrap}
+.cpick{width:28px;height:28px;border-radius:50%;cursor:pointer;box-sizing:border-box;transition:border .15s}
+.cfg-status{padding:10px 14px;border-radius:10px;font-size:13px;margin-top:10px;display:none}
+.cfg-status.ok{background:rgba(34,211,160,.12);color:var(--ok);border:1px solid rgba(34,211,160,.3);display:block}
+.cfg-status.err{background:rgba(255,79,109,.12);color:var(--er);border:1px solid rgba(255,79,109,.3);display:block}
 .cb{width:20px;height:20px;border-radius:6px;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:11px;font-weight:700;color:#fff;user-select:none;transition:all .15s}
 .cb.on{background:var(--ok);border-color:var(--ok)}
 .pbadge{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;flex-shrink:0}
 .ph{background:rgba(255,79,109,.18);color:var(--er)}.pm{background:rgba(255,179,71,.18);color:var(--wa)}.pl{background:rgba(34,211,160,.18);color:var(--ok)}
-.empty{text-align:center;padding:60px 20px;color:var(--tx3)}
-.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
-.empty-title{font-size:15px;font-weight:600;color:var(--tx2);margin-bottom:6px}
-
-/* NOTIFS */
+.empty{text-align:center;padding:60px 20px;color:var(--tx3)}.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}.empty-title{font-size:15px;font-weight:600;color:var(--tx2);margin-bottom:6px}
 .notif-wrap{position:fixed;top:16px;right:16px;z-index:400;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:calc(100vw - 32px)}
-.notif{background:var(--s1);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;min-width:240px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.4);pointer-events:all;animation:slideIn .35s ease-out}
+.notif{background:var(--s1);border-radius:12px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;min-width:230px;max-width:330px;box-shadow:0 8px 32px rgba(0,0,0,.4);pointer-events:all;animation:slideIn .3s ease-out}
 .notif.nd{border:1px solid rgba(255,79,109,.5)}.notif.nw{border:1px solid rgba(255,179,71,.5)}.notif.ns{border:1px solid rgba(34,211,160,.5)}.notif.ni{border:1px solid rgba(79,124,255,.4)}
 .notif-body{flex:1}.notif-title{font-size:13px;font-weight:600;margin-bottom:2px}.notif-msg{font-size:12px;color:var(--tx2)}
 .notif-x{background:none;border:none;color:var(--tx3);font-size:18px;line-height:1;padding:0}
 @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
-
-/* LOADING / SETUP */
-.loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:var(--bg)}
-.spin{animation:rot 1s linear infinite;display:inline-block;font-size:36px}
+.loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;background:var(--bg)}
+.spin{animation:rot 1s linear infinite;display:inline-block;font-size:34px}
 @keyframes rot{to{transform:rotate(360deg)}}
 .setup{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);padding:20px}
-.setup-card{background:var(--s1);border:1px solid var(--bd);border-radius:20px;padding:32px 24px;width:100%;max-width:480px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
-.setup-title{font-size:22px;font-weight:700;margin-bottom:6px}
-.setup-sub{font-size:13px;color:var(--tx2);margin-bottom:24px;line-height:1.6}
-.setup-step{display:flex;gap:12px;margin-bottom:16px;align-items:flex-start}
-.step-num{width:24px;height:24px;border-radius:50%;background:rgba(79,124,255,.2);color:var(--ac);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.step-text{font-size:13px;color:var(--tx2);line-height:1.6}
-.step-text code{background:var(--s2);padding:2px 6px;border-radius:4px;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--ac)}
-.setup-divider{border:none;border-top:1px solid var(--bd);margin:20px 0}
+.setup-card{background:var(--s1);border:1px solid var(--bd);border-radius:20px;padding:30px 22px;width:100%;max-width:460px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.setup-step{display:flex;gap:11px;margin-bottom:14px;align-items:flex-start}
+.step-num{width:22px;height:22px;border-radius:50%;background:rgba(79,124,255,.2);color:var(--ac);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:12px;color:var(--tx2);line-height:1.6}
+.step-text code{background:var(--s2);padding:2px 5px;border-radius:4px;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--ac)}
 @media(min-width:768px){.menu-btn{display:none!important}.close-side{display:none!important}}
 </style>
 </head>
@@ -251,31 +232,30 @@ textarea.fi{min-height:60px;resize:vertical}
 
 <div id="setup-screen" class="setup" style="display:none">
   <div class="setup-card">
-    <div style="font-size:32px;margin-bottom:12px">⚡</div>
-    <div class="setup-title">Kết nối <span style="color:var(--ac)">Supabase</span></div>
-    <div class="setup-sub">Nhập thông tin Supabase để đồng bộ dữ liệu trên mọi thiết bị.</div>
+    <div style="font-size:30px;margin-bottom:10px">⚡</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:5px">Kết nối <span style="color:var(--ac)">Supabase</span></div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:20px;line-height:1.6">Nhập thông tin để đồng bộ dữ liệu trên mọi thiết bị.</div>
     <div class="setup-step"><div class="step-num">1</div><div class="step-text">Vào <strong>supabase.com</strong> → Tạo project → region <code>Singapore</code></div></div>
-    <div class="setup-step"><div class="step-num">2</div><div class="step-text">Vào <strong>SQL Editor</strong> → chạy script tạo bảng (xem hướng dẫn kèm theo)</div></div>
+    <div class="setup-step"><div class="step-num">2</div><div class="step-text">Chạy SQL tạo bảng trong <strong>SQL Editor</strong></div></div>
     <div class="setup-step"><div class="step-num">3</div><div class="step-text">Vào <strong>Settings → API</strong> → copy <code>Project URL</code> và <code>anon/publishable key</code></div></div>
-    <hr class="setup-divider">
-    <div class="fg"><label class="fl">Supabase Project URL</label><input class="fi" id="setup-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" spellcheck="false"></div>
-    <div class="fg"><label class="fl">Supabase Anon / Publishable Key</label><textarea class="fi" id="setup-key" placeholder="eyJ... hoặc sb_publishable_..." rows="3" spellcheck="false"></textarea></div>
-    <div id="setup-status" class="config-status"></div>
-    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn-p" style="flex:1;padding:12px" onclick="testAndSaveConfig()">🔌 Kết nối & Bắt đầu</button></div>
-    <div style="font-size:11px;color:var(--tx3);text-align:center;margin-top:12px">Thông tin lưu trên thiết bị. Miễn phí vĩnh viễn cho dùng cá nhân.</div>
+    <hr style="border:none;border-top:1px solid var(--bd);margin:16px 0">
+    <div class="fg"><label class="fl">Supabase Project URL</label><input class="fi" id="setup-url" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false"></div>
+    <div class="fg"><label class="fl">Anon / Publishable Key</label><textarea class="fi" id="setup-key" placeholder="eyJ... hoặc sb_publishable_..." rows="3" spellcheck="false"></textarea></div>
+    <div id="setup-status" class="cfg-status"></div>
+    <button class="btn-p" style="width:100%;padding:12px;margin-top:14px" onclick="testAndSaveConfig()">🔌 Kết nối & Bắt đầu</button>
+    <div style="font-size:11px;color:var(--tx3);text-align:center;margin-top:10px">Thông tin lưu trên thiết bị. Miễn phí vĩnh viễn.</div>
   </div>
 </div>
 
 <div id="loading" class="loading">
   <span class="spin">⚡</span>
-  <div style="font-size:14px;color:var(--tx2)">Đang kết nối Supabase...</div>
-  <div style="font-size:12px;color:var(--tx3)" id="loading-sub">Khởi tạo...</div>
+  <div style="font-size:13px;color:var(--tx2)">Đang kết nối Supabase...</div>
+  <div style="font-size:11px;color:var(--tx3)" id="loading-sub">Khởi tạo...</div>
 </div>
 
 <div id="app" class="app" style="display:none">
   <div class="grid-bg"></div>
   <div class="side-overlay" id="sideOverlay" onclick="closeSide()"></div>
-
   <aside class="sidebar" id="sidebar">
     <div class="logo">
       <div class="logo-icon">⚡</div>
@@ -297,7 +277,10 @@ textarea.fi{min-height:60px;resize:vertical}
         <div class="clock-time" id="clock">00:00:00</div>
         <div class="clock-date" id="clock-date"></div>
       </div>
-      <button onclick="openConfigModal()" style="width:100%;margin-top:10px;background:none;border:1px solid var(--bd);color:var(--tx3);border-radius:8px;padding:7px;font-size:11px;cursor:pointer">⚙️ Cấu hình Supabase</button>
+      <div class="sidebar-btns">
+        <button class="side-btn" id="refresh-side-btn" onclick="manualRefresh(this)" title="Đồng bộ dữ liệu">↻ Đồng bộ</button>
+        <button class="side-btn" onclick="openConfigModal()" title="Cấu hình Supabase">⚙️ Config</button>
+      </div>
     </div>
   </aside>
 
@@ -315,6 +298,7 @@ textarea.fi{min-height:60px;resize:vertical}
           <button class="vbtn" id="vlist" onclick="setViewMode('list')" title="List">☰</button>
           <button class="vbtn" id="vkanban" onclick="setViewMode('kanban')" title="Kanban">⬛</button>
         </div>
+        <button class="refresh-topbar" id="refresh-top-btn" onclick="manualRefresh(this)" title="Đồng bộ ngay">↻</button>
         <button class="btn-add" onclick="openTaskModal()">＋ Task</button>
       </div>
     </header>
@@ -322,11 +306,11 @@ textarea.fi{min-height:60px;resize:vertical}
   </main>
 </div>
 
-<!-- TASK DETAIL DRAWER -->
+<!-- DRAWER -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-header">
-    <div style="font-size:16px;font-weight:700" id="drawer-title">Chi tiết task</div>
+    <div style="font-size:15px;font-weight:700;flex:1" id="drawer-title">Chi tiết task</div>
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
   </div>
   <div id="drawer-body"></div>
@@ -336,8 +320,24 @@ textarea.fi{min-height:60px;resize:vertical}
 <div class="overlay" id="task-modal" onclick="if(event.target===this)closeTaskModal()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="task-modal-title">✨ Thêm <span style="color:var(--ac)">nhiệm vụ</span></div>
-    <div class="fg"><label class="fl">Tên nhiệm vụ *</label><input class="fi" id="f-name" placeholder="Nhập tên..."></div>
+    <div class="sheet-title" id="task-modal-title">✨ Thêm nhiệm vụ</div>
+    <!-- EMOJI ROW -->
+    <div class="fg" style="display:flex;align-items:center;gap:10px">
+      <div>
+        <label class="fl">Icon</label>
+        <div class="emoji-picker-wrap" id="emoji-wrap">
+          <button class="emoji-picker-btn" id="emoji-btn" onclick="toggleEmojiPanel()" type="button">
+            <span id="emoji-preview">📌</span>
+          </button>
+          <div class="emoji-panel hidden" id="emoji-panel">
+            <div class="emoji-cats" id="emoji-cats"></div>
+            <div class="emoji-grid" id="emoji-grid"></div>
+            <button class="emoji-clear" onclick="clearEmoji()">✕ Bỏ icon</button>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1"><label class="fl">Tên nhiệm vụ *</label><input class="fi" id="f-name" placeholder="Nhập tên..."></div>
+    </div>
     <div class="fg"><label class="fl">Mô tả</label><textarea class="fi" id="f-desc" placeholder="Chi tiết..."></textarea></div>
     <div class="fr">
       <div class="fg"><label class="fl">Project</label><select class="fi" id="f-proj"></select></div>
@@ -370,7 +370,7 @@ textarea.fi{min-height:60px;resize:vertical}
 <div class="overlay" id="proj-modal" onclick="if(event.target===this)closeProjModal()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="proj-modal-title">📁 Tạo <span style="color:var(--ac)">Project</span></div>
+    <div class="sheet-title" id="proj-modal-title">📁 Tạo Project</div>
     <div class="fg"><label class="fl">Tên project *</label><input class="fi" id="pf-name" placeholder="Tên project..."></div>
     <div class="fg"><label class="fl">Màu sắc</label><div class="color-picker" id="cpicker"></div></div>
     <div class="fg"><label class="fl">Mô tả</label><input class="fi" id="pf-desc" placeholder="Mô tả ngắn..."></div>
@@ -385,10 +385,10 @@ textarea.fi{min-height:60px;resize:vertical}
 <div class="overlay" id="config-modal" onclick="if(event.target===this)closeConfigModal()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">⚙️ Cấu hình <span style="color:var(--ac)">Supabase</span></div>
-    <div class="fg"><label class="fl">Project URL</label><input class="fi" id="cfg-url" placeholder="https://xxxx.supabase.co"></div>
+    <div class="sheet-title">⚙️ Cấu hình Supabase</div>
+    <div class="fg"><label class="fl">Project URL</label><input class="fi" id="cfg-url"></div>
     <div class="fg"><label class="fl">Anon / Publishable Key</label><textarea class="fi" id="cfg-key" rows="3"></textarea></div>
-    <div id="cfg-status" class="config-status"></div>
+    <div id="cfg-status" class="cfg-status"></div>
     <div class="mactions"><button class="btn-g" onclick="closeConfigModal()">Hủy</button><button class="btn-p" onclick="updateConfig()">🔌 Cập nhật</button></div>
   </div>
 </div>
@@ -397,21 +397,59 @@ textarea.fi{min-height:60px;resize:vertical}
 
 <script>
 'use strict';
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
+// EMOJI DATA
+// ═══════════════════════════════════════
+const EMOJI_CATS={
+  '⭐ Phổ biến':['📌','⭐','🔥','✅','💡','🎯','🚀','💪','📋','🛠','🎨','📊','💼','📱','🖥','🔔','⚠️','✨','🏆','💎'],
+  '😀 Cảm xúc':['😀','😎','🤔','💪','🙌','👍','❤️','🎉','😤','🤩','😊','🥳','😅','🫡','🤝'],
+  '💼 Công việc':['📝','📋','📊','📈','📉','🗂','📁','📂','✏️','🖊','📌','🔖','📎','🗒','🗓','📅','⏰','⏱','🔔','📢'],
+  '💻 Tech':['💻','🖥','📱','⌨️','🖱','🖨','📡','🔌','🔋','💾','💿','🖲','📟','📠','🔧','🔩','⚙️','🛠','🔑','🔐'],
+  '🎨 Sáng tạo':['🎨','✏️','🖌','🖍','📐','📏','🎭','🎬','🎵','🎸','🎹','🎤','📷','🎥','🎞','🎪'],
+  '🌈 Màu sắc':['🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','🔺','🔻','💠'],
+};
+let emojiCat=Object.keys(EMOJI_CATS)[0], selectedEmoji='';
+
+function buildEmojiPanel(){
+  const cats=document.getElementById('emoji-cats');
+  const grid=document.getElementById('emoji-grid');
+  cats.innerHTML=Object.keys(EMOJI_CATS).map(c=>`<button class="emoji-cat-btn ${c===emojiCat?'active':''}" onclick="switchEmojiCat('${c}')">${c.split(' ')[0]}</button>`).join('');
+  grid.innerHTML=EMOJI_CATS[emojiCat].map(e=>`<button class="emoji-btn" onclick="pickEmoji('${e}')">${e}</button>`).join('');
+}
+function switchEmojiCat(c){emojiCat=c;buildEmojiPanel();}
+function toggleEmojiPanel(){
+  const p=document.getElementById('emoji-panel');
+  if(p.classList.contains('hidden')){buildEmojiPanel();p.classList.remove('hidden');}
+  else p.classList.add('hidden');
+}
+function pickEmoji(e){
+  selectedEmoji=e;
+  document.getElementById('emoji-preview').textContent=e;
+  document.getElementById('emoji-panel').classList.add('hidden');
+}
+function clearEmoji(){
+  selectedEmoji='';
+  document.getElementById('emoji-preview').textContent='📌';
+  document.getElementById('emoji-panel').classList.add('hidden');
+}
+document.addEventListener('click',e=>{
+  const wrap=document.getElementById('emoji-wrap');
+  if(wrap&&!wrap.contains(e.target))document.getElementById('emoji-panel')?.classList.add('hidden');
+});
+
+// ═══════════════════════════════════════
 // CONFIG & SUPABASE
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 const CFG_KEY='tf_sb_cfg';
 function getConfig(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'null');}catch{return null;}}
-function saveConfig(url,key){localStorage.setItem(CFG_KEY,JSON.stringify({url:url.trim().replace(/\/$/,''),key:key.trim()}));}
+function saveConfig(u,k){localStorage.setItem(CFG_KEY,JSON.stringify({url:u.trim().replace(/\/$/,''),key:k.trim()}));}
 let SB_URL='',SB_KEY='';
-
 async function sbFetch(path,opts={}){
-  const headers={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':opts.prefer||'return=representation',...(opts.headers||{})};
-  const res=await fetch(SB_URL+'/rest/v1/'+path,{...opts,headers});
-  if(!res.ok){const e=await res.text();throw new Error(`${res.status}: ${e}`);}
-  const t=await res.text();return t?JSON.parse(t):null;
+  const h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':opts.prefer||'return=representation',...(opts.headers||{})};
+  const r=await fetch(SB_URL+'/rest/v1/'+path,{...opts,headers:h});
+  if(!r.ok){const e=await r.text();throw new Error(`${r.status}: ${e}`);}
+  const t=await r.text();return t?JSON.parse(t):null;
 }
-
 const db={
   getProjects:()=>sbFetch('projects?order=created_at.asc'),
   insertProject:p=>sbFetch('projects',{method:'POST',body:JSON.stringify(p)}),
@@ -421,20 +459,19 @@ const db={
   insertTask:t=>sbFetch('tasks',{method:'POST',body:JSON.stringify(t)}),
   updateTask:(id,d)=>sbFetch(`tasks?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(d)}),
   deleteTask:id=>sbFetch(`tasks?id=eq.${id}`,{method:'DELETE',prefer:''}),
-  getSubtasks:taskId=>sbFetch(`subtasks?task_id=eq.${taskId}&order=created_at.asc`),
+  getSubtasks:tid=>sbFetch(`subtasks?task_id=eq.${tid}&order=sort_order.asc,created_at.asc`),
   insertSubtask:s=>sbFetch('subtasks',{method:'POST',body:JSON.stringify(s)}),
   updateSubtask:(id,d)=>sbFetch(`subtasks?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(d)}),
   deleteSubtask:id=>sbFetch(`subtasks?id=eq.${id}`,{method:'DELETE',prefer:''}),
 };
-
-async function testConnection(url,key){
-  const r=await fetch(url+'/rest/v1/projects?limit=1',{headers:{'apikey':key,'Authorization':'Bearer '+key}});
+async function testConnection(u,k){
+  const r=await fetch(u+'/rest/v1/projects?limit=1',{headers:{'apikey':k,'Authorization':'Bearer '+k}});
   if(!r.ok)throw new Error('Kết nối thất bại '+r.status+' — kiểm tra URL và Key');
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 // STATE
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 const COLORS=['#4f7cff','#7c5fff','#ff5f7c','#22d3a0','#ffb347','#ff6b35','#a78bfa','#f472b6','#34d399','#60a5fa'];
 const POM_MAX=4;
 let tasks=[],projects=[],subtasksCache={};
@@ -442,74 +479,85 @@ let viewMode='card',curView='all',curFilter='all';
 let editId=null,editProjId=null,selColor='#4f7cff';
 let pom={running:false,taskId:null,sec:25*60,interval:null};
 let dlChecked={},openDrawerTaskId=null;
+// drag state
+let dragSrc=null,dragType=null,dragTaskId=null;
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 // BOOT
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 async function testAndSaveConfig(){
-  const url=document.getElementById('setup-url').value.trim(),key=document.getElementById('setup-key').value.trim();
+  const u=document.getElementById('setup-url').value.trim(),k=document.getElementById('setup-key').value.trim();
   const st=document.getElementById('setup-status');
-  if(!url||!key){st.className='config-status err';st.textContent='⚠️ Vui lòng nhập đủ URL và Key';return;}
-  st.className='config-status ok';st.textContent='⏳ Đang kiểm tra...';
-  try{await testConnection(url,key);saveConfig(url,key);st.textContent='✅ Thành công! Đang tải...';setTimeout(startApp,800);}
-  catch(e){st.className='config-status err';st.textContent='❌ '+e.message;}
+  if(!u||!k){st.className='cfg-status err';st.textContent='⚠️ Vui lòng nhập đủ URL và Key';return;}
+  st.className='cfg-status ok';st.textContent='⏳ Đang kiểm tra...';
+  try{await testConnection(u,k);saveConfig(u,k);st.textContent='✅ Thành công! Đang tải...';setTimeout(startApp,800);}
+  catch(e){st.className='cfg-status err';st.textContent='❌ '+e.message;}
 }
-
 async function boot(){
   const cfg=getConfig();
   if(!cfg||!cfg.url||!cfg.key){document.getElementById('loading').style.display='none';document.getElementById('setup-screen').style.display='flex';return;}
   SB_URL=cfg.url;SB_KEY=cfg.key;startApp();
 }
-
 async function startApp(){
   document.getElementById('setup-screen').style.display='none';
   document.getElementById('loading').style.display='flex';
   document.getElementById('loading-sub').textContent='Đang tải dữ liệu...';
   try{
     const cfg=getConfig();SB_URL=cfg.url;SB_KEY=cfg.key;
-    const [p,t]=await Promise.all([db.getProjects(),db.getTasks()]);
+    const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]);
     projects=p||[];tasks=t||[];
     if(!projects.length)await seedDefaults();
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
-    render();
-    setInterval(tickClock,1000);tickClock();
-    setInterval(checkDeadlines,60000);
-    setInterval(refreshData,30000);
+    render();setInterval(tickClock,1000);tickClock();
+    setInterval(checkDeadlines,60000);setInterval(autoRefresh,30000);
     showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
   }catch(e){
     document.getElementById('loading').style.display='none';
     document.getElementById('setup-screen').style.display='flex';
-    document.getElementById('setup-status').className='config-status err';
-    document.getElementById('setup-status').textContent='❌ '+e.message;
+    const st=document.getElementById('setup-status');
+    if(st){st.className='cfg-status err';st.textContent='❌ '+e.message;}
   }
 }
-
 async function seedDefaults(){
   const ps=[{id:'p_fe',name:'Frontend',color:'#4f7cff',description:'UI/UX'},{id:'p_be',name:'Backend',color:'#7c5fff',description:'API'},{id:'p_mk',name:'Marketing',color:'#22d3a0',description:'Campaigns'}];
   await Promise.all(ps.map(p=>db.insertProject(p)));projects=ps;
 }
 
-async function refreshData(){
+// ═══════════════════════════════════════
+// MANUAL REFRESH
+// ═══════════════════════════════════════
+async function manualRefresh(btn){
+  if(btn){btn.classList.add('spin');btn.disabled=true;}
+  setSyncUI('loading');
+  try{
+    const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]);
+    projects=p||[];tasks=t||[];
+    // reload subtasks for open drawer
+    if(openDrawerTaskId){
+      subtasksCache[openDrawerTaskId]=await db.getSubtasks(openDrawerTaskId)||[];
+      renderDrawer(openDrawerTaskId);
+    }
+    renderContent();setSyncUI('ok');showNotif('ns','↻ Đã đồng bộ','Dữ liệu mới nhất đã được tải.');
+  }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi đồng bộ',e.message);}
+  finally{if(btn){btn.classList.remove('spin');btn.disabled=false;}}
+}
+async function autoRefresh(){
   try{const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]);projects=p||[];tasks=t||[];renderContent();}catch{}
 }
 
-// ══════════════════════════════════════
-// SYNC UI
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
+// SYNC UI & CLOCK
+// ═══════════════════════════════════════
 let syncTimer;
-function setSyncUI(s,msg=''){
+function setSyncUI(s){
   const el=document.getElementById('sync-pill');if(!el)return;
   clearTimeout(syncTimer);
   if(s==='loading'){el.className='sync-pill sync-loading';el.textContent='⟳ Đang lưu...';}
   else if(s==='ok'){el.className='sync-pill sync-ok';el.textContent='☁️ Đã đồng bộ';syncTimer=setTimeout(()=>{el.className='sync-pill sync-idle';el.textContent='';},3000);}
-  else if(s==='err'){el.className='sync-pill sync-err';el.textContent='⚠️ '+msg;}
+  else if(s==='err'){el.className='sync-pill sync-err';el.textContent='⚠️ Lỗi lưu';}
   else{el.className='sync-pill sync-idle';el.textContent='';}
 }
-
-// ══════════════════════════════════════
-// CLOCK
-// ══════════════════════════════════════
 function tickClock(){
   const n=new Date();
   const cl=document.getElementById('clock'),cd=document.getElementById('clock-date');
@@ -517,9 +565,9 @@ function tickClock(){
   if(cd)cd.textContent=n.toLocaleDateString('vi-VN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 // HELPERS
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 function getDL(t){
   if(!t.deadline)return{cls:'',label:''};
   const now=Date.now(),dl=new Date(t.deadline).getTime();
@@ -535,17 +583,11 @@ function fmtShort(d){return new Date(d).toLocaleDateString('vi-VN',{day:'2-digit
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 const SL={todo:'📝 Chưa làm',inprogress:'🚧 Đang làm',review:'👀 Review',done:'✅ Xong'};
 const PL={high:'Cao',medium:'TB',low:'Thấp'};
+function getSubProg(tid){const s=subtasksCache[tid]||[];if(!s.length)return null;const d=s.filter(x=>x.done).length;return{total:s.length,done:d,pct:Math.round(d/s.length*100)};}
 
-function getSubtaskProgress(taskId){
-  const subs=subtasksCache[taskId]||[];
-  if(!subs.length)return null;
-  const done=subs.filter(s=>s.done).length;
-  return{total:subs.length,done,pct:Math.round(done/subs.length*100)};
-}
-
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 // FILTER & BADGES
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 function getBadges(){
   const now=Date.now(),today=new Date().toDateString(),s24=now+86400000;
   return{all:tasks.filter(t=>t.status!=='done').length,today:tasks.filter(t=>t.status!=='done'&&t.deadline&&new Date(t.deadline).toDateString()===today).length,ov:tasks.filter(t=>t.status!=='done'&&t.deadline&&new Date(t.deadline).getTime()<now).length,sn:tasks.filter(t=>t.status!=='done'&&t.deadline&&new Date(t.deadline).getTime()>now&&new Date(t.deadline).getTime()<=s24).length};
@@ -574,30 +616,22 @@ function getFiltered(){
   return r;
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 // STATS
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 function getStatsFor(scope){
-  const now=Date.now();
-  const base=scope==='all'?tasks:tasks.filter(t=>t.project_id===scope);
-  const total=base.length,done=base.filter(t=>t.status==='done').length;
-  const wip=base.filter(t=>t.status==='inprogress').length,ov=base.filter(t=>t.status!=='done'&&t.deadline&&new Date(t.deadline).getTime()<now).length;
+  const now=Date.now(),base=scope==='all'?tasks:tasks.filter(t=>t.project_id===scope);
+  const total=base.length,done=base.filter(t=>t.status==='done').length,wip=base.filter(t=>t.status==='inprogress').length;
+  const ov=base.filter(t=>t.status!=='done'&&t.deadline&&new Date(t.deadline).getTime()<now).length;
   const review=base.filter(t=>t.status==='review').length,todo=base.filter(t=>t.status==='todo').length;
-  const rate=total>0?Math.round(done/total*100):0;
-  return{total,done,wip,ov,rate,review,todo};
+  return{total,done,wip,ov,rate:total>0?Math.round(done/total*100):0,review,todo};
 }
-
 function buildStatsHtml(){
-  const proj=projects.find(p=>'p_'+p.id===curView);
-  const s=proj?getStatsFor(proj.id):getStatsFor('all');
-  const pc=proj?proj.color:null;
-  const progColor=s.rate>=80?'ok':s.rate>=40?'':s.rate>0?'wa':'';
-  const progHtml=`<div class="prog-wrap">
-    <div class="prog-header"><span>${proj?`📁 ${esc(proj.name)}`:' Tổng tiến độ'}</span><span style="font-weight:600;color:${s.rate>=80?'var(--ok)':s.rate>=40?'var(--ac)':'var(--wa)'}">${s.rate}%</span></div>
-    <div class="prog-bar"><div class="prog-fill ${progColor}" style="width:${s.rate}%"></div></div>
-  </div>`;
+  const proj=projects.find(p=>'p_'+p.id===curView),s=proj?getStatsFor(proj.id):getStatsFor('all');
+  const pc=proj?proj.color:null,rc=s.rate>=80?'ok':s.rate>=40?'':'';
   const g1=pc?`linear-gradient(90deg,${pc},${pc}88)`:'linear-gradient(90deg,#4f7cff,#7c5fff)';
-  return progHtml+`<div class="stats-grid">
+  return `<div class="prog-wrap"><div class="prog-header"><span>${proj?`📁 ${esc(proj.name)}`:' Tổng tiến độ'}</span><span style="font-weight:600;color:${s.rate>=80?'var(--ok)':s.rate>=40?'var(--ac)':'var(--wa)'}">${s.rate}%</span></div><div class="prog-bar"><div class="prog-fill ${rc}" style="width:${s.rate}%"></div></div></div>
+  <div class="stats-grid">
     <div class="stat-card"><div class="stat-top" style="background:${g1}"></div><div class="stat-label">Tổng task</div><div class="stat-val">${s.total}</div><div class="stat-sub">${s.todo} chưa làm</div><div class="stat-icon">📋</div></div>
     <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#22d3a0,#22d3d3)"></div><div class="stat-label">Hoàn thành</div><div class="stat-val" style="color:var(--ok)">${s.rate}%</div><div class="stat-sub">${s.done}/${s.total}</div><div class="stat-icon">✅</div></div>
     <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#ffb347,#ff8f47)"></div><div class="stat-label">Đang làm</div><div class="stat-val" style="color:var(--wa)">${s.wip}</div><div class="stat-sub">${s.review} review</div><div class="stat-icon">🚧</div></div>
@@ -605,18 +639,14 @@ function buildStatsHtml(){
   </div>`;
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 // RENDER
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
 const NAV=[{v:'all',icon:'📋',label:'Tất cả',b:'all',bt:'b-blue'},{v:'today',icon:'📅',label:'Hôm nay',b:'today',bt:'b-blue'},{v:'ov',icon:'🔥',label:'Quá hạn',b:'ov',bt:'b-red'},{v:'sn',icon:'⚠️',label:'Sắp hạn',b:'sn',bt:'b-yellow'},{v:'done',icon:'✅',label:'Hoàn thành',b:null}];
 
 function renderSidebar(){
   const bg=getBadges();
-  document.getElementById('nav-list').innerHTML=NAV.map(n=>`
-    <button class="nav-item ${curView===n.v?'active':''}" onclick="setCurView('${n.v}')">
-      <span class="ni">${n.icon}</span><span class="nlabel">${n.label}</span>
-      ${n.b&&bg[n.b]>0?`<span class="badge ${n.bt}">${bg[n.b]}</span>`:''}
-    </button>`).join('');
+  document.getElementById('nav-list').innerHTML=NAV.map(n=>`<button class="nav-item ${curView===n.v?'active':''}" onclick="setCurView('${n.v}')"><span class="ni">${n.icon}</span><span class="nlabel">${n.label}</span>${n.b&&bg[n.b]>0?`<span class="badge ${n.bt}">${bg[n.b]}</span>`:''}</button>`).join('');
   document.getElementById('proj-nav').innerHTML=projects.map(p=>`
     <div class="proj-item ${curView==='p_'+p.id?'active':''}" id="pi_${p.id}">
       <div class="proj-dot" style="background:${p.color}" onclick="setCurView('p_${p.id}')"></div>
@@ -636,43 +666,34 @@ function renderContent(){
   const vl={all:'Tất cả nhiệm vụ',today:'Hôm nay',ov:'Quá hạn',sn:'Sắp đến hạn',done:'Hoàn thành'};
   const proj=projects.find(p=>'p_'+p.id===curView);
   document.getElementById('page-title').textContent=vl[curView]||(proj?proj.name:'Tasks');
-
   const pomHtml=pom.taskId?(()=>{
     const t=tasks.find(t=>t.id===pom.taskId);
     const mm=String(Math.floor(pom.sec/60)).padStart(2,'0'),ss=String(pom.sec%60).padStart(2,'0');
     const dots=Array.from({length:POM_MAX},(_,i)=>`<div class="pdot ${i<(t?.pomo_done||0)?'on':''}"></div>`).join('');
-    return `<div class="pomo-banner"><div style="flex:1;min-width:130px"><div style="font-size:11px;color:var(--tx2)">🍅 Đang tập trung</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(t?.name||'')}</div><div class="pomo-dots">${dots}</div></div><div class="pomo-timer" id="pomo-display">${mm}:${ss}</div><div style="display:flex;gap:6px"><button class="btn-g" onclick="togglePom()">${pom.running?'⏸':'▶'}</button><button class="btn-g" onclick="stopPom()">⏹</button></div></div>`;
+    return `<div class="pomo-banner"><div style="flex:1;min-width:120px"><div style="font-size:11px;color:var(--tx2)">🍅 Đang tập trung</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(t?.name||'')}</div><div class="pomo-dots">${dots}</div></div><div class="pomo-timer" id="pomo-display">${mm}:${ss}</div><div style="display:flex;gap:6px"><button class="btn-g" onclick="togglePom()">${pom.running?'⏸':'▶'}</button><button class="btn-g" onclick="stopPom()">⏹</button></div></div>`;
   })():'';
-
-  const filterHtml=`<div class="filters">${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}].map(c=>`<div class="chip ${c.x||''} ${curFilter===c.k?'active':''}" onclick="setFilter('${c.k}')">${c.l}</div>`).join('')}</div>
-  <select class="sort-sel" id="sort-sel" onchange="renderContent()"><option value="created">🕐 Mới nhất</option><option value="dl">📅 Deadline</option><option value="pri">🎯 Ưu tiên</option><option value="az">🔤 A–Z</option></select>`;
-
+  const filterHtml=`<div class="filters">${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}].map(c=>`<div class="chip ${c.x||''} ${curFilter===c.k?'active':''}" onclick="setFilter('${c.k}')">${c.l}</div>`).join('')}</div><select class="sort-sel" id="sort-sel" onchange="renderContent()"><option value="created">🕐 Mới nhất</option><option value="dl">📅 Deadline</option><option value="pri">🎯 Ưu tiên</option><option value="az">🔤 A–Z</option></select>`;
   let tasksHtml='';
-  if(!filtered.length){
-    tasksHtml=`<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Không có task nào</div><div style="font-size:12px">Tạo task mới hoặc đổi bộ lọc</div></div>`;
-  } else {
+  if(!filtered.length){tasksHtml=`<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Không có task nào</div><div style="font-size:12px">Tạo task mới hoặc đổi bộ lọc</div></div>`;}
+  else{
     tasksHtml=`<div class="sec-hdr">Tasks<span class="sec-count">${filtered.length}</span></div>`;
     if(viewMode==='card')tasksHtml+=`<div class="cards-grid">${filtered.map(mkCard).join('')}</div>`;
     else if(viewMode==='list')tasksHtml+=`<div class="task-list">${filtered.map(mkRow).join('')}</div>`;
     else tasksHtml+=mkKanban(filtered);
   }
-
   document.getElementById('content').innerHTML=pomHtml+buildStatsHtml()+filterHtml+tasksHtml;
   checkDeadlines();
 }
 function render(){renderContent();}
 
-// ══════════════════════════════════════
-// CARD
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
+// CARD / ROW / KANBAN
+// ═══════════════════════════════════════
 function mkCard(t){
-  const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t);
-  const prog=getSubtaskProgress(t.id);
-  const links=t.links||[];
+  const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t),prog=getSubProg(t.id),links=t.links||[];
   const dots=Array.from({length:POM_MAX},(_,i)=>`<div class="pdot ${i<(t.pomo_done||0)?'on':''}"></div>`).join('');
-  const linksHtml=links.length?`<div class="card-links">${links.map(l=>`<a class="link-chip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 ${esc(l.label||l.url)}</a>`).join('')}</div>`:'';
-  const progHtml=prog?`<div class="card-prog"><div class="card-prog-label"><span>Subtasks</span><span>${prog.done}/${prog.total}</span></div><div class="card-prog-bar"><div class="card-prog-fill" style="width:${prog.pct}%"></div></div></div>`:'';
   return `<div class="task-card ${t.status==='done'?'done':''} ${dl.cls}" onclick="openDrawer('${t.id}')">
+    ${t.emoji?`<div class="card-emoji">${t.emoji}</div>`:''}
     <div class="card-header">
       <div class="cb ${t.status==='done'?'on':''}" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.status==='done'?'✓':''}</div>
       <div class="card-title ${t.status==='done'?'done':''}">${esc(t.name)}</div>
@@ -680,14 +701,14 @@ function mkCard(t){
     </div>
     ${t.description?`<div class="card-desc">${esc(t.description)}</div>`:''}
     ${t.tags?.length?`<div class="card-tags">${t.tags.map(g=>`<span class="tag">#${esc(g)}</span>`).join('')}</div>`:''}
-    ${linksHtml}
+    ${links.length?`<div class="card-links">${links.map(l=>`<a class="link-chip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 ${esc(l.label||l.url)}</a>`).join('')}</div>`:''}
     <div class="card-meta">
       ${t.start_time?`<span class="meta">📅 ${fmtShort(t.start_time)}</span>`:''}
       ${t.deadline?`<span class="meta ${dl.cls}">${dl.label}</span>`:''}
       ${t.estimate_hours?`<span class="meta">⏱${t.estimate_hours}h</span>`:''}
       <span class="meta">${SL[t.status]||t.status}</span>
     </div>
-    ${progHtml}
+    ${prog?`<div class="card-prog"><div class="card-prog-label"><span>Subtasks</span><span>${prog.done}/${prog.total}</span></div><div class="card-prog-bar"><div class="card-prog-fill" style="width:${prog.pct}%"></div></div></div>`:''}
     ${t.pomo_done?`<div class="pomo-dots" style="margin-top:6px">${dots}</div>`:''}
     <div class="card-footer">
       <div class="proj-pill">${proj?`<div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}`:'<span style="color:var(--tx3)">—</span>'}</div>
@@ -700,50 +721,33 @@ function mkCard(t){
   </div>`;
 }
 
-// ══════════════════════════════════════
-// ROW
-// ══════════════════════════════════════
 function mkRow(t){
-  const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t);
-  const prog=getSubtaskProgress(t.id);
+  const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t),prog=getSubProg(t.id);
   const pi={high:'🔴',medium:'🟡',low:'🟢'};
   return `<div class="task-row ${t.status==='done'?'done':''} ${dl.cls}" onclick="openDrawer('${t.id}')">
     <div class="cb ${t.status==='done'?'on':''}" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.status==='done'?'✓':''}</div>
+    ${t.emoji?`<span style="font-size:16px">${t.emoji}</span>`:''}
     <span>${pi[t.priority]}</span>
-    <div class="row-title ${t.status==='done'?'done':''}" style="flex:1">${esc(t.name)}${prog?` <span style="font-size:10px;color:var(--tx3);margin-left:6px">${prog.done}/${prog.total} ✓</span>`:''}</div>
-    <div style="font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:4px;min-width:70px">${proj?`<div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}`:'—'}</div>
-    <div class="meta ${dl.cls}" style="min-width:80px">${dl.label||'—'}</div>
-    <div class="actions">
-      <button class="abt" onclick="event.stopPropagation();startPom('${t.id}')">🍅</button>
-      <button class="abt" onclick="event.stopPropagation();openEdit('${t.id}')">✏️</button>
-      <button class="abt" onclick="event.stopPropagation();delTask('${t.id}')">🗑</button>
-    </div>
+    <div class="row-title ${t.status==='done'?'done':''}" style="flex:1">${esc(t.name)}${prog?` <span style="font-size:10px;color:var(--tx3);margin-left:5px">${prog.done}/${prog.total} ✓</span>`:''}</div>
+    <div style="font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:4px;min-width:65px">${proj?`<div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}`:'—'}</div>
+    <div class="meta ${dl.cls}" style="min-width:78px">${dl.label||'—'}</div>
+    <div class="actions"><button class="abt" onclick="event.stopPropagation();startPom('${t.id}')">🍅</button><button class="abt" onclick="event.stopPropagation();openEdit('${t.id}')">✏️</button><button class="abt" onclick="event.stopPropagation();delTask('${t.id}')">🗑</button></div>
   </div>`;
 }
 
-// ══════════════════════════════════════
-// KANBAN
-// ══════════════════════════════════════
 const KANBAN_COLS=[{s:'todo',label:'📝 Chưa làm',color:'#5a6480'},{s:'inprogress',label:'🚧 Đang làm',color:'#ffb347'},{s:'review',label:'👀 Review',color:'#4f7cff'},{s:'done',label:'✅ Xong',color:'#22d3a0'}];
 function mkKanban(filtered){
   return `<div class="kanban-board">${KANBAN_COLS.map(col=>{
-    const col_tasks=filtered.filter(t=>t.status===col.s);
-    return `<div class="kanban-col">
-      <div class="kanban-col-header">
-        <div class="kanban-col-dot" style="background:${col.color}"></div>
-        <span>${col.label}</span>
-        <span class="kanban-col-count">${col_tasks.length}</span>
-      </div>
-      ${col_tasks.map(t=>{
-        const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t);
-        const prog=getSubtaskProgress(t.id);
-        const links=t.links||[];
+    const ct=filtered.filter(t=>t.status===col.s);
+    return `<div class="kanban-col"><div class="kanban-col-header"><div class="kanban-col-dot" style="background:${col.color}"></div><span>${col.label}</span><span class="kanban-col-count">${ct.length}</span></div>
+      ${ct.map(t=>{const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t),prog=getSubProg(t.id),links=t.links||[];
         return `<div class="kanban-card ${dl.cls}" onclick="openDrawer('${t.id}')">
+          ${t.emoji?`<div class="kanban-emoji">${t.emoji}</div>`:''}
           <div class="kanban-card-title ${t.status==='done'?'done':''}">${esc(t.name)}</div>
-          ${prog?`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:3px"><span>Subtasks</span><span>${prog.done}/${prog.total}</span></div><div class="card-prog-bar"><div class="card-prog-fill" style="width:${prog.pct}%"></div></div></div>`:''}
+          ${prog?`<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:2px"><span>Subtasks</span><span>${prog.done}/${prog.total}</span></div><div class="card-prog-bar"><div class="card-prog-fill" style="width:${prog.pct}%"></div></div></div>`:''}
           <div class="kanban-card-meta">
             <div class="pbadge ${t.priority==='high'?'ph':t.priority==='medium'?'pm':'pl'}" style="font-size:9px">${PL[t.priority]}</div>
-            ${proj?`<div class="proj-pill"><div class="proj-dot" style="background:${proj.color}"></div><span>${esc(proj.name)}</span></div>`:''}
+            ${proj?`<div class="proj-pill"><div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}</div>`:''}
             ${t.deadline?`<span class="meta ${dl.cls}" style="font-size:10px">${dl.label}</span>`:''}
             ${links.length?`<span style="font-size:10px;color:var(--ac)">🔗${links.length}</span>`:''}
             <div style="margin-left:auto;display:flex;gap:3px">
@@ -753,21 +757,19 @@ function mkKanban(filtered){
           </div>
         </div>`;
       }).join('')}
-      <button onclick="openTaskModalWithStatus('${col.s}')" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px dashed var(--bd);background:none;color:var(--tx3);font-size:12px;cursor:pointer">＋ Thêm</button>
+      <button onclick="openTaskModalWithStatus('${col.s}')" style="width:100%;margin-top:6px;padding:7px;border-radius:8px;border:1px dashed var(--bd);background:none;color:var(--tx3);font-size:12px;cursor:pointer">＋ Thêm</button>
     </div>`;
   }).join('')}</div>`;
 }
 
-// ══════════════════════════════════════
-// TASK DETAIL DRAWER
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
+// DRAWER
+// ═══════════════════════════════════════
 async function openDrawer(taskId){
   openDrawerTaskId=taskId;
   const t=tasks.find(t=>t.id===taskId);if(!t)return;
-  document.getElementById('drawer-title').textContent=t.name;
   document.getElementById('drawer-overlay').classList.add('open');
   document.getElementById('drawer').classList.add('open');
-  // Load subtasks
   if(!subtasksCache[taskId]){
     try{subtasksCache[taskId]=await db.getSubtasks(taskId)||[];}catch{subtasksCache[taskId]=[];}
   }
@@ -777,61 +779,73 @@ async function openDrawer(taskId){
 function renderDrawer(taskId){
   const t=tasks.find(t=>t.id===taskId);if(!t)return;
   const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t);
-  const subs=subtasksCache[taskId]||[];
-  const links=t.links||[];
-  const prog=subs.length?`<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:6px"><span>Tiến độ subtasks</span><span style="font-weight:600">${subs.filter(s=>s.done).length}/${subs.length} (${subs.length>0?Math.round(subs.filter(s=>s.done).length/subs.length*100):0}%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:${subs.length>0?Math.round(subs.filter(s=>s.done).length/subs.length*100):0}%"></div></div></div>`:'';
+  const subs=subtasksCache[taskId]||[],links=t.links||[];
+  const subDone=subs.filter(s=>s.done).length,subPct=subs.length?Math.round(subDone/subs.length*100):0;
 
-  document.getElementById('drawer-title').textContent=t.name;
+  document.getElementById('drawer-title').textContent=(t.emoji?t.emoji+' ':'')+t.name;
+
+  const subsHtml=subs.map((s,i)=>`
+    <li class="drag-item" id="sub_${s.id}" draggable="true"
+      ondragstart="onDragStart(event,'sub','${taskId}',${i})"
+      ondragover="onDragOver(event,${i},'sub','${taskId}')"
+      ondrop="onDrop(event,${i},'sub','${taskId}')"
+      ondragend="onDragEnd()">
+      <span class="drag-handle">⠿</span>
+      <div class="cb ${s.done?'on':''}" onclick="toggleSubtask('${taskId}','${s.id}')">${s.done?'✓':''}</div>
+      <span class="drag-item-name ${s.done?'done':''}">${esc(s.name)}</span>
+      <button class="drag-item-del" onclick="delSubtask('${taskId}','${s.id}')">×</button>
+    </li>`).join('');
+
+  const linksHtml=links.map((l,i)=>`
+    <li class="drag-item" id="lnk_${i}" draggable="true"
+      ondragstart="onDragStart(event,'link','${taskId}',${i})"
+      ondragover="onDragOver(event,${i},'link','${taskId}')"
+      ondrop="onDrop(event,${i},'link','${taskId}')"
+      ondragend="onDragEnd()">
+      <span class="drag-handle">⠿</span>
+      <a href="${esc(l.url)}" target="_blank" rel="noopener" style="flex:1;font-size:12px;color:var(--ac);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="event.stopPropagation()">${esc(l.label||l.url)}</a>
+      <button class="drag-item-del" onclick="delLink('${taskId}',${i})">×</button>
+    </li>`).join('');
+
   document.getElementById('drawer-body').innerHTML=`
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">
       <div class="pbadge ${t.priority==='high'?'ph':t.priority==='medium'?'pm':'pl'}">${PL[t.priority]}</div>
       <div style="padding:3px 10px;border-radius:6px;font-size:11px;background:var(--s2);color:var(--tx2)">${SL[t.status]}</div>
       ${proj?`<div class="proj-pill" style="padding:3px 10px;border-radius:6px;background:var(--s2)"><div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}</div>`:''}
     </div>
-    ${t.description?`<div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:16px;padding:12px;background:var(--s2);border-radius:10px">${esc(t.description)}</div>`:''}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;font-size:12px">
-      ${t.start_time?`<div style="background:var(--s2);padding:10px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:3px">Bắt đầu</div><div style="color:var(--tx);font-weight:500">${fmtDate(t.start_time)}</div></div>`:''}
-      ${t.deadline?`<div style="background:var(--s2);padding:10px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:3px">Deadline</div><div style="color:${dl.cls==='ov'?'var(--er)':dl.cls==='sn'?'var(--wa)':'var(--tx)'};font-weight:500">${fmtDate(t.deadline)}</div></div>`:''}
-      ${t.estimate_hours?`<div style="background:var(--s2);padding:10px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:3px">Ước tính</div><div style="font-weight:500">${t.estimate_hours}h</div></div>`:''}
-      ${t.pomo_done?`<div style="background:var(--s2);padding:10px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:3px">Pomodoro</div><div style="font-weight:500">${t.pomo_done} 🍅</div></div>`:''}
+    ${t.description?`<div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:14px;padding:11px;background:var(--s2);border-radius:9px">${esc(t.description)}</div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;font-size:12px">
+      ${t.start_time?`<div style="background:var(--s2);padding:9px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:2px;font-size:10px">Bắt đầu</div><div style="font-weight:500">${fmtDate(t.start_time)}</div></div>`:''}
+      ${t.deadline?`<div style="background:var(--s2);padding:9px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:2px;font-size:10px">Deadline</div><div style="color:${dl.cls==='ov'?'var(--er)':dl.cls==='sn'?'var(--wa)':'var(--tx)'};font-weight:500">${fmtDate(t.deadline)}</div></div>`:''}
+      ${t.estimate_hours?`<div style="background:var(--s2);padding:9px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:2px;font-size:10px">Ước tính</div><div style="font-weight:500">${t.estimate_hours}h</div></div>`:''}
+      ${t.pomo_done?`<div style="background:var(--s2);padding:9px;border-radius:9px"><div style="color:var(--tx3);margin-bottom:2px;font-size:10px">Pomodoro</div><div style="font-weight:500">${t.pomo_done} 🍅</div></div>`:''}
     </div>
-    ${t.tags?.length?`<div class="card-tags" style="margin-bottom:16px">${t.tags.map(g=>`<span class="tag">#${esc(g)}</span>`).join('')}</div>`:''}
-    ${prog}
+    ${t.tags?.length?`<div class="card-tags" style="margin-bottom:14px">${t.tags.map(g=>`<span class="tag">#${esc(g)}</span>`).join('')}</div>`:''}
 
     <!-- LINKS -->
-    <div class="links-section">
-      <div class="subtask-hdr">🔗 Links <span style="font-size:11px;color:var(--tx3);font-weight:400">(${links.length})</span></div>
-      <div id="links-list">
-        ${links.map((l,i)=>`<div class="link-item">
-          <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label||l.url)}</a>
-          <button class="link-del" onclick="delLink('${taskId}',${i})">×</button>
-        </div>`).join('')}
-      </div>
-      <div class="link-add">
-        <input class="link-input" id="link-url-input" placeholder="https://..." onkeydown="if(event.key==='Enter')addLink('${taskId}')">
-        <input class="link-label-input" id="link-label-input" placeholder="Tên link" onkeydown="if(event.key==='Enter')addLink('${taskId}')">
-        <button class="link-btn" onclick="addLink('${taskId}')">＋</button>
+    <div style="margin-bottom:16px">
+      <div class="section-hdr">🔗 Links <span style="font-size:11px;color:var(--tx3);font-weight:400">${links.length} • kéo để sắp xếp</span></div>
+      <ul class="drag-list" id="links-list">${linksHtml}</ul>
+      <div class="add-row">
+        <input class="add-input" id="link-url-input" placeholder="https://..." onkeydown="if(event.key==='Enter')addLink('${taskId}')">
+        <input class="add-input" style="width:95px;flex:none" id="link-label-input" placeholder="Tên" onkeydown="if(event.key==='Enter')addLink('${taskId}')">
+        <button class="add-btn" onclick="addLink('${taskId}')">＋</button>
       </div>
     </div>
 
     <!-- SUBTASKS -->
-    <div class="subtask-section">
-      <div class="subtask-hdr">☑️ Subtasks <span style="font-size:11px;color:var(--tx3);font-weight:400">(${subs.filter(s=>s.done).length}/${subs.length})</span></div>
-      <div id="subtasks-list">
-        ${subs.map(s=>`<div class="subtask-item" id="sub_${s.id}">
-          <div class="cb ${s.done?'on':''}" onclick="toggleSubtask('${taskId}','${s.id}')">${s.done?'✓':''}</div>
-          <span class="subtask-name ${s.done?'done':''}">${esc(s.name)}</span>
-          <button class="subtask-del" onclick="delSubtask('${taskId}','${s.id}')">×</button>
-        </div>`).join('')}
-      </div>
-      <div class="subtask-add">
-        <input class="subtask-input" id="subtask-input" placeholder="Thêm subtask..." onkeydown="if(event.key==='Enter')addSubtask('${taskId}')">
-        <button class="subtask-btn" onclick="addSubtask('${taskId}')">＋</button>
+    <div style="margin-bottom:16px">
+      <div class="section-hdr">☑️ Subtasks <span style="font-size:11px;color:var(--tx3);font-weight:400">${subDone}/${subs.length} • kéo để sắp xếp</span></div>
+      ${subs.length?`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-bottom:4px"><span>Tiến độ</span><span>${subPct}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${subPct}%"></div></div></div>`:''}
+      <ul class="drag-list" id="subtasks-list">${subsHtml}</ul>
+      <div class="add-row">
+        <input class="add-input" id="subtask-input" placeholder="Thêm subtask..." onkeydown="if(event.key==='Enter')addSubtask('${taskId}')">
+        <button class="add-btn" onclick="addSubtask('${taskId}')">＋</button>
       </div>
     </div>
 
-    <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-p" style="flex:1" onclick="openEdit('${taskId}');closeDrawer()">✏️ Chỉnh sửa task</button>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn-p" style="flex:1" onclick="openEdit('${taskId}');closeDrawer()">✏️ Chỉnh sửa</button>
       <button class="btn-g" onclick="startPom('${taskId}');closeDrawer()">🍅 Pomodoro</button>
       <button class="btn-danger" onclick="delTask('${taskId}');closeDrawer()">🗑 Xóa</button>
     </div>`;
@@ -843,22 +857,59 @@ function closeDrawer(){
   openDrawerTaskId=null;
 }
 
-// ── LINKS ──────────────────────────────
+// ═══════════════════════════════════════
+// DRAG & DROP (subtasks + links)
+// ═══════════════════════════════════════
+function onDragStart(e,type,taskId,idx){
+  dragSrc=idx;dragType=type;dragTaskId=taskId;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>e.target.classList.add('dragging'),0);
+}
+function onDragOver(e,idx,type,taskId){
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  if(type!==dragType||taskId!==dragTaskId)return;
+  document.querySelectorAll('.drag-item').forEach(el=>el.classList.remove('drag-over'));
+  const listId=type==='sub'?`sub_${(subtasksCache[taskId]||[])[idx]?.id}`:`lnk_${idx}`;
+  document.getElementById(listId)?.classList.add('drag-over');
+}
+function onDragEnd(){
+  document.querySelectorAll('.drag-item').forEach(el=>{el.classList.remove('dragging');el.classList.remove('drag-over');});
+  dragSrc=null;dragType=null;dragTaskId=null;
+}
+async function onDrop(e,targetIdx,type,taskId){
+  e.preventDefault();
+  if(dragSrc===null||type!==dragType||taskId!==dragTaskId||dragSrc===targetIdx)return onDragEnd();
+  if(type==='sub'){
+    const subs=subtasksCache[taskId]||[];
+    const moved=subs.splice(dragSrc,1)[0];subs.splice(targetIdx,0,moved);
+    subtasksCache[taskId]=subs;
+    renderDrawer(taskId);
+    // save sort_order
+    try{await Promise.all(subs.map((s,i)=>db.updateSubtask(s.id,{sort_order:i})));}catch{}
+  } else {
+    const t=tasks.find(t=>t.id===taskId);if(!t)return onDragEnd();
+    const links=[...(t.links||[])];
+    const moved=links.splice(dragSrc,1)[0];links.splice(targetIdx,0,moved);
+    t.links=links;setSyncUI('loading');
+    renderDrawer(taskId);
+    try{await db.updateTask(taskId,{links,updated_at:new Date().toISOString()});setSyncUI('ok');}
+    catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
+  }
+  onDragEnd();
+}
+
+// ═══════════════════════════════════════
+// LINKS CRUD
+// ═══════════════════════════════════════
 async function addLink(taskId){
-  const urlEl=document.getElementById('link-url-input'),lblEl=document.getElementById('link-label-input');
-  const url=urlEl.value.trim(),label=lblEl.value.trim();
-  if(!url)return;
+  const ue=document.getElementById('link-url-input'),le=document.getElementById('link-label-input');
+  const url=ue.value.trim(),label=le.value.trim();if(!url)return;
   const t=tasks.find(t=>t.id===taskId);if(!t)return;
   const links=[...(t.links||[]),{url,label:label||url}];
   setSyncUI('loading');
-  try{
-    await db.updateTask(taskId,{links,updated_at:new Date().toISOString()});
-    t.links=links;setSyncUI('ok');
-    urlEl.value='';lblEl.value='';
-    renderDrawer(taskId);renderContent();
-  }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
+  try{await db.updateTask(taskId,{links,updated_at:new Date().toISOString()});t.links=links;setSyncUI('ok');ue.value='';le.value='';renderDrawer(taskId);renderContent();}
+  catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
-
 async function delLink(taskId,idx){
   const t=tasks.find(t=>t.id===taskId);if(!t)return;
   const links=(t.links||[]).filter((_,i)=>i!==idx);
@@ -867,30 +918,28 @@ async function delLink(taskId,idx){
   catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
 
-// ── SUBTASKS ───────────────────────────
+// ═══════════════════════════════════════
+// SUBTASKS CRUD
+// ═══════════════════════════════════════
 async function addSubtask(taskId){
   const inp=document.getElementById('subtask-input');
   const name=inp.value.trim();if(!name)return;
+  const subs=subtasksCache[taskId]||[];
   setSyncUI('loading');
   try{
-    const rec={id:'s_'+Date.now(),task_id:taskId,name,done:false};
+    const rec={id:'s_'+Date.now(),task_id:taskId,name,done:false,sort_order:subs.length};
     const res=await db.insertSubtask(rec);
     if(!subtasksCache[taskId])subtasksCache[taskId]=[];
     subtasksCache[taskId].push(res?res[0]:rec);
-    inp.value='';setSyncUI('ok');
-    renderDrawer(taskId);renderContent();
+    inp.value='';setSyncUI('ok');renderDrawer(taskId);renderContent();
   }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
-
 async function toggleSubtask(taskId,subId){
-  const subs=subtasksCache[taskId]||[];
-  const s=subs.find(s=>s.id===subId);if(!s)return;
-  s.done=!s.done;
-  setSyncUI('loading');
+  const s=(subtasksCache[taskId]||[]).find(s=>s.id===subId);if(!s)return;
+  s.done=!s.done;setSyncUI('loading');
   try{await db.updateSubtask(subId,{done:s.done});setSyncUI('ok');renderDrawer(taskId);renderContent();}
   catch(e){s.done=!s.done;setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
-
 async function delSubtask(taskId,subId){
   subtasksCache[taskId]=(subtasksCache[taskId]||[]).filter(s=>s.id!==subId);
   setSyncUI('loading');
@@ -898,9 +947,9 @@ async function delSubtask(taskId,subId){
   catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
 
-// ══════════════════════════════════════
-// ACTIONS
-// ══════════════════════════════════════
+// ═══════════════════════════════════════
+// TASK ACTIONS
+// ═══════════════════════════════════════
 function setCurView(v){curView=v;closeSide();renderContent();}
 function setFilter(f){curFilter=f;renderContent();}
 function setViewMode(v){
@@ -909,214 +958,134 @@ function setViewMode(v){
   document.getElementById(v==='card'?'vcard':v==='list'?'vlist':'vkanban')?.classList.add('active');
   renderContent();
 }
-
 async function toggleDone(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
-  const ns=t.status==='done'?'todo':'done';
-  t.status=ns;renderContent();
+  const ns=t.status==='done'?'todo':'done';t.status=ns;renderContent();
   if(openDrawerTaskId===id)renderDrawer(id);
   setSyncUI('loading');
   try{await db.updateTask(id,{status:ns,updated_at:new Date().toISOString()});setSyncUI('ok');if(ns==='done')showNotif('ns','✅ Xong!',`"${t.name}" hoàn thành.`);}
-  catch(e){t.status=t.status==='done'?'todo':'done';renderContent();setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
+  catch(e){t.status=t.status==='done'?'todo':'done';renderContent();setSyncUI('err');}
 }
-
 async function delTask(id){
   if(!confirm('Xóa task này?'))return;
-  const t=tasks.find(t=>t.id===id);
-  tasks=tasks.filter(t=>t.id!==id);renderContent();
+  const t=tasks.find(t=>t.id===id);tasks=tasks.filter(t=>t.id!==id);renderContent();
   setSyncUI('loading');
   try{await db.deleteTask(id);setSyncUI('ok');showNotif('ns','🗑 Đã xóa','Task đã xóa.');}
   catch(e){tasks.push(t);renderContent();setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
 
-// ── PROJECT MENU ────────────────────────
-function toggleProjMenu(id,e){
-  e.stopPropagation();
-  document.querySelectorAll('.proj-dropdown').forEach(d=>{if(d.id!=='pdrop_'+id)d.classList.remove('open');});
-  document.getElementById('pdrop_'+id)?.classList.toggle('open');
-}
-document.addEventListener('click',()=>document.querySelectorAll('.proj-dropdown').forEach(d=>d.classList.remove('open')));
-
-function editProject(id){
-  const p=projects.find(p=>p.id===id);if(!p)return;
-  editProjId=id;
-  document.getElementById('proj-modal-title').innerHTML='✏️ Chỉnh sửa <span style="color:var(--ac)">Project</span>';
-  document.getElementById('pf-name').value=p.name;
-  document.getElementById('pf-desc').value=p.description||'';
-  selColor=p.color;
-  renderColorPicker();
-  document.getElementById('proj-modal').classList.add('open');
-}
-
-async function deleteProject(id){
-  const p=projects.find(p=>p.id===id);
-  const taskCount=tasks.filter(t=>t.project_id===id).length;
-  const msg=taskCount>0?`Project "${p?.name}" có ${taskCount} task. Xóa project (task vẫn giữ lại, chỉ bỏ liên kết)?`:`Xóa project "${p?.name}"?`;
-  if(!confirm(msg))return;
-  projects=projects.filter(p=>p.id!==id);
-  tasks=tasks.map(t=>t.project_id===id?{...t,project_id:null}:t);
-  renderContent();setSyncUI('loading');
-  try{await db.deleteProject(id);setSyncUI('ok');showNotif('ns','🗑 Đã xóa',`Project "${p?.name}" đã xóa.`);}
-  catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);refreshData();}
-}
-
-// ── TASK MODAL ──────────────────────────
+// ─── TASK MODAL ────────────────────────
 function openTaskModal(){
-  editId=null;
-  document.getElementById('task-modal-title').innerHTML='✨ Thêm <span style="color:var(--ac)">nhiệm vụ</span>';
+  editId=null;selectedEmoji='';
+  document.getElementById('task-modal-title').textContent='✨ Thêm nhiệm vụ';
+  document.getElementById('emoji-preview').textContent='📌';
   ['f-name','f-desc','f-start','f-dl','f-tags'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('f-pri').value='medium';
-  document.getElementById('f-status').value='todo';
-  document.getElementById('f-est').value='';
-  fillProjSelect('');
-  document.getElementById('task-modal').classList.add('open');
+  document.getElementById('f-pri').value='medium';document.getElementById('f-status').value='todo';document.getElementById('f-est').value='';
+  fillProjSelect('');document.getElementById('task-modal').classList.add('open');
   setTimeout(()=>document.getElementById('f-name').focus(),350);
 }
-function openTaskModalWithStatus(status){
-  openTaskModal();
-  document.getElementById('f-status').value=status;
-}
+function openTaskModalWithStatus(status){openTaskModal();document.getElementById('f-status').value=status;}
 function openEdit(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
-  editId=id;
-  document.getElementById('task-modal-title').innerHTML='✏️ Chỉnh sửa <span style="color:var(--ac)">nhiệm vụ</span>';
-  document.getElementById('f-name').value=t.name;
-  document.getElementById('f-desc').value=t.description||'';
-  document.getElementById('f-pri').value=t.priority;
-  document.getElementById('f-status').value=t.status;
+  editId=id;selectedEmoji=t.emoji||'';
+  document.getElementById('task-modal-title').textContent='✏️ Chỉnh sửa nhiệm vụ';
+  document.getElementById('emoji-preview').textContent=t.emoji||'📌';
+  document.getElementById('f-name').value=t.name;document.getElementById('f-desc').value=t.description||'';
+  document.getElementById('f-pri').value=t.priority;document.getElementById('f-status').value=t.status;
   document.getElementById('f-start').value=t.start_time?t.start_time.slice(0,16):'';
   document.getElementById('f-dl').value=t.deadline?t.deadline.slice(0,16):'';
   document.getElementById('f-est').value=t.estimate_hours||'';
   document.getElementById('f-tags').value=(t.tags||[]).join(', ');
-  fillProjSelect(t.project_id||'');
-  document.getElementById('task-modal').classList.add('open');
+  fillProjSelect(t.project_id||'');document.getElementById('task-modal').classList.add('open');
 }
 function closeTaskModal(){document.getElementById('task-modal').classList.remove('open');}
 function fillProjSelect(val){document.getElementById('f-proj').innerHTML=`<option value="">— Không có —</option>`+projects.map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${esc(p.name)}</option>`).join('');}
-
 async function saveTask(){
   const name=document.getElementById('f-name').value.trim();
-  if(!name){showNotif('nw','⚠️ Thiếu tên','Nhập tên nhiệm vụ.');return;}
-  const btn=document.getElementById('save-task-btn');btn.textContent='⏳...';btn.disabled=true;
+  if(!name){showNotif('nw','⚠️ Thiếu tên','Nhập tên.');return;}
+  const btn=document.getElementById('save-task-btn');btn.textContent='⏳';btn.disabled=true;
   const toISO=s=>s?new Date(s).toISOString():null;
-  const data={name,description:document.getElementById('f-desc').value.trim()||null,project_id:document.getElementById('f-proj').value||null,priority:document.getElementById('f-pri').value,status:document.getElementById('f-status').value,start_time:toISO(document.getElementById('f-start').value),deadline:toISO(document.getElementById('f-dl').value),estimate_hours:parseFloat(document.getElementById('f-est').value)||0,tags:document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean),updated_at:new Date().toISOString()};
+  const data={name,description:document.getElementById('f-desc').value.trim()||null,project_id:document.getElementById('f-proj').value||null,priority:document.getElementById('f-pri').value,status:document.getElementById('f-status').value,start_time:toISO(document.getElementById('f-start').value),deadline:toISO(document.getElementById('f-dl').value),estimate_hours:parseFloat(document.getElementById('f-est').value)||0,tags:document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean),emoji:selectedEmoji||null,updated_at:new Date().toISOString()};
   setSyncUI('loading');
   try{
     if(editId){await db.updateTask(editId,data);Object.assign(tasks.find(t=>t.id===editId),data);showNotif('ns','✅ Đã cập nhật',`"${name}" lưu xong.`);}
     else{const rec={...data,id:'t_'+Date.now(),links:[],pomo_done:0};const res=await db.insertTask(rec);tasks.unshift(res?res[0]:rec);showNotif('ns','✨ Đã thêm',`"${name}" tạo xong!`);}
     setSyncUI('ok');renderContent();closeTaskModal();
-  }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi lưu',e.message);}
+  }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
   finally{btn.textContent='💾 Lưu';btn.disabled=false;}
 }
 
-// ── PROJECT MODAL ──────────────────────
-function openProjModal(){
-  editProjId=null;selColor='#4f7cff';
-  document.getElementById('proj-modal-title').innerHTML='📁 Tạo <span style="color:var(--ac)">Project</span>';
-  document.getElementById('pf-name').value='';document.getElementById('pf-desc').value='';
-  renderColorPicker();document.getElementById('proj-modal').classList.add('open');
-}
+// ─── PROJECT MODAL ─────────────────────
+function openProjModal(){editProjId=null;selColor='#4f7cff';document.getElementById('proj-modal-title').textContent='📁 Tạo Project';document.getElementById('pf-name').value='';document.getElementById('pf-desc').value='';renderColorPicker();document.getElementById('proj-modal').classList.add('open');}
 function closeProjModal(){document.getElementById('proj-modal').classList.remove('open');editProjId=null;}
 function renderColorPicker(){document.getElementById('cpicker').innerHTML=COLORS.map(c=>`<div class="cpick" style="background:${c};border:3px solid ${c===selColor?'#fff':'transparent'}" onclick="pickColor('${c}',this)"></div>`).join('');}
 function pickColor(c,el){selColor=c;document.querySelectorAll('.cpick').forEach(d=>d.style.borderColor='transparent');el.style.borderColor='#fff';}
-
+function toggleProjMenu(id,e){e.stopPropagation();document.querySelectorAll('.proj-dropdown').forEach(d=>{if(d.id!=='pdrop_'+id)d.classList.remove('open');});document.getElementById('pdrop_'+id)?.classList.toggle('open');}
+document.addEventListener('click',()=>document.querySelectorAll('.proj-dropdown').forEach(d=>d.classList.remove('open')));
+function editProject(id){
+  const p=projects.find(p=>p.id===id);if(!p)return;
+  editProjId=id;selColor=p.color;
+  document.getElementById('proj-modal-title').textContent='✏️ Chỉnh sửa Project';
+  document.getElementById('pf-name').value=p.name;document.getElementById('pf-desc').value=p.description||'';
+  renderColorPicker();document.getElementById('proj-modal').classList.add('open');
+}
+async function deleteProject(id){
+  const p=projects.find(p=>p.id===id);const tc=tasks.filter(t=>t.project_id===id).length;
+  if(!confirm(`Xóa project "${p?.name}"?${tc>0?` (${tc} task sẽ bỏ liên kết project)`:''}`))return;
+  projects=projects.filter(p=>p.id!==id);tasks=tasks.map(t=>t.project_id===id?{...t,project_id:null}:t);renderContent();setSyncUI('loading');
+  try{await db.deleteProject(id);setSyncUI('ok');showNotif('ns','🗑 Đã xóa',`"${p?.name}" xóa xong.`);}
+  catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);autoRefresh();}
+}
 async function saveProject(){
-  const name=document.getElementById('pf-name').value.trim();
-  if(!name){showNotif('nw','⚠️ Thiếu tên','Nhập tên project.');return;}
-  const btn=document.getElementById('save-proj-btn');btn.textContent='⏳...';btn.disabled=true;
+  const name=document.getElementById('pf-name').value.trim();if(!name){showNotif('nw','⚠️ Thiếu tên','Nhập tên.');return;}
+  const btn=document.getElementById('save-proj-btn');btn.textContent='⏳';btn.disabled=true;
   setSyncUI('loading');
   try{
     const desc=document.getElementById('pf-desc').value.trim()||null;
-    if(editProjId){
-      await db.updateProject(editProjId,{name,color:selColor,description:desc});
-      Object.assign(projects.find(p=>p.id===editProjId),{name,color:selColor,description:desc});
-      showNotif('ns','✅ Đã cập nhật',`"${name}" lưu xong.`);
-    } else {
-      const rec={id:'p_'+Date.now(),name,color:selColor,description:desc};
-      const res=await db.insertProject(rec);projects.push(res?res[0]:rec);
-      showNotif('ns','📁 Đã tạo',`"${name}" tạo xong!`);
-    }
+    if(editProjId){await db.updateProject(editProjId,{name,color:selColor,description:desc});Object.assign(projects.find(p=>p.id===editProjId),{name,color:selColor,description:desc});showNotif('ns','✅ Cập nhật xong',`"${name}" lưu xong.`);}
+    else{const rec={id:'p_'+Date.now(),name,color:selColor,description:desc};const res=await db.insertProject(rec);projects.push(res?res[0]:rec);showNotif('ns','📁 Đã tạo',`"${name}" tạo xong!`);}
     setSyncUI('ok');renderContent();closeProjModal();
   }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
   finally{btn.textContent='💾 Lưu';btn.disabled=false;}
 }
 
-// ── CONFIG ─────────────────────────────
-function openConfigModal(){const cfg=getConfig()||{};document.getElementById('cfg-url').value=cfg.url||'';document.getElementById('cfg-key').value=cfg.key||'';document.getElementById('cfg-status').className='config-status';document.getElementById('config-modal').classList.add('open');}
+// ─── CONFIG ────────────────────────────
+function openConfigModal(){const cfg=getConfig()||{};document.getElementById('cfg-url').value=cfg.url||'';document.getElementById('cfg-key').value=cfg.key||'';document.getElementById('cfg-status').className='cfg-status';document.getElementById('config-modal').classList.add('open');}
 function closeConfigModal(){document.getElementById('config-modal').classList.remove('open');}
 async function updateConfig(){
-  const url=document.getElementById('cfg-url').value.trim(),key=document.getElementById('cfg-key').value.trim();
-  const st=document.getElementById('cfg-status');st.className='config-status ok';st.textContent='⏳ Đang kiểm tra...';
-  try{await testConnection(url,key);saveConfig(url,key);SB_URL=url;SB_KEY=key;st.textContent='✅ Thành công! Đang tải lại...';setTimeout(()=>location.reload(),800);}
-  catch(e){st.className='config-status err';st.textContent='❌ '+e.message;}
+  const u=document.getElementById('cfg-url').value.trim(),k=document.getElementById('cfg-key').value.trim();
+  const st=document.getElementById('cfg-status');st.className='cfg-status ok';st.textContent='⏳ Kiểm tra...';
+  try{await testConnection(u,k);saveConfig(u,k);SB_URL=u;SB_KEY=k;st.textContent='✅ Thành công! Đang tải lại...';setTimeout(()=>location.reload(),700);}
+  catch(e){st.className='cfg-status err';st.textContent='❌ '+e.message;}
 }
-
-// ── SIDEBAR ────────────────────────────
 function openSide(){document.getElementById('sidebar').classList.add('open');document.getElementById('sideOverlay').classList.add('open');}
 function closeSide(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sideOverlay').classList.remove('open');}
 
-// ── POMODORO ───────────────────────────
-function startPom(id){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
-  clearInterval(pom.interval);pom.running=true;pom.taskId=id;pom.sec=25*60;
-  pom.interval=setInterval(tickPom,1000);renderContent();
-  showNotif('ni','🍅 Bắt đầu!',`25 phút cho "${t.name}".`);
-}
-function tickPom(){
-  if(!pom.running)return;pom.sec--;
-  const d=document.getElementById('pomo-display');
-  if(d)d.textContent=`${String(Math.floor(pom.sec/60)).padStart(2,'0')}:${String(pom.sec%60).padStart(2,'0')}`;
-  if(pom.sec<=0){
-    clearInterval(pom.interval);
-    const t=tasks.find(t=>t.id===pom.taskId);
-    if(t){t.pomo_done=(t.pomo_done||0)+1;db.updateTask(pom.taskId,{pomo_done:t.pomo_done,updated_at:new Date().toISOString()});}
-    showNotif('ns','🎉 Xong Pomodoro!','Nghỉ 5 phút nhé!');
-    pom={running:false,taskId:null,sec:25*60,interval:null};renderContent();
-  }
-}
+// ─── POMODORO ──────────────────────────
+function startPom(id){const t=tasks.find(t=>t.id===id);if(!t)return;clearInterval(pom.interval);pom.running=true;pom.taskId=id;pom.sec=25*60;pom.interval=setInterval(tickPom,1000);renderContent();showNotif('ni','🍅 Bắt đầu!',`25 phút cho "${t.name}".`);}
+function tickPom(){if(!pom.running)return;pom.sec--;const d=document.getElementById('pomo-display');if(d)d.textContent=`${String(Math.floor(pom.sec/60)).padStart(2,'0')}:${String(pom.sec%60).padStart(2,'0')}`;if(pom.sec<=0){clearInterval(pom.interval);const t=tasks.find(t=>t.id===pom.taskId);if(t){t.pomo_done=(t.pomo_done||0)+1;db.updateTask(pom.taskId,{pomo_done:t.pomo_done,updated_at:new Date().toISOString()});}showNotif('ns','🎉 Xong Pomodoro!','Nghỉ 5 phút nhé!');pom={running:false,taskId:null,sec:25*60,interval:null};renderContent();}}
 function togglePom(){pom.running=!pom.running;renderContent();}
 function stopPom(){clearInterval(pom.interval);pom={running:false,taskId:null,sec:25*60,interval:null};renderContent();}
 
-// ── DEADLINE ───────────────────────────
-function checkDeadlines(){
-  const now=Date.now(),h1=now+3600000,h24=now+86400000;
-  tasks.forEach(t=>{
-    if(t.status==='done'||!t.deadline)return;
-    const dl=new Date(t.deadline).getTime();
-    if(dl<now&&!dlChecked[t.id+'_ov']){dlChecked[t.id+'_ov']=1;showNotif('nd','🔥 Quá hạn!',`"${t.name}" đã quá hạn.`);}
-    if(dl>now&&dl<=h1&&!dlChecked[t.id+'_1h']){dlChecked[t.id+'_1h']=1;showNotif('nw','⚡ Còn 1 giờ!',`"${t.name}" deadline <1h.`);}
-    if(dl>now&&dl<=h24&&!dlChecked[t.id+'_24h']){dlChecked[t.id+'_24h']=1;showNotif('nw','⚠️ 24h nữa',`"${t.name}" deadline hôm nay.`);}
-  });
-}
+// ─── DEADLINE ──────────────────────────
+function checkDeadlines(){const now=Date.now(),h1=now+3600000,h24=now+86400000;tasks.forEach(t=>{if(t.status==='done'||!t.deadline)return;const dl=new Date(t.deadline).getTime();if(dl<now&&!dlChecked[t.id+'_ov']){dlChecked[t.id+'_ov']=1;showNotif('nd','🔥 Quá hạn!',`"${t.name}" đã quá hạn.`);}if(dl>now&&dl<=h1&&!dlChecked[t.id+'_1h']){dlChecked[t.id+'_1h']=1;showNotif('nw','⚡ Còn 1 giờ!',`"${t.name}" deadline <1h.`);}if(dl>now&&dl<=h24&&!dlChecked[t.id+'_24h']){dlChecked[t.id+'_24h']=1;showNotif('nw','⚠️ 24h nữa',`"${t.name}" deadline hôm nay.`);}});}
 
-// ── NOTIFS ─────────────────────────────
+// ─── NOTIFS ────────────────────────────
 let nid=0;
-function showNotif(cls,title,msg,dur=5500){
-  const id=++nid;const el=document.createElement('div');
-  el.className=`notif ${cls}`;el.id='n'+id;
-  const ico={nd:'🔥',nw:'⚠️',ns:'✅',ni:'ℹ️'};
-  el.innerHTML=`<div style="font-size:16px;flex-shrink:0">${ico[cls]||'📌'}</div><div class="notif-body"><div class="notif-title">${title}</div><div class="notif-msg">${msg}</div></div><button class="notif-x" onclick="document.getElementById('n${id}').remove()">×</button>`;
-  document.getElementById('notif-wrap').appendChild(el);
-  setTimeout(()=>el?.remove(),dur);
-}
+function showNotif(cls,title,msg,dur=5500){const id=++nid;const el=document.createElement('div');el.className=`notif ${cls}`;el.id='n'+id;const ico={nd:'🔥',nw:'⚠️',ns:'✅',ni:'ℹ️'};el.innerHTML=`<div style="font-size:15px;flex-shrink:0">${ico[cls]||'📌'}</div><div class="notif-body"><div class="notif-title">${title}</div><div class="notif-msg">${msg}</div></div><button class="notif-x" onclick="document.getElementById('n${id}').remove()">×</button>`;document.getElementById('notif-wrap').appendChild(el);setTimeout(()=>el?.remove(),dur);}
 
-// ══════════════════════════════════════
-// SQL MIGRATION NOTE (shown in console)
-// ══════════════════════════════════════
-// Run this in Supabase SQL Editor to add new features:
-// ALTER TABLE tasks ADD COLUMN IF NOT EXISTS links jsonb DEFAULT '[]';
-// CREATE TABLE IF NOT EXISTS subtasks (
-//   id text primary key, task_id text references tasks(id) on delete cascade,
-//   name text not null, done boolean default false,
-//   created_at timestamptz default now()
-// );
-// ALTER TABLE subtasks ENABLE ROW LEVEL SECURITY;
-// CREATE POLICY "Allow all" ON subtasks FOR ALL USING (true) WITH CHECK (true);
-
+// ─── KEYBOARD ──────────────────────────
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='n'){e.preventDefault();openTaskModal();}
-  if(e.key==='Escape'){closeTaskModal();closeProjModal();closeConfigModal();closeDrawer();closeSide();}
+  if(e.key==='Escape'){closeTaskModal();closeProjModal();closeConfigModal();closeDrawer();closeSide();document.getElementById('emoji-panel')?.classList.add('hidden');}
 });
+
+// SQL NOTE:
+// ALTER TABLE tasks ADD COLUMN IF NOT EXISTS emoji text;
+// ALTER TABLE tasks ADD COLUMN IF NOT EXISTS links jsonb DEFAULT '[]';
+// ALTER TABLE subtasks ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0;
+// (nếu chưa có bảng subtasks, chạy SQL đầy đủ từ lần trước)
+
 window.addEventListener('DOMContentLoaded',boot);
 </script>
 </body>
