@@ -372,7 +372,7 @@ textarea.fi{min-height:58px;resize:vertical}
     <div class="fr">
       <div class="fg"><label class="fl">Project</label><select class="fi" id="f-proj"></select></div>
       <div class="fg"><label class="fl">Ưu tiên</label>
-        <select class="fi" id="f-pri"><option value="high">🔴 Cao</option><option value="medium" selected>🟡 TB</option><option value="low">🟢 Thấp</option></select>
+        <select class="fi" id="f-pri"><option value="high">▲ Cao</option><option value="medium" selected>◆ Trung bình</option><option value="low">▽ Thấp</option></select>
       </div>
     </div>
     <div class="fr">
@@ -383,8 +383,8 @@ textarea.fi{min-height:58px;resize:vertical}
       <div class="fg"><label class="fl">Ước tính (h)</label><input class="fi" type="number" min="0" step="0.5" id="f-est" placeholder="2.5"></div>
       <div class="fg"><label class="fl">Trạng thái</label>
         <select class="fi" id="f-status">
-          <option value="todo">📝 Chưa làm</option><option value="inprogress">🚧 Đang làm</option>
-          <option value="review">👀 Review</option><option value="done">✅ Xong</option>
+          <option value="todo">Chưa làm</option><option value="inprogress">Đang làm</option>
+          <option value="review">Review</option><option value="done">Xong</option>
         </select>
       </div>
     </div>
@@ -856,7 +856,7 @@ function renderContent(){
     const dots=Array.from({length:POM_MAX},(_,i)=>`<div class="pdot ${i<(t?.pomo_done||0)?'on':''}"></div>`).join('');
     return `<div class="pomo-banner"><div style="flex:1;min-width:120px"><div style="font-size:11px;color:var(--tx2)">🍅 Đang tập trung</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(t?.name||'')}</div><div class="pomo-dots">${dots}</div></div><div class="pomo-timer" id="pomo-display">${mm}:${ss}</div><div style="display:flex;gap:6px"><button class="btn-g" onclick="togglePom()">${pom.running?'⏸':'▶'}</button><button class="btn-g" onclick="stopPom()">⏹</button></div></div>`;
   })():'';
-  const filterHtml=`<div class="filters">${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}].map(c=>`<div class="chip ${c.x||''} ${curFilter===c.k?'active':''}" onclick="setFilter('${c.k}')">${c.l}</div>`).join('')}</div><select class="sort-sel" id="sort-sel" onchange="renderContent()"><option value="created">🕐 Mới nhất</option><option value="dl">📅 Deadline</option><option value="pri">🎯 Ưu tiên</option><option value="az">🔤 A–Z</option></select>`;
+  const filterHtml=`<div class="filters">${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}].map(c=>`<div class="chip ${c.x||''} ${curFilter===c.k?'active':''}" onclick="setFilter('${c.k}')">${c.l}</div>`).join('')}</div><select class="sort-sel" id="sort-sel" onchange="renderContent()"><option value="created">Mới nhất</option><option value="dl">Deadline gần nhất</option><option value="pri">Ưu tiên cao nhất</option><option value="az">Tên A–Z</option></select>`;
   let tasksHtml='';
   if(!filtered.length){tasksHtml=`<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Không có task nào</div><div style="font-size:12px">Tạo task mới hoặc đổi bộ lọc</div></div>`;}
   else{
