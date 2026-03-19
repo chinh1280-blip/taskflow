@@ -214,8 +214,8 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .card-icon-lib{font-size:26px;color:var(--ac)}
 .card-icon-lib.material-icons{font-size:28px}}
 /* MODALS */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;transition:opacity .3s;pointer-events:none;opacity:0}
-.overlay.open{display:flex;opacity:1;pointer-events:all}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;justify-content:center;transition:opacity .3s;pointer-events:none;opacity:0}
+.overlay.open{opacity:1;pointer-events:all}
 .sheet{background:var(--s1);border:1px solid var(--bd);border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 -16px 64px rgba(0,0,0,.6)}
 .sheet-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 16px}
 .sheet-title{font-size:17px;font-weight:700;margin-bottom:16px}
@@ -372,7 +372,7 @@ textarea.fi{min-height:58px;resize:vertical}
     <div class="fr">
       <div class="fg"><label class="fl">Project</label><select class="fi" id="f-proj"></select></div>
       <div class="fg"><label class="fl">Ưu tiên</label>
-        <select class="fi" id="f-pri"><option value="high">▲ Cao</option><option value="medium" selected>◆ Trung bình</option><option value="low">▽ Thấp</option></select>
+        <select class="fi" id="f-pri"><option value="high">🔴 Cao</option><option value="medium" selected>🟡 TB</option><option value="low">🟢 Thấp</option></select>
       </div>
     </div>
     <div class="fr">
@@ -383,8 +383,8 @@ textarea.fi{min-height:58px;resize:vertical}
       <div class="fg"><label class="fl">Ước tính (h)</label><input class="fi" type="number" min="0" step="0.5" id="f-est" placeholder="2.5"></div>
       <div class="fg"><label class="fl">Trạng thái</label>
         <select class="fi" id="f-status">
-          <option value="todo">Chưa làm</option><option value="inprogress">Đang làm</option>
-          <option value="review">Review</option><option value="done">Xong</option>
+          <option value="todo">📝 Chưa làm</option><option value="inprogress">🚧 Đang làm</option>
+          <option value="review">👀 Review</option><option value="done">✅ Xong</option>
         </select>
       </div>
     </div>
@@ -856,7 +856,7 @@ function renderContent(){
     const dots=Array.from({length:POM_MAX},(_,i)=>`<div class="pdot ${i<(t?.pomo_done||0)?'on':''}"></div>`).join('');
     return `<div class="pomo-banner"><div style="flex:1;min-width:120px"><div style="font-size:11px;color:var(--tx2)">🍅 Đang tập trung</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(t?.name||'')}</div><div class="pomo-dots">${dots}</div></div><div class="pomo-timer" id="pomo-display">${mm}:${ss}</div><div style="display:flex;gap:6px"><button class="btn-g" onclick="togglePom()">${pom.running?'⏸':'▶'}</button><button class="btn-g" onclick="stopPom()">⏹</button></div></div>`;
   })():'';
-  const filterHtml=`<div class="filters">${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}].map(c=>`<div class="chip ${c.x||''} ${curFilter===c.k?'active':''}" onclick="setFilter('${c.k}')">${c.l}</div>`).join('')}</div><select class="sort-sel" id="sort-sel" onchange="renderContent()"><option value="created">Mới nhất</option><option value="dl">Deadline gần nhất</option><option value="pri">Ưu tiên cao nhất</option><option value="az">Tên A–Z</option></select>`;
+  const filterHtml=`<div class="filters">${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}].map(c=>`<div class="chip ${c.x||''} ${curFilter===c.k?'active':''}" onclick="setFilter('${c.k}')">${c.l}</div>`).join('')}</div><select class="sort-sel" id="sort-sel" onchange="renderContent()"><option value="created">🕐 Mới nhất</option><option value="dl">📅 Deadline</option><option value="pri">🎯 Ưu tiên</option><option value="az">🔤 A–Z</option></select>`;
   let tasksHtml='';
   if(!filtered.length){tasksHtml=`<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Không có task nào</div><div style="font-size:12px">Tạo task mới hoặc đổi bộ lọc</div></div>`;}
   else{
@@ -1252,9 +1252,7 @@ function openTaskModal(){
   renderIconInBtn({type:'',value:''});
   ['f-name','f-desc','f-start','f-dl','f-tags'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('f-pri').value='medium';document.getElementById('f-status').value='todo';document.getElementById('f-est').value='';
-  fillProjSelect('');
-  const _tm=document.getElementById('task-modal');
-  _tm.style.display='flex';requestAnimationFrame(()=>{_tm.classList.add('open');});
+  fillProjSelect('');document.getElementById('task-modal').classList.add('open');
   setTimeout(()=>document.getElementById('f-name').focus(),350);
 }
 function openTaskModalWithStatus(status){openTaskModal();document.getElementById('f-status').value=status;}
@@ -1270,15 +1268,9 @@ function openEdit(id){
   document.getElementById('f-dl').value=t.deadline?t.deadline.slice(0,16):'';
   document.getElementById('f-est').value=t.estimate_hours||'';
   document.getElementById('f-tags').value=(t.tags||[]).join(', ');
-  fillProjSelect(t.project_id||'');
-  const _em=document.getElementById('task-modal');
-  _em.style.display='flex';requestAnimationFrame(()=>{_em.classList.add('open');});
+  fillProjSelect(t.project_id||'');document.getElementById('task-modal').classList.add('open');
 }
-function closeTaskModal(){
-  const _m=document.getElementById('task-modal');
-  _m.classList.remove('open');
-  setTimeout(()=>{if(!_m.classList.contains('open'))_m.style.display='none';},320);
-}
+function closeTaskModal(){document.getElementById('task-modal').classList.remove('open');}
 function fillProjSelect(val){document.getElementById('f-proj').innerHTML=`<option value="">— Không có —</option>`+projects.map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${esc(p.name)}</option>`).join('');}
 async function saveTask(){
   const name=document.getElementById('f-name').value.trim();
@@ -1296,14 +1288,8 @@ async function saveTask(){
 }
 
 // ─── PROJECT MODAL ─────────────────────
-function openProjModal(){editProjId=null;selColor='#4f7cff';document.getElementById('proj-modal-title').textContent='📁 Tạo Project';document.getElementById('pf-name').value='';document.getElementById('pf-desc').value='';renderColorPicker();
-  const _pm=document.getElementById('proj-modal');
-  _pm.style.display='flex';requestAnimationFrame(()=>{_pm.classList.add('open');});}
-function closeProjModal(){
-  const _m=document.getElementById('proj-modal');
-  _m.classList.remove('open');editProjId=null;
-  setTimeout(()=>{if(!_m.classList.contains('open'))_m.style.display='none';},320);
-}
+function openProjModal(){editProjId=null;selColor='#4f7cff';document.getElementById('proj-modal-title').textContent='📁 Tạo Project';document.getElementById('pf-name').value='';document.getElementById('pf-desc').value='';renderColorPicker();document.getElementById('proj-modal').classList.add('open');}
+function closeProjModal(){document.getElementById('proj-modal').classList.remove('open');editProjId=null;}
 function renderColorPicker(){document.getElementById('cpicker').innerHTML=COLORS.map(c=>`<div class="cpick" style="background:${c};border:3px solid ${c===selColor?'#fff':'transparent'}" onclick="pickColor('${c}',this)"></div>`).join('');}
 function pickColor(c,el){selColor=c;document.querySelectorAll('.cpick').forEach(d=>d.style.borderColor='transparent');el.style.borderColor='#fff';}
 function toggleProjMenu(id,e){e.stopPropagation();document.querySelectorAll('.proj-dropdown').forEach(d=>{if(d.id!=='pdrop_'+id)d.classList.remove('open');});document.getElementById('pdrop_'+id)?.classList.toggle('open');}
@@ -1336,14 +1322,8 @@ async function saveProject(){
 }
 
 // ─── CONFIG ────────────────────────────
-function openConfigModal(){const cfg=getConfig()||{};document.getElementById('cfg-url').value=cfg.url||'';document.getElementById('cfg-key').value=cfg.key||'';document.getElementById('cfg-status').className='cfg-status';
-  const _cm=document.getElementById('config-modal');
-  _cm.style.display='flex';requestAnimationFrame(()=>{_cm.classList.add('open');});}
-function closeConfigModal(){
-  const _m=document.getElementById('config-modal');
-  _m.classList.remove('open');
-  setTimeout(()=>{if(!_m.classList.contains('open'))_m.style.display='none';},320);
-}
+function openConfigModal(){const cfg=getConfig()||{};document.getElementById('cfg-url').value=cfg.url||'';document.getElementById('cfg-key').value=cfg.key||'';document.getElementById('cfg-status').className='cfg-status';document.getElementById('config-modal').classList.add('open');}
+function closeConfigModal(){document.getElementById('config-modal').classList.remove('open');}
 async function updateConfig(){
   const u=document.getElementById('cfg-url').value.trim(),k=document.getElementById('cfg-key').value.trim();
   const st=document.getElementById('cfg-status');st.className='cfg-status ok';st.textContent='⏳ Kiểm tra...';
