@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#0d0f14">
 <title>TaskFlow ☁️</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 <style>
 :root{--bg:#0d0f14;--s1:#161920;--s2:#1e2230;--s3:#252a3a;--bd:#2e3450;--ac:#4f7cff;--ac2:#7c5fff;--ok:#22d3a0;--wa:#ffb347;--er:#ff4f6d;--tx:#e8ecf5;--tx2:#9aa5c4;--tx3:#5a6480;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -171,20 +173,46 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .add-input{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;outline:none;color:var(--tx)}
 .add-input:focus{border-color:var(--ac)}
 .add-btn{padding:8px 13px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600}
-/* EMOJI PICKER */
-.emoji-picker-wrap{position:relative;display:inline-block}
-.emoji-picker-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border .2s;flex-shrink:0}
-.emoji-picker-btn:hover{border-color:var(--ac)}
-.emoji-panel{position:absolute;top:100%;left:0;margin-top:6px;background:var(--s2);border:1px solid var(--bd);border-radius:14px;padding:12px;z-index:500;width:290px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.emoji-panel.hidden{display:none}
-.emoji-cats{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
-.emoji-cat-btn{padding:4px 10px;border-radius:20px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer;transition:all .15s}
-.emoji-cat-btn.active{background:var(--ac);color:#fff}
-.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;max-height:180px;overflow-y:auto}
-.emoji-btn{width:30px;height:30px;border-radius:6px;border:none;background:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.emoji-btn:hover{background:var(--s3)}
-.emoji-clear{width:100%;margin-top:8px;padding:6px;border-radius:8px;border:none;background:var(--s3);color:var(--tx2);font-size:12px;cursor:pointer}
-.emoji-clear:hover{background:rgba(255,79,109,.2);color:var(--er)}
+/* INLINE EDIT */
+.inline-edit-wrap{flex:1;display:flex;align-items:center;gap:5px;min-width:0}
+.inline-view{flex:1;min-width:0;cursor:pointer;border-radius:5px;padding:1px 3px;transition:background .15s;display:flex;align-items:center;gap:4px}
+.inline-view:hover{background:rgba(79,124,255,.09)}
+.inline-view:hover .edit-hint{opacity:1}
+.edit-hint{font-size:10px;color:var(--ac);opacity:0;transition:opacity .15s;flex-shrink:0}
+.inline-form{flex:1;display:none;flex-direction:column;gap:5px}
+.inline-form.open{display:flex}
+.inline-inp{background:var(--s3);border:1px solid var(--ac);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--tx);outline:none;width:100%}
+.inline-row{display:flex;gap:4px}
+.inline-ok{padding:4px 10px;border-radius:6px;border:none;background:var(--ac);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+.inline-cancel{padding:4px 8px;border-radius:6px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer}
+.di-edit{background:none;border:none;color:var(--tx3);font-size:13px;padding:2px 3px;opacity:0;transition:opacity .15s;flex-shrink:0;cursor:pointer}
+.drag-item:hover .di-edit,.drag-item:hover .drag-item-del{opacity:1}
+/* ICON PICKER */
+.icon-picker-wrap{position:relative;display:inline-block}
+.icon-picker-btn{width:48px;height:48px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border .2s;flex-shrink:0;overflow:hidden;color:var(--ac)}
+.icon-picker-btn:hover{border-color:var(--ac)}
+.icon-panel{position:absolute;top:calc(100% + 6px);left:0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:12px;z-index:600;width:320px;box-shadow:0 16px 48px rgba(0,0,0,.65);display:none}
+.icon-panel.open{display:block}
+.icon-tabs{display:flex;gap:3px;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px;flex-wrap:wrap}
+.icon-tab{padding:4px 10px;border-radius:7px;border:none;background:none;color:var(--tx3);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.icon-tab.active{background:rgba(79,124,255,.15);color:var(--ac)}
+.icon-search-inp{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;font-size:12px;outline:none;margin-bottom:8px;color:var(--tx)}
+.icon-search-inp:focus{border-color:var(--ac)}
+.icon-cat-row{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.icon-cat-btn{padding:3px 9px;border-radius:20px;border:none;background:var(--s3);color:var(--tx2);font-size:10px;cursor:pointer;transition:all .15s}
+.icon-cat-btn.active{background:var(--ac);color:#fff}
+.icon-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;max-height:196px;overflow-y:auto}
+.icon-btn{width:38px;height:38px;border-radius:7px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;font-size:17px;color:var(--tx2)}
+.icon-btn:hover{background:var(--s2);color:var(--tx)}
+.icon-btn i{font-size:16px;line-height:1;pointer-events:none}
+.icon-btn span.material-icons{font-size:18px;line-height:1;pointer-events:none}
+.icon-btn.sel{background:rgba(79,124,255,.18);color:var(--ac)}
+.icon-clear-btn{width:100%;margin-top:8px;padding:6px;border-radius:8px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer}
+.icon-clear-btn:hover{background:rgba(255,79,109,.15);color:var(--er)}
+.card-icon-wrap{margin-bottom:10px;line-height:1}
+.card-icon-emoji{font-size:28px}
+.card-icon-lib{font-size:26px;color:var(--ac)}
+.card-icon-lib.material-icons{font-size:28px}}
 /* MODALS */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;justify-content:center;transition:opacity .3s;pointer-events:none;opacity:0}
 .overlay.open{opacity:1;pointer-events:all}
@@ -321,18 +349,20 @@ textarea.fi{min-height:58px;resize:vertical}
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="task-modal-title">✨ Thêm nhiệm vụ</div>
-    <!-- EMOJI ROW -->
+    <!-- ICON ROW -->
     <div class="fg" style="display:flex;align-items:center;gap:10px">
       <div>
         <label class="fl">Icon</label>
-        <div class="emoji-picker-wrap" id="emoji-wrap">
-          <button class="emoji-picker-btn" id="emoji-btn" onclick="toggleEmojiPanel()" type="button">
-            <span id="emoji-preview">📌</span>
+        <div class="icon-picker-wrap" id="icon-wrap">
+          <button class="icon-picker-btn" id="icon-btn" onclick="toggleIconPanel()" type="button">
+            <span id="icon-preview">📌</span>
           </button>
-          <div class="emoji-panel hidden" id="emoji-panel">
-            <div class="emoji-cats" id="emoji-cats"></div>
-            <div class="emoji-grid" id="emoji-grid"></div>
-            <button class="emoji-clear" onclick="clearEmoji()">✕ Bỏ icon</button>
+          <div class="icon-panel" id="icon-panel">
+            <div class="icon-tabs" id="icon-tabs"></div>
+            <input class="icon-search-inp" id="icon-search" placeholder="🔍 Tìm icon..." oninput="filterIcons()">
+            <div class="icon-cat-row" id="icon-cat-row"></div>
+            <div class="icon-grid" id="icon-grid"></div>
+            <button class="icon-clear-btn" onclick="clearIcon()">✕ Bỏ icon</button>
           </div>
         </div>
       </div>
@@ -400,41 +430,195 @@ textarea.fi{min-height:58px;resize:vertical}
 // ═══════════════════════════════════════
 // EMOJI DATA
 // ═══════════════════════════════════════
-const EMOJI_CATS={
-  '⭐ Phổ biến':['📌','⭐','🔥','✅','💡','🎯','🚀','💪','📋','🛠','🎨','📊','💼','📱','🖥','🔔','⚠️','✨','🏆','💎'],
-  '😀 Cảm xúc':['😀','😎','🤔','💪','🙌','👍','❤️','🎉','😤','🤩','😊','🥳','😅','🫡','🤝'],
-  '💼 Công việc':['📝','📋','📊','📈','📉','🗂','📁','📂','✏️','🖊','📌','🔖','📎','🗒','🗓','📅','⏰','⏱','🔔','📢'],
-  '💻 Tech':['💻','🖥','📱','⌨️','🖱','🖨','📡','🔌','🔋','💾','💿','🖲','📟','📠','🔧','🔩','⚙️','🛠','🔑','🔐'],
-  '🎨 Sáng tạo':['🎨','✏️','🖌','🖍','📐','📏','🎭','🎬','🎵','🎸','🎹','🎤','📷','🎥','🎞','🎪'],
-  '🌈 Màu sắc':['🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','🔺','🔻','💠'],
-};
-let emojiCat=Object.keys(EMOJI_CATS)[0], selectedEmoji='';
+// ═══════════════════════════════════════
+// ICON PICKER — Emoji + FontAwesome + Material Icons + Lucide
+// ═══════════════════════════════════════
+let selectedIcon = {type:'',value:''}; // type: emoji|fa|mi|lucide
+let iconLib = 'emoji'; // active tab
+let iconCat = ''; // active category
 
-function buildEmojiPanel(){
-  const cats=document.getElementById('emoji-cats');
-  const grid=document.getElementById('emoji-grid');
-  cats.innerHTML=Object.keys(EMOJI_CATS).map(c=>`<button class="emoji-cat-btn ${c===emojiCat?'active':''}" onclick="switchEmojiCat('${c}')">${c.split(' ')[0]}</button>`).join('');
-  grid.innerHTML=EMOJI_CATS[emojiCat].map(e=>`<button class="emoji-btn" onclick="pickEmoji('${e}')">${e}</button>`).join('');
+const EMOJI_LIB = {
+  '⭐ Phổ biến': ['📌','⭐','🔥','✅','💡','🎯','🚀','💪','📋','🛠','🎨','📊','💼','📱','🖥','🔔','⚠️','✨','🏆','💎','🕐','📅','🔗','💬','📣'],
+  '😀 Cảm xúc': ['😀','😎','🤔','💪','🙌','👍','❤️','🎉','😤','🤩','😊','🥳','😅','🫡','🤝','🫶','💯','🙏','✊','👊'],
+  '💼 Công việc': ['📝','📋','📊','📈','📉','🗂','📁','📂','✏️','🖊','📌','🔖','📎','🗒','🗓','📅','⏰','⏱','🔔','📢','🔍','💼','🏢','📞'],
+  '💻 Tech': ['💻','🖥','📱','⌨️','🖱','📡','🔌','🔋','💾','💿','🔧','🔩','⚙️','🛠','🔑','🔐','🌐','🖨','📟','🧮','🤖','🔭','🧬','⚡'],
+  '🎨 Sáng tạo': ['🎨','✏️','🖌','🖍','📐','📏','🎭','🎬','🎵','🎸','🎹','🎤','📷','🎥','🎞','🎪','🎲','🃏','🧩','🎮'],
+  '🌈 Màu': ['🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','🔺','🔻','💠','🔘','🔲','🔳'],
+};
+
+const FA_LIB = {
+  'Phổ biến': [
+    ['fa-solid fa-star','star'],['fa-solid fa-fire','fire'],['fa-solid fa-bolt','bolt'],['fa-solid fa-flag','flag'],
+    ['fa-solid fa-check','check'],['fa-solid fa-xmark','xmark'],['fa-solid fa-heart','heart'],['fa-solid fa-bell','bell'],
+    ['fa-solid fa-bookmark','bookmark'],['fa-solid fa-tag','tag'],['fa-solid fa-circle-info','info'],['fa-solid fa-triangle-exclamation','warn'],
+    ['fa-solid fa-thumbs-up','thumbs-up'],['fa-solid fa-crown','crown'],['fa-solid fa-gem','gem'],['fa-solid fa-rocket','rocket'],
+  ],
+  'Công việc': [
+    ['fa-solid fa-briefcase','briefcase'],['fa-solid fa-calendar','calendar'],['fa-solid fa-clock','clock'],['fa-solid fa-list-check','list-check'],
+    ['fa-solid fa-chart-bar','chart-bar'],['fa-solid fa-chart-line','chart-line'],['fa-solid fa-file-lines','file'],['fa-solid fa-folder','folder'],
+    ['fa-solid fa-envelope','envelope'],['fa-solid fa-paper-plane','paper-plane'],['fa-solid fa-comment','comment'],['fa-solid fa-phone','phone'],
+    ['fa-solid fa-users','users'],['fa-solid fa-user-tie','user-tie'],['fa-solid fa-building','building'],['fa-solid fa-handshake','handshake'],
+  ],
+  'Tech': [
+    ['fa-solid fa-laptop','laptop'],['fa-solid fa-mobile-screen','mobile'],['fa-solid fa-server','server'],['fa-solid fa-database','database'],
+    ['fa-solid fa-code','code'],['fa-brands fa-github','github'],['fa-solid fa-bug','bug'],['fa-solid fa-gear','gear'],
+    ['fa-solid fa-shield','shield'],['fa-solid fa-wifi','wifi'],['fa-solid fa-cloud','cloud'],['fa-solid fa-microchip','microchip'],
+    ['fa-solid fa-terminal','terminal'],['fa-solid fa-key','key'],['fa-solid fa-lock','lock'],['fa-solid fa-robot','robot'],
+  ],
+  'Thiết kế': [
+    ['fa-solid fa-palette','palette'],['fa-solid fa-pen-nib','pen'],['fa-solid fa-crop','crop'],['fa-solid fa-wand-magic-sparkles','magic'],
+    ['fa-solid fa-image','image'],['fa-solid fa-layer-group','layers'],['fa-solid fa-vector-square','vector'],['fa-solid fa-grid','grid'],
+    ['fa-solid fa-shapes','shapes'],['fa-solid fa-draw-polygon','polygon'],['fa-solid fa-font','font'],['fa-solid fa-fill-drip','fill'],
+  ],
+};
+
+const MI_LIB = {
+  'Phổ biến': ['star','favorite','check_circle','flag','bolt','rocket_launch','thumb_up','notifications','bookmark','label','info','warning','trending_up','emoji_events','diamond','auto_awesome'],
+  'Công việc': ['work','calendar_month','schedule','task_alt','bar_chart','show_chart','description','folder','email','send','chat','phone','group','badge','business','handshake'],
+  'Tech': ['laptop','smartphone','cloud','storage','code','terminal','bug_report','settings','security','wifi','memory','developer_mode','api','hub','lock','smart_toy'],
+  'UI': ['home','search','add','edit','delete','share','download','upload','refresh','menu','more_vert','close','arrow_forward','expand_more','visibility','filter_list'],
+};
+
+const LUCIDE_LIB = {
+  'Phổ biến': [
+    ['<polyline points="20 6 9 17 4 12"/>','check'],
+    ['<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>','star'],
+    ['<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><polyline points="12 6 12 12 16 14"/>','clock'],
+    ['<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/>','phone'],
+    ['<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>','mail'],
+    ['<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>','message'],
+    ['<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>','info'],
+    ['<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>','alert'],
+    ['<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>','star2'],
+    ['<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>','heart'],
+    ['<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>','coffee'],
+    ['<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>','monitor'],
+    ['<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>','smartphone'],
+    ['<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>','package'],
+    ['<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>','target'],
+    ['<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>','send'],
+  ],
+  'Tech': [
+    ['<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>','code'],
+    ['<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>','desktop'],
+    ['<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>','database'],
+    ['<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>','chart'],
+    ['<circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>','settings'],
+    ['<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>','shield'],
+    ['<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>','lock'],
+    ['<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>','wifi'],
+    ['<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>','activity'],
+    ['<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>','layers'],
+    ['<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>','search'],
+    ['<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>','upload'],
+  ],
+};
+
+function renderIconInBtn(icon){
+  const btn = document.getElementById('icon-btn');
+  const prev = document.getElementById('icon-preview');
+  if(!icon||!icon.type){prev.innerHTML='📌';prev.style.cssText='';return;}
+  if(icon.type==='emoji'){prev.innerHTML=icon.value;prev.style.cssText='font-size:22px';}
+  else if(icon.type==='fa'){prev.innerHTML=`<i class="${icon.value}" style="font-size:18px;color:var(--ac)"></i>`;prev.style.cssText='';}
+  else if(icon.type==='mi'){prev.innerHTML=`<span class="material-icons" style="font-size:22px;color:var(--ac)">${icon.value}</span>`;prev.style.cssText='';}
+  else if(icon.type==='lucide'){prev.innerHTML=`<svg viewBox="0 0 24 24" width="22" height="22" stroke="var(--ac)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${icon.value[0]}</svg>`;prev.style.cssText='';}
 }
-function switchEmojiCat(c){emojiCat=c;buildEmojiPanel();}
-function toggleEmojiPanel(){
-  const p=document.getElementById('emoji-panel');
-  if(p.classList.contains('hidden')){buildEmojiPanel();p.classList.remove('hidden');}
-  else p.classList.add('hidden');
+
+function renderIconInCard(icon){
+  if(!icon||!icon.type)return '';
+  if(icon.type==='emoji')return `<div class="card-icon-wrap"><span class="card-icon-emoji">${icon.value}</span></div>`;
+  if(icon.type==='fa')return `<div class="card-icon-wrap"><i class="${icon.value} card-icon-lib"></i></div>`;
+  if(icon.type==='mi')return `<div class="card-icon-wrap"><span class="material-icons card-icon-lib">${icon.value}</span></div>`;
+  if(icon.type==='lucide')return `<div class="card-icon-wrap"><svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--ac)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${icon.value[0]}</svg></div>`;
+  return '';
 }
-function pickEmoji(e){
-  selectedEmoji=e;
-  document.getElementById('emoji-preview').textContent=e;
-  document.getElementById('emoji-panel').classList.add('hidden');
+
+function toggleIconPanel(){
+  const p=document.getElementById('icon-panel');
+  if(p.classList.contains('open')){p.classList.remove('open');}
+  else{buildIconPanel();p.classList.add('open');}
 }
-function clearEmoji(){
-  selectedEmoji='';
-  document.getElementById('emoji-preview').textContent='📌';
-  document.getElementById('emoji-panel').classList.add('hidden');
+
+function buildIconPanel(){
+  const tabs=['😀 Emoji','FA','Material','Lucide'];
+  const tabMap={'😀 Emoji':'emoji','FA':'fa','Material':'mi','Lucide':'lucide'};
+  document.getElementById('icon-tabs').innerHTML=tabs.map(t=>`<button class="icon-tab ${tabMap[t]===iconLib?'active':''}" onclick="switchIconLib('${tabMap[t]}')">${t}</button>`).join('');
+  document.getElementById('icon-search').value='';
+  buildIconCats();
+  buildIconGrid('');
 }
+
+function switchIconLib(lib){
+  iconLib=lib;iconCat='';
+  buildIconCats();buildIconGrid('');
+  document.querySelectorAll('.icon-tab').forEach((b,i)=>{
+    const libs=['emoji','fa','mi','lucide'];
+    b.classList.toggle('active',libs[i]===lib);
+  });
+}
+
+function buildIconCats(){
+  let cats=[];
+  if(iconLib==='emoji')cats=Object.keys(EMOJI_LIB);
+  else if(iconLib==='fa')cats=Object.keys(FA_LIB);
+  else if(iconLib==='mi')cats=Object.keys(MI_LIB);
+  else cats=Object.keys(LUCIDE_LIB);
+  document.getElementById('icon-cat-row').innerHTML=cats.map(c=>`<button class="icon-cat-btn ${c===iconCat?'active':''}" onclick="switchIconCat('${c}')">${c.split(' ')[0]}</button>`).join('');
+}
+
+function switchIconCat(c){iconCat=c;document.querySelectorAll('.icon-cat-btn').forEach(b=>b.classList.toggle('active',b.textContent===c.split(' ')[0]));buildIconGrid('');}
+
+function filterIcons(){buildIconGrid(document.getElementById('icon-search').value.toLowerCase());}
+
+function buildIconGrid(q){
+  const grid=document.getElementById('icon-grid');
+  let html='';
+  const isSel=(type,val)=>selectedIcon.type===type&&(Array.isArray(val)?selectedIcon.value[0]===val[0]:selectedIcon.value===val);
+  if(iconLib==='emoji'){
+    const cats=iconCat?{[iconCat]:EMOJI_LIB[iconCat]}:EMOJI_LIB;
+    Object.values(cats).flat().filter(e=>!q||e.includes(q)).forEach(e=>{
+      html+=`<button class="icon-btn ${isSel('emoji',e)?'sel':''}" onclick="pickIcon('emoji','${e}','')" title="${e}">${e}</button>`;
+    });
+  } else if(iconLib==='fa'){
+    const cats=iconCat?{[iconCat]:FA_LIB[iconCat]}:FA_LIB;
+    Object.values(cats).flat().filter(([cls,name])=>!q||name.includes(q)||cls.includes(q)).forEach(([cls,name])=>{
+      html+=`<button class="icon-btn ${isSel('fa',cls)?'sel':''}" onclick="pickIcon('fa','${cls}','')" title="${name}"><i class="${cls}"></i></button>`;
+    });
+  } else if(iconLib==='mi'){
+    const cats=iconCat?{[iconCat]:MI_LIB[iconCat]}:MI_LIB;
+    Object.values(cats).flat().filter(n=>!q||n.includes(q)).forEach(n=>{
+      html+=`<button class="icon-btn ${isSel('mi',n)?'sel':''}" onclick="pickIcon('mi','${n}','')" title="${n}"><span class="material-icons">${n}</span></button>`;
+    });
+  } else {
+    const cats=iconCat?{[iconCat]:LUCIDE_LIB[iconCat]}:LUCIDE_LIB;
+    Object.values(cats).flat().filter(([,name])=>!q||name.includes(q)).forEach(([svg,name])=>{
+      const svgEsc=svg.replace(/"/g,'&quot;');
+      html+=`<button class="icon-btn ${isSel('lucide',svg)?'sel':''}" onclick="pickIconLucide(this,'${name}')" data-svg="${svgEsc}" title="${name}"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${svg}</svg></button>`;
+    });
+  }
+  grid.innerHTML=html||'<div style="grid-column:1/-1;font-size:12px;color:var(--tx3);text-align:center;padding:20px">Không tìm thấy icon</div>';
+}
+
+function pickIcon(type,value,_){
+  selectedIcon={type,value};
+  renderIconInBtn(selectedIcon);
+  document.getElementById('icon-panel').classList.remove('open');
+}
+function pickIconLucide(btn,name){
+  const svg=btn.dataset.svg;
+  selectedIcon={type:'lucide',value:[svg,name]};
+  renderIconInBtn(selectedIcon);
+  document.getElementById('icon-panel').classList.remove('open');
+}
+function clearIcon(){
+  selectedIcon={type:'',value:''};
+  renderIconInBtn(selectedIcon);
+  document.getElementById('icon-panel').classList.remove('open');
+}
+
 document.addEventListener('click',e=>{
-  const wrap=document.getElementById('emoji-wrap');
-  if(wrap&&!wrap.contains(e.target))document.getElementById('emoji-panel')?.classList.add('hidden');
+  const wrap=document.getElementById('icon-wrap');
+  if(wrap&&!wrap.contains(e.target))document.getElementById('icon-panel')?.classList.remove('open');
 });
 
 // ═══════════════════════════════════════
@@ -693,7 +877,7 @@ function mkCard(t){
   const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t),prog=getSubProg(t.id),links=t.links||[];
   const dots=Array.from({length:POM_MAX},(_,i)=>`<div class="pdot ${i<(t.pomo_done||0)?'on':''}"></div>`).join('');
   return `<div class="task-card ${t.status==='done'?'done':''} ${dl.cls}" onclick="openDrawer('${t.id}')">
-    ${t.emoji?`<div class="card-emoji">${t.emoji}</div>`:''}
+    ${renderIconInCard(t.icon_data?tryParseIcon(t.icon_data):(t.emoji?{type:'emoji',value:t.emoji}:null))}
     <div class="card-header">
       <div class="cb ${t.status==='done'?'on':''}" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.status==='done'?'✓':''}</div>
       <div class="card-title ${t.status==='done'?'done':''}">${esc(t.name)}</div>
@@ -742,7 +926,7 @@ function mkKanban(filtered){
     return `<div class="kanban-col"><div class="kanban-col-header"><div class="kanban-col-dot" style="background:${col.color}"></div><span>${col.label}</span><span class="kanban-col-count">${ct.length}</span></div>
       ${ct.map(t=>{const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t),prog=getSubProg(t.id),links=t.links||[];
         return `<div class="kanban-card ${dl.cls}" onclick="openDrawer('${t.id}')">
-          ${t.emoji?`<div class="kanban-emoji">${t.emoji}</div>`:''}
+          ${renderIconInCard(t.icon_data?tryParseIcon(t.icon_data):(t.emoji?{type:'emoji',value:t.emoji}:null))}
           <div class="kanban-card-title ${t.status==='done'?'done':''}">${esc(t.name)}</div>
           ${prog?`<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:2px"><span>Subtasks</span><span>${prog.done}/${prog.total}</span></div><div class="card-prog-bar"><div class="card-prog-fill" style="width:${prog.pct}%"></div></div></div>`:''}
           <div class="kanban-card-meta">
@@ -782,7 +966,7 @@ function renderDrawer(taskId){
   const subs=subtasksCache[taskId]||[],links=t.links||[];
   const subDone=subs.filter(s=>s.done).length,subPct=subs.length?Math.round(subDone/subs.length*100):0;
 
-  document.getElementById('drawer-title').textContent=(t.emoji?t.emoji+' ':'')+t.name;
+  const _ic=t.icon_data?tryParseIcon(t.icon_data):(t.emoji?{type:'emoji',value:t.emoji}:null);document.getElementById('drawer-title').textContent=(_ic&&_ic.type==='emoji'?_ic.value+' ':'')+t.name;
 
   const subsHtml=subs.map((s,i)=>`
     <li class="drag-item" id="sub_${s.id}" draggable="true"
@@ -792,7 +976,21 @@ function renderDrawer(taskId){
       ondragend="onDragEnd()">
       <span class="drag-handle">⠿</span>
       <div class="cb ${s.done?'on':''}" onclick="toggleSubtask('${taskId}','${s.id}')">${s.done?'✓':''}</div>
-      <span class="drag-item-name ${s.done?'done':''}">${esc(s.name)}</span>
+      <div class="inline-edit-wrap">
+        <div class="inline-view" id="sv_${s.id}" ondblclick="startEditSubtask('${taskId}','${s.id}')">
+          <span class="drag-item-name ${s.done?'done':''}">${esc(s.name)}</span>
+          <span class="edit-hint">✏️</span>
+        </div>
+        <div class="inline-form" id="sf_${s.id}">
+          <input class="inline-inp" value="${esc(s.name)}" placeholder="Tên subtask..."
+            onkeydown="if(event.key==='Enter')saveEditSubtask('${taskId}','${s.id}');if(event.key==='Escape')cancelEditSubtask('${s.id}')">
+          <div class="inline-row">
+            <button class="inline-ok" onclick="saveEditSubtask('${taskId}','${s.id}')">✓</button>
+            <button class="inline-cancel" onclick="cancelEditSubtask('${s.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+      <button class="di-edit" onclick="startEditSubtask('${taskId}','${s.id}')" title="Sửa">✏️</button>
       <button class="drag-item-del" onclick="delSubtask('${taskId}','${s.id}')">×</button>
     </li>`).join('');
 
@@ -803,7 +1001,25 @@ function renderDrawer(taskId){
       ondrop="onDrop(event,${i},'link','${taskId}')"
       ondragend="onDragEnd()">
       <span class="drag-handle">⠿</span>
-      <a href="${esc(l.url)}" target="_blank" rel="noopener" style="flex:1;font-size:12px;color:var(--ac);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="event.stopPropagation()">${esc(l.label||l.url)}</a>
+      <div class="inline-edit-wrap">
+        <div class="inline-view" id="lv_${i}" ondblclick="startEditLink('${taskId}',${i})">
+          <a href="${esc(l.url)}" target="_blank" rel="noopener"
+            style="font-size:12px;color:var(--ac);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"
+            onclick="event.stopPropagation()">${esc(l.label||l.url)}</a>
+          <span class="edit-hint">✏️</span>
+        </div>
+        <div class="inline-form" id="lf_${i}">
+          <input class="inline-inp" placeholder="URL..." value="${esc(l.url)}"
+            onkeydown="if(event.key==='Enter')saveEditLink('${taskId}',${i});if(event.key==='Escape')cancelEditLink(${i})">
+          <input class="inline-inp" placeholder="Tên hiển thị" value="${esc(l.label||'')}"
+            onkeydown="if(event.key==='Enter')saveEditLink('${taskId}',${i});if(event.key==='Escape')cancelEditLink(${i})">
+          <div class="inline-row">
+            <button class="inline-ok" onclick="saveEditLink('${taskId}',${i})">✓ Lưu</button>
+            <button class="inline-cancel" onclick="cancelEditLink(${i})">✕</button>
+          </div>
+        </div>
+      </div>
+      <button class="di-edit" onclick="startEditLink('${taskId}',${i})" title="Sửa">✏️</button>
       <button class="drag-item-del" onclick="delLink('${taskId}',${i})">×</button>
     </li>`).join('');
 
@@ -974,11 +1190,66 @@ async function delTask(id){
   catch(e){tasks.push(t);renderContent();setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
 }
 
+
+// ═══════════════════════════════════════
+// INLINE EDIT helpers
+// ═══════════════════════════════════════
+function tryParseIcon(s){try{return JSON.parse(s);}catch{return null;}}
+
+function startEditSubtask(taskId, subId){
+  const s=(subtasksCache[taskId]||[]).find(s=>s.id===subId);if(!s)return;
+  const view=document.getElementById('sv_'+subId),form=document.getElementById('sf_'+subId);
+  if(!view||!form)return;
+  view.style.display='none';form.classList.add('open');
+  const inp=form.querySelector('.inline-inp');if(inp){inp.value=s.name;inp.focus();inp.select();}
+}
+function cancelEditSubtask(subId){
+  const view=document.getElementById('sv_'+subId),form=document.getElementById('sf_'+subId);
+  if(view)view.style.display='';if(form)form.classList.remove('open');
+}
+async function saveEditSubtask(taskId,subId){
+  const form=document.getElementById('sf_'+subId);
+  const inp=form?.querySelector('.inline-inp');
+  const name=inp?.value.trim();if(!name)return cancelEditSubtask(subId);
+  const s=(subtasksCache[taskId]||[]).find(s=>s.id===subId);if(!s)return;
+  s.name=name;setSyncUI('loading');
+  try{await db.updateSubtask(subId,{name});setSyncUI('ok');}
+  catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
+  renderDrawer(taskId);
+}
+
+function startEditLink(taskId,idx){
+  const view=document.getElementById('lv_'+idx),form=document.getElementById('lf_'+idx);
+  if(!view||!form)return;
+  const t=tasks.find(t=>t.id===taskId);
+  const link=(t?.links||[])[idx];
+  view.style.display='none';form.classList.add('open');
+  const inps=form.querySelectorAll('.inline-inp');
+  if(inps[0]){inps[0].value=link?.url||'';inps[0].focus();}
+  if(inps[1])inps[1].value=link?.label||'';
+}
+function cancelEditLink(idx){
+  const view=document.getElementById('lv_'+idx),form=document.getElementById('lf_'+idx);
+  if(view)view.style.display='';if(form)form.classList.remove('open');
+}
+async function saveEditLink(taskId,idx){
+  const form=document.getElementById('lf_'+idx);
+  const inps=form?.querySelectorAll('.inline-inp');
+  const url=inps?.[0]?.value.trim(),label=inps?.[1]?.value.trim();
+  if(!url)return cancelEditLink(idx);
+  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const links=[...(t.links||[])];links[idx]={url,label:label||url};
+  t.links=links;setSyncUI('loading');
+  try{await db.updateTask(taskId,{links,updated_at:new Date().toISOString()});setSyncUI('ok');}
+  catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
+  renderDrawer(taskId);renderContent();
+}
+
 // ─── TASK MODAL ────────────────────────
 function openTaskModal(){
-  editId=null;selectedEmoji='';
+  editId=null;selectedIcon={type:'',value:''};
   document.getElementById('task-modal-title').textContent='✨ Thêm nhiệm vụ';
-  document.getElementById('emoji-preview').textContent='📌';
+  renderIconInBtn({type:'',value:''});
   ['f-name','f-desc','f-start','f-dl','f-tags'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('f-pri').value='medium';document.getElementById('f-status').value='todo';document.getElementById('f-est').value='';
   fillProjSelect('');document.getElementById('task-modal').classList.add('open');
@@ -987,9 +1258,10 @@ function openTaskModal(){
 function openTaskModalWithStatus(status){openTaskModal();document.getElementById('f-status').value=status;}
 function openEdit(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
-  editId=id;selectedEmoji=t.emoji||'';
+  editId=id;
+  try{selectedIcon=t.icon_data?JSON.parse(t.icon_data):{type:'emoji',value:t.emoji||''};}catch{selectedIcon={type:'emoji',value:t.emoji||''};}
   document.getElementById('task-modal-title').textContent='✏️ Chỉnh sửa nhiệm vụ';
-  document.getElementById('emoji-preview').textContent=t.emoji||'📌';
+  renderIconInBtn(selectedIcon);
   document.getElementById('f-name').value=t.name;document.getElementById('f-desc').value=t.description||'';
   document.getElementById('f-pri').value=t.priority;document.getElementById('f-status').value=t.status;
   document.getElementById('f-start').value=t.start_time?t.start_time.slice(0,16):'';
@@ -1005,7 +1277,7 @@ async function saveTask(){
   if(!name){showNotif('nw','⚠️ Thiếu tên','Nhập tên.');return;}
   const btn=document.getElementById('save-task-btn');btn.textContent='⏳';btn.disabled=true;
   const toISO=s=>s?new Date(s).toISOString():null;
-  const data={name,description:document.getElementById('f-desc').value.trim()||null,project_id:document.getElementById('f-proj').value||null,priority:document.getElementById('f-pri').value,status:document.getElementById('f-status').value,start_time:toISO(document.getElementById('f-start').value),deadline:toISO(document.getElementById('f-dl').value),estimate_hours:parseFloat(document.getElementById('f-est').value)||0,tags:document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean),emoji:selectedEmoji||null,updated_at:new Date().toISOString()};
+  const data={name,description:document.getElementById('f-desc').value.trim()||null,project_id:document.getElementById('f-proj').value||null,priority:document.getElementById('f-pri').value,status:document.getElementById('f-status').value,start_time:toISO(document.getElementById('f-start').value),deadline:toISO(document.getElementById('f-dl').value),estimate_hours:parseFloat(document.getElementById('f-est').value)||0,tags:document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean),emoji:(selectedIcon.type==='emoji'?selectedIcon.value:null),icon_data:selectedIcon.type?JSON.stringify(selectedIcon):null,updated_at:new Date().toISOString()};
   setSyncUI('loading');
   try{
     if(editId){await db.updateTask(editId,data);Object.assign(tasks.find(t=>t.id===editId),data);showNotif('ns','✅ Đã cập nhật',`"${name}" lưu xong.`);}
@@ -1077,11 +1349,12 @@ function showNotif(cls,title,msg,dur=5500){const id=++nid;const el=document.crea
 // ─── KEYBOARD ──────────────────────────
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='n'){e.preventDefault();openTaskModal();}
-  if(e.key==='Escape'){closeTaskModal();closeProjModal();closeConfigModal();closeDrawer();closeSide();document.getElementById('emoji-panel')?.classList.add('hidden');}
+  if(e.key==='Escape'){closeTaskModal();closeProjModal();closeConfigModal();closeDrawer();closeSide();document.getElementById('icon-panel')?.classList.remove('open');}
 });
 
 // SQL NOTE:
 // ALTER TABLE tasks ADD COLUMN IF NOT EXISTS emoji text;
+// ALTER TABLE tasks ADD COLUMN IF NOT EXISTS icon_data text;
 // ALTER TABLE tasks ADD COLUMN IF NOT EXISTS links jsonb DEFAULT '[]';
 // ALTER TABLE subtasks ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0;
 // (nếu chưa có bảng subtasks, chạy SQL đầy đủ từ lần trước)
