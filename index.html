@@ -84,7 +84,8 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 
 /* ══════ CONTENT ══════ */
 .content{flex:1;overflow-y:auto;padding:14px}
-.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:767px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
 .stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px;position:relative;overflow:hidden}
 .stat-top{position:absolute;top:0;left:0;right:0;height:2px}
 .stat-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);margin-bottom:5px}
@@ -630,12 +631,71 @@ function renderSidebar() {
     </div>`).join('');
 }
 
+function getStatsFor(scope) {
+  // scope = 'all' | project_id
+  const now = Date.now();
+  const base = scope==='all' ? tasks : tasks.filter(t=>t.project_id===scope);
+  const total = base.length;
+  const done  = base.filter(t=>t.status==='done').length;
+  const wip   = base.filter(t=>t.status==='inprogress').length;
+  const ov    = base.filter(t=>t.status!=='done'&&t.deadline&&new Date(t.deadline).getTime()<now).length;
+  const rate  = total>0?Math.round(done/total*100):0;
+  // extra for project view
+  const review = base.filter(t=>t.status==='review').length;
+  const todo   = base.filter(t=>t.status==='todo').length;
+  return {total,done,wip,ov,rate,review,todo};
+}
+
+function buildStatsHtml() {
+  const proj = projects.find(p=>'p_'+p.id===curView);
+  const isProject = !!proj;
+  const s = isProject ? getStatsFor(proj.id) : getStatsFor('all');
+
+  if (isProject) {
+    // Project dashboard: Total, Done%, In Progress, Overdue + accent color từ project
+    const pc = proj.color;
+    return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${pc}"></div>
+      <span style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:1px">${esc(proj.name)}</span>
+      <span style="font-size:11px;color:var(--tx3);margin-left:4px">— Thống kê project</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,${pc},${pc}88)"></div>
+        <div class="stat-label">Tổng task</div><div class="stat-val" style="color:var(--tx)">${s.total}</div>
+        <div class="stat-sub">${s.todo} chưa làm</div><div class="stat-icon">📋</div></div>
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#22d3a0,#22d3d3)"></div>
+        <div class="stat-label">Hoàn thành</div><div class="stat-val" style="color:var(--ok)">${s.rate}%</div>
+        <div class="stat-sub">${s.done}/${s.total} tasks</div><div class="stat-icon">✅</div></div>
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#ffb347,#ff8f47)"></div>
+        <div class="stat-label">Đang làm</div><div class="stat-val" style="color:var(--wa)">${s.wip}</div>
+        <div class="stat-sub">${s.review} đang review</div><div class="stat-icon">🚧</div></div>
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#ff4f6d,#ff5f7c)"></div>
+        <div class="stat-label">Quá hạn</div><div class="stat-val" style="color:var(--er)">${s.ov}</div>
+        <div class="stat-sub">cần xử lý ngay</div><div class="stat-icon">🔥</div></div>
+    </div>`;
+  } else {
+    // Tổng quan toàn bộ
+    return `<div class="stats-grid">
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#4f7cff,#7c5fff)"></div>
+        <div class="stat-label">Tổng task</div><div class="stat-val" style="color:var(--tx)">${s.total}</div>
+        <div class="stat-sub">${s.done} hoàn thành</div><div class="stat-icon">📋</div></div>
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#22d3a0,#22d3d3)"></div>
+        <div class="stat-label">Tỷ lệ xong</div><div class="stat-val" style="color:var(--ok)">${s.rate}%</div>
+        <div class="stat-sub">${s.done}/${s.total} tasks</div><div class="stat-icon">✅</div></div>
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#ffb347,#ff8f47)"></div>
+        <div class="stat-label">Đang làm</div><div class="stat-val" style="color:var(--wa)">${s.wip}</div>
+        <div class="stat-sub">in progress</div><div class="stat-icon">🚧</div></div>
+      <div class="stat-card"><div class="stat-top" style="background:linear-gradient(90deg,#ff4f6d,#ff5f7c)"></div>
+        <div class="stat-label">Quá hạn</div><div class="stat-val" style="color:var(--er)">${s.ov}</div>
+        <div class="stat-sub">cần xử lý</div><div class="stat-icon">🔥</div></div>
+    </div>`;
+  }
+}
+
 function renderContent() {
   renderSidebar();
   const filtered=getFiltered();
-  const total=tasks.length, done=tasks.filter(t=>t.status==='done').length;
-  const wip=tasks.filter(t=>t.status==='inprogress').length, ov=getBadges().ov;
-  const rate=total>0?Math.round(done/total*100):0;
   const vl={all:'Tất cả nhiệm vụ',today:'Hôm nay',ov:'Quá hạn',sn:'Sắp đến hạn',done:'Hoàn thành'};
   const proj=projects.find(p=>'p_'+p.id===curView);
   document.getElementById('page-title').textContent=vl[curView]||(proj?proj.name:'Tasks');
@@ -658,16 +718,7 @@ function renderContent() {
     </div>`;
   })() : '';
 
-  const statsHtml=`<div class="stats-grid">
-    ${[
-      {l:'Tổng task',v:total,s:`${done} hoàn thành`,i:'📋',c:'var(--tx)',g:'linear-gradient(90deg,#4f7cff,#7c5fff)'},
-      {l:'Hoàn thành',v:rate+'%',s:`${done}/${total}`,i:'✅',c:'var(--ok)',g:'linear-gradient(90deg,#22d3a0,#22d3d3)'},
-      {l:'Đang làm',v:wip,s:'in progress',i:'🚧',c:'var(--wa)',g:'linear-gradient(90deg,#ffb347,#ff8f47)'},
-      {l:'Quá hạn',v:ov,s:'cần xử lý',i:'🔥',c:'var(--er)',g:'linear-gradient(90deg,#ff4f6d,#ff5f7c)'},
-    ].map(s=>`<div class="stat-card"><div class="stat-top" style="background:${s.g}"></div>
-      <div class="stat-label">${s.l}</div><div class="stat-val" style="color:${s.c}">${s.v}</div>
-      <div class="stat-sub">${s.s}</div><div class="stat-icon">${s.i}</div></div>`).join('')}
-  </div>`;
+  const statsHtml = buildStatsHtml();
 
   const filterHtml=`<div class="filters">
     ${[{k:'all',l:'Tất cả'},{k:'todo',l:'Chưa làm'},{k:'wip',l:'Đang làm'},{k:'done2',l:'Xong'},{k:'hi',l:'🔴 Cao',x:'chi'},{k:'med',l:'🟡 TB',x:'chm'}]
