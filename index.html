@@ -162,7 +162,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .drag-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--s2);margin-bottom:6px;transition:all .15s;user-select:none}
 .drag-item.dragging{opacity:.4;background:var(--s3)}
 .drag-item.drag-over{border:1px dashed var(--ac);background:rgba(79,124,255,.08)}
-.drag-handle{color:var(--tx3);font-size:14px;cursor:grab;flex-shrink:0;padding:0 2px}
+.drag-handle{color:var(--tx3);font-size:16px;cursor:grab;flex-shrink:0;padding:2px 4px;touch-action:none}
 .drag-handle:active{cursor:grabbing}
 .drag-item-name{flex:1;font-size:13px;color:var(--tx)}
 .drag-item-name.done{text-decoration:line-through;color:var(--tx3)}
@@ -187,11 +187,12 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .inline-cancel{padding:4px 8px;border-radius:6px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer}
 .di-edit{background:none;border:none;color:var(--tx3);font-size:13px;padding:2px 3px;opacity:0;transition:opacity .15s;flex-shrink:0;cursor:pointer}
 .drag-item:hover .di-edit,.drag-item:hover .drag-item-del{opacity:1}
+@media(hover:none){.di-edit,.drag-item-del{opacity:0.6}}
 /* ICON PICKER */
 .icon-picker-wrap{position:relative;display:inline-block}
 .icon-picker-btn{width:48px;height:48px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border .2s;flex-shrink:0;overflow:hidden;color:var(--ac)}
 .icon-picker-btn:hover{border-color:var(--ac)}
-.icon-panel{position:absolute;top:calc(100% + 6px);left:0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:12px;z-index:600;width:320px;box-shadow:0 16px 48px rgba(0,0,0,.65);display:none}
+.icon-panel{position:fixed;top:0;left:0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:12px;z-index:9999;width:320px;box-shadow:0 16px 48px rgba(0,0,0,.65);display:none;max-height:70vh;overflow-y:auto}
 .icon-panel.open{display:block}
 .icon-tabs{display:flex;gap:3px;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px;flex-wrap:wrap}
 .icon-tab{padding:4px 10px;border-radius:7px;border:none;background:none;color:var(--tx3);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
@@ -357,13 +358,7 @@ textarea.fi{min-height:58px;resize:vertical}
           <button class="icon-picker-btn" id="icon-btn" onclick="toggleIconPanel()" type="button">
             <span id="icon-preview">📌</span>
           </button>
-          <div class="icon-panel" id="icon-panel">
-            <div class="icon-tabs" id="icon-tabs"></div>
-            <input class="icon-search-inp" id="icon-search" placeholder="🔍 Tìm icon..." oninput="filterIcons()">
-            <div class="icon-cat-row" id="icon-cat-row"></div>
-            <div class="icon-grid" id="icon-grid"></div>
-            <button class="icon-clear-btn" onclick="clearIcon()">✕ Bỏ icon</button>
-          </div>
+
         </div>
       </div>
       <div style="flex:1"><label class="fl">Tên nhiệm vụ *</label><input class="fi" id="f-name" placeholder="Nhập tên..."></div>
@@ -421,6 +416,15 @@ textarea.fi{min-height:58px;resize:vertical}
     <div id="cfg-status" class="cfg-status"></div>
     <div class="mactions"><button class="btn-g" onclick="closeConfigModal()">Hủy</button><button class="btn-p" onclick="updateConfig()">🔌 Cập nhật</button></div>
   </div>
+</div>
+
+<!-- ICON PANEL — fixed position outside any overflow container -->
+<div class="icon-panel" id="icon-panel">
+  <div class="icon-tabs" id="icon-tabs"></div>
+  <input class="icon-search-inp" id="icon-search" placeholder="🔍 Tìm icon..." oninput="filterIcons()">
+  <div class="icon-cat-row" id="icon-cat-row"></div>
+  <div class="icon-grid" id="icon-grid"></div>
+  <button class="icon-clear-btn" onclick="clearIcon()">✕ Bỏ icon</button>
 </div>
 
 <div class="notif-wrap" id="notif-wrap"></div>
@@ -535,8 +539,20 @@ function renderIconInCard(icon){
 
 function toggleIconPanel(){
   const p=document.getElementById('icon-panel');
-  if(p.classList.contains('open')){p.classList.remove('open');}
-  else{buildIconPanel();p.classList.add('open');}
+  if(p.classList.contains('open')){p.classList.remove('open');return;}
+  // Position panel below the button using fixed coords
+  const btn=document.getElementById('icon-btn');
+  const rect=btn.getBoundingClientRect();
+  const panelW=320;
+  let left=rect.left;
+  if(left+panelW>window.innerWidth-8)left=window.innerWidth-panelW-8;
+  if(left<8)left=8;
+  let top=rect.bottom+6;
+  if(top+400>window.innerHeight)top=rect.top-Math.min(400,rect.top-8);
+  p.style.left=left+'px';
+  p.style.top=top+'px';
+  buildIconPanel();
+  p.classList.add('open');
 }
 
 function buildIconPanel(){
@@ -618,7 +634,10 @@ function clearIcon(){
 
 document.addEventListener('click',e=>{
   const wrap=document.getElementById('icon-wrap');
-  if(wrap&&!wrap.contains(e.target))document.getElementById('icon-panel')?.classList.remove('open');
+  const panel=document.getElementById('icon-panel');
+  if(!wrap?.contains(e.target)&&!panel?.contains(e.target)){
+    panel?.classList.remove('open');
+  }
 });
 
 // ═══════════════════════════════════════
@@ -973,7 +992,8 @@ function renderDrawer(taskId){
       ondragstart="onDragStart(event,'sub','${taskId}',${i})"
       ondragover="onDragOver(event,${i},'sub','${taskId}')"
       ondrop="onDrop(event,${i},'sub','${taskId}')"
-      ondragend="onDragEnd()">
+      ondragend="onDragEnd()"
+      ontouchstart="onTouchStart(event,'sub','${taskId}',${i})">
       <span class="drag-handle">⠿</span>
       <div class="cb ${s.done?'on':''}" onclick="toggleSubtask('${taskId}','${s.id}')">${s.done?'✓':''}</div>
       <div class="inline-edit-wrap">
@@ -999,7 +1019,8 @@ function renderDrawer(taskId){
       ondragstart="onDragStart(event,'link','${taskId}',${i})"
       ondragover="onDragOver(event,${i},'link','${taskId}')"
       ondrop="onDrop(event,${i},'link','${taskId}')"
-      ondragend="onDragEnd()">
+      ondragend="onDragEnd()"
+      ontouchstart="onTouchStart(event,'link','${taskId}',${i})">
       <span class="drag-handle">⠿</span>
       <div class="inline-edit-wrap">
         <div class="inline-view" id="lv_${i}" ondblclick="startEditLink('${taskId}',${i})">
@@ -1076,6 +1097,12 @@ function closeDrawer(){
 // ═══════════════════════════════════════
 // DRAG & DROP (subtasks + links)
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// DRAG & DROP — Mouse + Touch support
+// ═══════════════════════════════════════
+let touchDragEl=null, touchDragClone=null, touchOffsetX=0, touchOffsetY=0;
+
+// ── Mouse drag (desktop) ──
 function onDragStart(e,type,taskId,idx){
   dragSrc=idx;dragType=type;dragTaskId=taskId;
   e.dataTransfer.effectAllowed='move';
@@ -1095,24 +1122,99 @@ function onDragEnd(){
 async function onDrop(e,targetIdx,type,taskId){
   e.preventDefault();
   if(dragSrc===null||type!==dragType||taskId!==dragTaskId||dragSrc===targetIdx)return onDragEnd();
+  await doReorder(type,taskId,dragSrc,targetIdx);
+  onDragEnd();
+}
+
+// ── Touch drag (mobile) ──
+function onTouchStart(e,type,taskId,idx){
+  // Only trigger from handle
+  const handle=e.currentTarget.querySelector('.drag-handle');
+  if(handle&&!handle.contains(e.touches[0].target))return;
+  e.preventDefault();
+  dragSrc=idx;dragType=type;dragTaskId=taskId;
+  touchDragEl=e.currentTarget;
+
+  // Create floating clone
+  const rect=touchDragEl.getBoundingClientRect();
+  touchOffsetX=e.touches[0].clientX-rect.left;
+  touchOffsetY=e.touches[0].clientY-rect.top;
+  touchDragClone=touchDragEl.cloneNode(true);
+  touchDragClone.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.85;z-index:9999;pointer-events:none;background:var(--s3);border:1px solid var(--ac);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.5);transform:scale(1.02);transition:none;`;
+  document.body.appendChild(touchDragClone);
+  touchDragEl.classList.add('dragging');
+}
+
+function onTouchMove(e){
+  if(dragSrc===null||!touchDragClone)return;
+  e.preventDefault();
+  const touch=e.touches[0];
+  touchDragClone.style.left=(touch.clientX-touchOffsetX)+'px';
+  touchDragClone.style.top=(touch.clientY-touchOffsetY)+'px';
+
+  // Find item under finger
+  touchDragClone.style.display='none';
+  const el=document.elementFromPoint(touch.clientX,touch.clientY);
+  touchDragClone.style.display='';
+  const item=el?.closest('.drag-item');
+  document.querySelectorAll('.drag-item').forEach(x=>x.classList.remove('drag-over'));
+  if(item&&item!==touchDragEl)item.classList.add('drag-over');
+}
+
+async function onTouchEnd(e){
+  if(dragSrc===null||!touchDragClone)return;
+  e.preventDefault();
+
+  // Find drop target
+  touchDragClone.style.display='none';
+  const touch=e.changedTouches[0];
+  const el=document.elementFromPoint(touch.clientX,touch.clientY);
+  touchDragClone.style.display='';
+
+  const targetItem=el?.closest('.drag-item');
+  document.querySelectorAll('.drag-item').forEach(x=>x.classList.remove('drag-over'));
+  touchDragEl?.classList.remove('dragging');
+  touchDragClone.remove();touchDragClone=null;
+
+  if(targetItem&&targetItem!==touchDragEl){
+    // Get target index from id
+    let targetIdx=null;
+    if(dragType==='sub'){
+      const subs=subtasksCache[dragTaskId]||[];
+      const targetId=targetItem.id.replace('sub_','');
+      targetIdx=subs.findIndex(s=>s.id===targetId);
+    } else {
+      targetIdx=parseInt(targetItem.id.replace('lnk_',''));
+    }
+    if(targetIdx!==null&&targetIdx>=0&&targetIdx!==dragSrc){
+      await doReorder(dragType,dragTaskId,dragSrc,targetIdx);
+    }
+  }
+  dragSrc=null;dragType=null;dragTaskId=null;touchDragEl=null;
+}
+
+// ── Shared reorder logic ──
+async function doReorder(type,taskId,fromIdx,toIdx){
   if(type==='sub'){
     const subs=subtasksCache[taskId]||[];
-    const moved=subs.splice(dragSrc,1)[0];subs.splice(targetIdx,0,moved);
+    const moved=subs.splice(fromIdx,1)[0];subs.splice(toIdx,0,moved);
     subtasksCache[taskId]=subs;
     renderDrawer(taskId);
-    // save sort_order
     try{await Promise.all(subs.map((s,i)=>db.updateSubtask(s.id,{sort_order:i})));}catch{}
   } else {
-    const t=tasks.find(t=>t.id===taskId);if(!t)return onDragEnd();
+    const t=tasks.find(t=>t.id===taskId);if(!t)return;
     const links=[...(t.links||[])];
-    const moved=links.splice(dragSrc,1)[0];links.splice(targetIdx,0,moved);
+    const moved=links.splice(fromIdx,1)[0];links.splice(toIdx,0,moved);
     t.links=links;setSyncUI('loading');
     renderDrawer(taskId);
     try{await db.updateTask(taskId,{links,updated_at:new Date().toISOString()});setSyncUI('ok');}
     catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi',e.message);}
   }
-  onDragEnd();
 }
+
+// Bind global touch events
+document.addEventListener('touchmove',onTouchMove,{passive:false});
+document.addEventListener('touchend',onTouchEnd,{passive:false});
 
 // ═══════════════════════════════════════
 // LINKS CRUD
