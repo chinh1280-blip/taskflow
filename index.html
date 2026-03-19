@@ -212,7 +212,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .card-icon-wrap{margin-bottom:10px;line-height:1}
 .card-icon-emoji{font-size:28px}
 .card-icon-lib{font-size:26px;color:var(--ac)}
-.card-icon-lib.material-icons{font-size:28px}}
+.card-icon-lib.material-icons{font-size:28px}
 /* MODALS */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;transition:opacity .3s;pointer-events:none;opacity:0}
 .overlay.open{display:flex;opacity:1;pointer-events:all}
@@ -1313,7 +1313,9 @@ function editProject(id){
   editProjId=id;selColor=p.color;
   document.getElementById('proj-modal-title').textContent='✏️ Chỉnh sửa Project';
   document.getElementById('pf-name').value=p.name;document.getElementById('pf-desc').value=p.description||'';
-  renderColorPicker();document.getElementById('proj-modal').classList.add('open');
+  renderColorPicker();
+  const _pm=document.getElementById('proj-modal');
+  _pm.style.display='flex';requestAnimationFrame(()=>_pm.classList.add('open'));
 }
 async function deleteProject(id){
   const p=projects.find(p=>p.id===id);const tc=tasks.filter(t=>t.project_id===id).length;
