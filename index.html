@@ -128,6 +128,14 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .card-links{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
 .link-chip{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;background:rgba(79,124,255,.1);color:var(--ac);border:1px solid rgba(79,124,255,.25);text-decoration:none;cursor:pointer;transition:all .15s}
 .link-chip:hover{background:rgba(79,124,255,.2)}
+.link-chip.local{background:rgba(255,179,71,.1);color:var(--wa);border-color:rgba(255,179,71,.3)}
+.link-chip.local:hover{background:rgba(255,179,71,.2)}
+.path-box{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:9px;background:var(--s2);border:1px solid rgba(255,179,71,.25);flex:1;min-width:0}
+.path-text{flex:1;font-size:11px;font-family:'Roboto Mono',monospace;color:var(--wa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.path-icon{font-size:14px;flex-shrink:0}
+.copy-path-btn{padding:4px 10px;border-radius:6px;border:none;background:rgba(255,179,71,.15);color:var(--wa);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;white-space:nowrap}
+.copy-path-btn:hover{background:rgba(255,179,71,.3)}
+.copy-path-btn.copied{background:rgba(34,211,160,.15);color:var(--ok)}
 .card-prog{margin-bottom:7px}
 .card-prog-bar{height:3px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:3px}
 .card-prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .4s}
@@ -904,7 +912,10 @@ function mkCard(t){
     </div>
     ${t.description?`<div class="card-desc">${esc(t.description)}</div>`:''}
     ${t.tags?.length?`<div class="card-tags">${t.tags.map(g=>`<span class="tag">#${esc(g)}</span>`).join('')}</div>`:''}
-    ${links.length?`<div class="card-links">${links.map(l=>`<a class="link-chip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 ${esc(l.label||l.url)}</a>`).join('')}</div>`:''}
+    ${links.length?`<div class="card-links">${links.map(l=>isLocalPath(l.url)?
+  `<span class="link-chip local" onclick="event.stopPropagation()">📁 ${esc(l.label||l.url)}</span>`:
+  `<a class="link-chip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 ${esc(l.label||l.url)}</a>`
+).join('')}</div>`:''}
     <div class="card-meta">
       ${t.start_time?`<span class="meta">📅 ${fmtShort(t.start_time)}</span>`:''}
       ${t.deadline?`<span class="meta ${dl.cls}">${dl.label}</span>`:''}
@@ -979,6 +990,45 @@ async function openDrawer(taskId){
   renderDrawer(taskId);
 }
 
+
+// ── Link type detection ──────────────────
+function isLocalPath(url){
+  if(!url)return false;
+  // Windows paths: C:\ D:\ \\server
+  if(/^[a-zA-Z]:[\\\/]/.test(url))return true;
+  if(/^\\\\/.test(url))return true;
+  // Unix/Mac paths: /Users /home /mnt
+  if(/^\/(?!\/)/.test(url))return true;
+  // Explicit file:// 
+  if(url.startsWith('file://'))return true;
+  return false;
+}
+
+function getPathDisplay(url){
+  // Normalize to show nicely
+  return url.replace(/^file:\/\/\//, '').replace(/\//g, '\\');
+}
+
+function copyPath(url, btnId){
+  // Clean up for Explorer: remove file:// prefix, normalize slashes
+  let path = url.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '');
+  // Convert forward slashes to backslash for Windows
+  path = path.replace(/\//g, '\\');
+  navigator.clipboard.writeText(path).then(()=>{
+    const btn = document.getElementById(btnId);
+    if(btn){ btn.textContent='✓ Đã copy!'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='📋 Copy path'; btn.classList.remove('copied'); }, 2000); }
+  }).catch(()=>{
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = path; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById(btnId);
+    if(btn){ btn.textContent='✓ Đã copy!'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='📋 Copy path'; btn.classList.remove('copied'); }, 2000); }
+  });
+}
+
 function renderDrawer(taskId){
   const t=tasks.find(t=>t.id===taskId);if(!t)return;
   const proj=projects.find(p=>p.id===t.project_id),dl=getDL(t);
@@ -1024,9 +1074,17 @@ function renderDrawer(taskId){
       <span class="drag-handle">⠿</span>
       <div class="inline-edit-wrap">
         <div class="inline-view" id="lv_${i}" ondblclick="startEditLink('${taskId}',${i})">
-          <a href="${esc(l.url)}" target="_blank" rel="noopener"
-            style="font-size:12px;color:var(--ac);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"
-            onclick="event.stopPropagation()">${esc(l.label||l.url)}</a>
+          ${isLocalPath(l.url) ? `
+            <div class="path-box">
+              <span class="path-icon">📁</span>
+              <span class="path-text" title="${esc(l.url)}">${esc(l.label||l.url)}</span>
+              <button class="copy-path-btn" id="cpbtn_${taskId}_${i}" onclick="event.stopPropagation();copyPath('${esc(l.url).replace(/'/g,'\\'')}','cpbtn_${taskId}_${i}')">📋 Copy path</button>
+            </div>
+          ` : `
+            <a href="${esc(l.url)}" target="_blank" rel="noopener"
+              style="font-size:12px;color:var(--ac);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"
+              onclick="event.stopPropagation()">${esc(l.label||l.url)}</a>
+          `}
           <span class="edit-hint">✏️</span>
         </div>
         <div class="inline-form" id="lf_${i}">
