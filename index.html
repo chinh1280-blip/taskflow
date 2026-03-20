@@ -254,6 +254,32 @@ textarea.fi{min-height:58px;resize:vertical}
 .notif-x{background:none;border:none;color:var(--tx3);font-size:18px;line-height:1;padding:0}
 @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 .loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;background:var(--bg)}
+/* LOGIN */
+.login-screen{display:none;align-items:center;justify-content:center;height:100vh;background:var(--bg);position:fixed;inset:0;z-index:999;flex-direction:column;gap:0}
+.login-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(79,124,255,.04)1px,transparent 1px),linear-gradient(90deg,rgba(79,124,255,.04)1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.login-card{background:var(--s1);border:1px solid var(--bd);border-radius:20px;padding:36px 28px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,.6);position:relative;z-index:1}
+.login-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
+.login-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 24px rgba(79,124,255,.4)}
+.login-logo-text{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.login-logo-text span{color:var(--ac)}
+.login-title{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:4px;text-align:center}
+.login-sub{font-size:12px;color:var(--tx3);text-align:center;margin-bottom:24px}
+.login-field{position:relative;margin-bottom:14px}
+.login-input{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:13px 44px 13px 14px;font-size:15px;color:var(--tx);outline:none;font-family:Roboto,sans-serif;transition:border .2s;letter-spacing:.05em}
+.login-input:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(79,124,255,.12)}
+.login-eye{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tx3);cursor:pointer;font-size:17px;padding:4px;line-height:1}
+.login-eye:hover{color:var(--tx)}
+.login-btn{width:100%;padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:Roboto,sans-serif;box-shadow:0 0 24px rgba(79,124,255,.3);transition:all .2s;margin-top:4px}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 0 32px rgba(79,124,255,.45)}
+.login-btn:active{transform:translateY(0)}
+.login-err{font-size:12px;color:var(--er);text-align:center;margin-top:10px;min-height:18px;display:flex;align-items:center;justify-content:center;gap:5px}
+.login-err.shake{animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.login-footer{font-size:11px;color:var(--tx3);text-align:center;margin-top:18px}
+.login-footer a{color:var(--ac);cursor:pointer;text-decoration:none}
+.login-footer a:hover{text-decoration:underline}
+/* Change password sheet */
+.change-pw-panel{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--bd)}
 .spin{animation:rot 1s linear infinite;display:inline-block;font-size:34px}
 @keyframes rot{to{transform:rotate(360deg)}}
 .setup{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);padding:20px}
@@ -281,6 +307,49 @@ textarea.fi{min-height:58px;resize:vertical}
     <div id="setup-status" class="cfg-status"></div>
     <button class="btn-p" style="width:100%;padding:12px;margin-top:14px" onclick="testAndSaveConfig()">🔌 Kết nối & Bắt đầu</button>
     <div style="font-size:11px;color:var(--tx3);text-align:center;margin-top:10px">Thông tin lưu trên thiết bị. Miễn phí vĩnh viễn.</div>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-bg"></div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">⚡</div>
+      <div class="login-logo-text">Task<span>Flow</span></div>
+    </div>
+    <div class="login-title">Xin chào 👋</div>
+    <div class="login-sub">Nhập mật khẩu để tiếp tục</div>
+    <div class="login-field">
+      <input class="login-input" type="password" id="pw-input"
+        placeholder="Nhập mật khẩu..."
+        onkeydown="if(event.key==='Enter')doLogin()"
+        autocomplete="current-password">
+      <button class="login-eye" onclick="togglePwEye()" id="pw-eye">👁</button>
+    </div>
+    <button class="login-btn" onclick="doLogin()" id="login-btn">🔓 Đăng nhập</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-footer">
+      <a onclick="showChangePw()">⚙️ Đổi mật khẩu</a>
+    </div>
+    <!-- Change password panel -->
+    <div class="change-pw-panel" id="change-pw-panel">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:10px">🔑 Đổi mật khẩu</div>
+      <div class="login-field" style="margin-bottom:10px">
+        <input class="login-input" type="password" id="old-pw" placeholder="Mật khẩu hiện tại" style="font-size:13px;padding:10px 42px 10px 12px" onkeydown="if(event.key==='Enter')doChangePw()">
+      </div>
+      <div class="login-field" style="margin-bottom:10px">
+        <input class="login-input" type="password" id="new-pw" placeholder="Mật khẩu mới" style="font-size:13px;padding:10px 42px 10px 12px" onkeydown="if(event.key==='Enter')doChangePw()">
+      </div>
+      <div class="login-field" style="margin-bottom:10px">
+        <input class="login-input" type="password" id="new-pw2" placeholder="Nhập lại mật khẩu mới" style="font-size:13px;padding:10px 42px 10px 12px" onkeydown="if(event.key==='Enter')doChangePw()">
+      </div>
+      <div class="login-err" id="changepw-err" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="doChangePw()" style="flex:1;padding:9px;border-radius:9px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer">💾 Lưu</button>
+        <button onclick="hideChangePw()" style="padding:9px 14px;border-radius:9px;border:none;background:var(--s2);color:var(--tx2);font-size:12px;cursor:pointer">Hủy</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -318,6 +387,7 @@ textarea.fi{min-height:58px;resize:vertical}
         <button class="side-btn" id="refresh-side-btn" onclick="manualRefresh(this)" title="Đồng bộ dữ liệu">↻ Đồng bộ</button>
         <button class="side-btn" onclick="openConfigModal()" title="Cấu hình Supabase">⚙️ Config</button>
       </div>
+      <button class="side-btn" onclick="logout()" style="width:100%;margin-top:6px;color:var(--er);border-color:rgba(255,79,109,.3)" title="Đăng xuất">🔒 Đăng xuất</button>
     </div>
   </aside>
 
@@ -704,10 +774,127 @@ async function testAndSaveConfig(){
   try{await testConnection(u,k);saveConfig(u,k);st.textContent='✅ Thành công! Đang tải...';setTimeout(startApp,800);}
   catch(e){st.className='cfg-status err';st.textContent='❌ '+e.message;}
 }
+// ═══════════════════════════════════════
+// AUTH — Password protection
+// ═══════════════════════════════════════
+const PW_KEY   = 'tf_pw_hash';   // stored hashed password
+const SES_KEY  = 'tf_session';   // session flag (sessionStorage = clears on tab close)
+const PW_DEF   = 'taskflow2024'; // default password on first run
+
+// Simple hash (SHA-256 via SubtleCrypto)
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function getStoredHash() {
+  return localStorage.getItem(PW_KEY);
+}
+
+async function ensureDefaultPw() {
+  if (!getStoredHash()) {
+    const h = await hashPw(PW_DEF);
+    localStorage.setItem(PW_KEY, h);
+  }
+}
+
+function isLoggedIn() {
+  return sessionStorage.getItem(SES_KEY) === '1';
+}
+
+function markLoggedIn() {
+  sessionStorage.setItem(SES_KEY, '1');
+}
+
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  if (!pw) { showLoginErr('Vui lòng nhập mật khẩu'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.textContent = '⏳ Đang kiểm tra...'; btn.disabled = true;
+  const h = await hashPw(pw);
+  const stored = getStoredHash();
+  btn.textContent = '🔓 Đăng nhập'; btn.disabled = false;
+  if (h === stored) {
+    markLoggedIn();
+    document.getElementById('login-screen').style.display = 'none';
+    boot();
+  } else {
+    showLoginErr('❌ Mật khẩu không đúng');
+    const card = document.querySelector('.login-card');
+    card.classList.remove('shake');
+    void card.offsetWidth; // reflow
+    card.classList.add('shake');
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+function showLoginErr(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg;
+  setTimeout(() => { if(el.textContent===msg) el.textContent=''; }, 3500);
+}
+
+function togglePwEye() {
+  const inp = document.getElementById('pw-input');
+  const eye = document.getElementById('pw-eye');
+  if (inp.type === 'password') { inp.type = 'text'; eye.textContent = '🙈'; }
+  else { inp.type = 'password'; eye.textContent = '👁'; }
+}
+
+function showChangePw() {
+  document.getElementById('change-pw-panel').style.display = 'block';
+  document.getElementById('old-pw').focus();
+}
+function hideChangePw() {
+  document.getElementById('change-pw-panel').style.display = 'none';
+  ['old-pw','new-pw','new-pw2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('changepw-err').textContent = '';
+}
+
+async function doChangePw() {
+  const oldPw  = document.getElementById('old-pw').value;
+  const newPw  = document.getElementById('new-pw').value;
+  const newPw2 = document.getElementById('new-pw2').value;
+  const errEl  = document.getElementById('changepw-err');
+
+  if (!oldPw || !newPw || !newPw2) { errEl.textContent = '⚠️ Điền đủ các ô'; return; }
+  if (newPw !== newPw2) { errEl.textContent = '❌ Mật khẩu mới không khớp'; return; }
+  if (newPw.length < 6)  { errEl.textContent = '❌ Mật khẩu tối thiểu 6 ký tự'; return; }
+
+  const oldHash = await hashPw(oldPw);
+  if (oldHash !== getStoredHash()) { errEl.textContent = '❌ Mật khẩu hiện tại sai'; return; }
+
+  const newHash = await hashPw(newPw);
+  localStorage.setItem(PW_KEY, newHash);
+  errEl.style.color = 'var(--ok)';
+  errEl.textContent = '✅ Đổi mật khẩu thành công!';
+  setTimeout(() => { hideChangePw(); errEl.style.color = ''; }, 1500);
+}
+
+// ── Logout button (added to sidebar) ──
+function logout() {
+  sessionStorage.removeItem(SES_KEY);
+  location.reload();
+}
+
 async function boot(){
   const cfg=getConfig();
   if(!cfg||!cfg.url||!cfg.key){document.getElementById('loading').style.display='none';document.getElementById('setup-screen').style.display='flex';return;}
   SB_URL=cfg.url;SB_KEY=cfg.key;startApp();
+}
+
+// Entry point — check login first
+async function initApp(){
+  await ensureDefaultPw();
+  if(isLoggedIn()){
+    boot();
+  } else {
+    document.getElementById('loading').style.display='none';
+    const ls=document.getElementById('login-screen');
+    ls.style.display='flex';
+    setTimeout(()=>document.getElementById('pw-input').focus(),100);
+  }
 }
 async function startApp(){
   document.getElementById('setup-screen').style.display='none';
@@ -1564,7 +1751,7 @@ document.addEventListener('keydown',e=>{
 // ALTER TABLE subtasks ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0;
 // (nếu chưa có bảng subtasks, chạy SQL đầy đủ từ lần trước)
 
-window.addEventListener('DOMContentLoaded',boot);
+window.addEventListener('DOMContentLoaded',initApp);
 </script>
 </body>
 </html>
