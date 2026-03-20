@@ -130,10 +130,10 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .link-chip:hover{background:rgba(79,124,255,.2)}
 .link-chip.local{background:rgba(255,179,71,.1);color:var(--wa);border-color:rgba(255,179,71,.3)}
 .link-chip.local:hover{background:rgba(255,179,71,.2)}
-.path-box{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:9px;background:var(--s2);border:1px solid rgba(255,179,71,.25);flex:1;min-width:0}
+.path-box{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:9px;background:var(--s2);border:1px solid rgba(255,179,71,.25);flex:1;min-width:0;overflow:visible}
 .path-text{flex:1;font-size:11px;font-family:'Roboto Mono',monospace;color:var(--wa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .path-icon{font-size:14px;flex-shrink:0}
-.copy-path-btn{padding:4px 10px;border-radius:6px;border:none;background:rgba(255,179,71,.15);color:var(--wa);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;white-space:nowrap}
+.copy-path-btn{padding:5px 12px;border-radius:6px;border:1px solid rgba(255,179,71,.4);background:rgba(255,179,71,.12);color:var(--wa);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap;-webkit-user-select:none;user-select:auto}
 .copy-path-btn:hover{background:rgba(255,179,71,.3)}
 .copy-path-btn.copied{background:rgba(34,211,160,.15);color:var(--ok)}
 .card-prog{margin-bottom:7px}
@@ -167,7 +167,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .drawer-close{background:none;border:none;color:var(--tx3);font-size:22px;flex-shrink:0}
 /* SUBTASK + LINKS — draggable */
 .drag-list{list-style:none}
-.drag-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--s2);margin-bottom:6px;transition:all .15s;user-select:none}
+.drag-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--s2);margin-bottom:6px;transition:all .15s}
 .drag-item.dragging{opacity:.4;background:var(--s3)}
 .drag-item.drag-over{border:1px dashed var(--ac);background:rgba(79,124,255,.08)}
 .drag-handle{color:var(--tx3);font-size:16px;cursor:grab;flex-shrink:0;padding:2px 4px;touch-action:none}
@@ -913,7 +913,7 @@ function mkCard(t){
     ${t.description?`<div class="card-desc">${esc(t.description)}</div>`:''}
     ${t.tags?.length?`<div class="card-tags">${t.tags.map(g=>`<span class="tag">#${esc(g)}</span>`).join('')}</div>`:''}
     ${links.length?`<div class="card-links">${links.map(l=>isLocalPath(l.url)?
-  `<span class="link-chip local" onclick="event.stopPropagation()">📁 ${esc(l.label||l.url)}</span>`:
+  `<span class="link-chip local" title="📋 Click để copy path" data-path="${esc(l.url)}" onclick="event.stopPropagation();copyPathFromEl(this)">📁 ${esc(l.label||l.url)}</span>`:
   `<a class="link-chip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 ${esc(l.label||l.url)}</a>`
 ).join('')}</div>`:''}
     <div class="card-meta">
@@ -1030,9 +1030,25 @@ function copyPath(url, btn){
   }
 }
 
-function copyPathFromEl(btn){
-  const url = btn.getAttribute('data-path') || '';
-  copyPath(url, btn);
+function copyPathFromEl(el){
+  const url = el.getAttribute('data-path') || '';
+  let path = url.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '');
+  path = path.replace(/\//g, '\\');
+  const isBtn = el.tagName === 'BUTTON';
+  const origText = isBtn ? el.textContent : null;
+  const showFeedback = () => {
+    if(isBtn){ el.textContent='✓ Đã copy!'; el.classList.add('copied'); setTimeout(()=>{el.textContent='📋 Copy path';el.classList.remove('copied');},2000); }
+    else { const tip=document.createElement('span'); tip.textContent=' ✓'; tip.style.cssText='color:var(--ok);font-size:10px'; el.appendChild(tip); setTimeout(()=>tip.remove(),2000); }
+  };
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(path).then(showFeedback).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=path;ta.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showFeedback();
+    });
+  } else {
+    const ta=document.createElement('textarea');ta.value=path;ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showFeedback();
+  }
 }
 
 function renderDrawer(taskId){
