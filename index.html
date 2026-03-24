@@ -289,6 +289,76 @@ textarea.fi{min-height:58px;resize:vertical}
 .step-text{font-size:12px;color:var(--tx2);line-height:1.6}
 .step-text code{background:var(--s2);padding:2px 5px;border-radius:4px;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--ac)}
 @media(min-width:768px){.menu-btn{display:none!important}.close-side{display:none!important}}
+
+/* ═══ DAILY ROUTINES ═══ */
+.daily-view{flex:1;overflow-y:auto;padding:14px}
+.daily-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.daily-title-block{display:flex;align-items:center;gap:10px}
+.daily-page-title{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.daily-today{font-size:12px;color:var(--tx3);font-family:'Roboto Mono',monospace}
+.daily-add-btn{padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;box-shadow:0 0 20px rgba(79,124,255,.25);white-space:nowrap}
+.daily-reset-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx3);margin-bottom:16px;flex-wrap:wrap}
+.daily-reset-sel{background:var(--s2);border:1px solid var(--bd);color:var(--tx2);border-radius:7px;padding:4px 9px;font-size:12px;outline:none;cursor:pointer}
+/* Daily card */
+.daily-card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:14px;transition:all .2s}
+.daily-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.daily-card-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.daily-card-icon{font-size:22px;flex-shrink:0}
+.daily-card-name{font-size:15px;font-weight:700;flex:1}
+.daily-card-proj{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:4px}
+.daily-card-actions{display:flex;gap:5px;opacity:0;transition:opacity .15s}
+.daily-card:hover .daily-card-actions{opacity:1}
+.daily-card-meta{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.daily-prog-text{font-size:12px;font-weight:600}
+.daily-streak{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--wa)}
+.daily-completion{font-size:11px;color:var(--tx3)}
+/* Chain */
+.daily-chain{display:flex;align-items:center;gap:0;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin}
+.chain-item{display:flex;flex-direction:column;align-items:center;position:relative;flex-shrink:0}
+.chain-item:not(:last-child)::after{content:'';position:absolute;top:12px;left:calc(50% + 12px);width:calc(100% - 4px);height:2px;background:var(--bd);z-index:0;transition:background .3s}
+.chain-item.done:not(:last-child)::after{background:var(--ok)}
+.chain-connector{width:60px;height:2px;background:var(--bd);flex-shrink:0;transition:background .3s;margin-top:12px;align-self:flex-start}
+.chain-connector.done{background:var(--ok)}
+.chain-step{display:flex;flex-direction:column;align-items:center;width:90px;flex-shrink:0}
+.chain-dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--bd);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:12px;font-weight:700;position:relative;z-index:1;flex-shrink:0}
+.chain-dot.done{background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:0 0 10px rgba(34,211,160,.4)}
+.chain-dot:not(.done){background:var(--s1);border-color:var(--er);color:var(--er)}
+.chain-dot:hover{transform:scale(1.15)}
+.chain-label{font-size:10px;color:var(--tx2);text-align:center;margin-top:6px;line-height:1.3;max-width:80px;word-break:break-word}
+.chain-label.done{color:var(--ok)}
+.chain-time{font-size:9px;color:var(--tx3);margin-top:2px}
+/* Progress bar on card */
+.daily-prog-bar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:12px}
+.daily-prog-fill{height:100%;border-radius:2px;transition:width .5s ease;background:linear-gradient(90deg,var(--ok),#22d3d3)}
+/* History view */
+.daily-hist-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.hist-day{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:default;transition:all .2s;position:relative}
+.hist-day.full{background:rgba(34,211,160,.25);color:var(--ok);border:1px solid rgba(34,211,160,.4)}
+.hist-day.part{background:rgba(255,179,71,.15);color:var(--wa);border:1px solid rgba(255,179,71,.3)}
+.hist-day.none{background:var(--s2);color:var(--tx3);border:1px solid var(--bd)}
+.hist-day:hover::after{content:attr(title);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--s3);color:var(--tx);font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;margin-bottom:3px;pointer-events:none;z-index:10}
+/* Notification badge */
+.notif-badge{display:inline-flex;align-items:center;justify-content:center;width:8px;height:8px;border-radius:50%;background:var(--er);position:absolute;top:2px;right:2px}
+/* Sidebar daily nav */
+.nav-item .daily-count{margin-left:auto;font-size:10px;color:var(--wa);font-weight:700}
+/* Empty daily */
+.daily-empty{text-align:center;padding:60px 20px;color:var(--tx3)}
+.daily-empty-icon{font-size:44px;margin-bottom:14px;opacity:.4}
+/* Daily modal */
+.step-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.step-row{display:flex;align-items:center;gap:8px;background:var(--s2);border-radius:8px;padding:8px 10px}
+.step-row-name{flex:1;font-size:13px;color:var(--tx)}
+.step-row-time{width:60px;background:var(--s3);border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font-size:12px;color:var(--tx2);outline:none;text-align:center}
+.step-drag{color:var(--tx3);cursor:grab;font-size:14px;padding:0 2px}
+.step-del{background:none;border:none;color:var(--tx3);font-size:15px;cursor:pointer}
+.step-del:hover{color:var(--er)}
+.add-step-row{display:flex;gap:7px;margin-top:4px}
+@media(max-width:600px){
+  .chain-step{width:70px}
+  .chain-label{max-width:65px;font-size:9px}
+  .chain-dot{width:22px;height:22px}
+  .chain-connector{width:36px}
+}
 </style>
 </head>
 <body>
@@ -376,6 +446,14 @@ textarea.fi{min-height:58px;resize:vertical}
       <div class="side-label">Projects</div>
       <div id="proj-nav"></div>
       <button class="add-proj" onclick="openProjModal()">＋ Thêm project</button>
+    </div>
+    <div class="side-section">
+      <div class="side-label">Daily Routines</div>
+      <button class="nav-item" id="nav-daily" onclick="switchToDailyView()" style="width:100%;text-align:left">
+        <span class="ni">🔄</span><span class="nlabel">Daily Routines</span>
+        <span id="daily-nav-badge" class="daily-count"></span>
+      </button>
+    <div style="display:none"><!-- placeholder
     </div>
     <div class="sidebar-footer">
       <div class="sync-pill sync-idle" id="sync-pill"></div>
@@ -909,6 +987,8 @@ async function startApp(){
     document.getElementById('app').style.display='flex';
     render();setInterval(tickClock,1000);tickClock();
     setInterval(checkDeadlines,60000);setInterval(autoRefresh,30000);
+    loadDailyData();  // load daily routines
+    requestNotifPermission();
     showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
   }catch(e){
     document.getElementById('loading').style.display='none';
@@ -1365,6 +1445,477 @@ function closeDrawer(){
 // ═══════════════════════════════════════
 // DRAG & DROP (subtasks + links)
 // ═══════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════
+//  DAILY ROUTINES
+// ════════════════════════════════════════════════════════════
+let dailyRoutines = [];      // list of routine objects
+let dailyLogs = {};          // {routineId: {date: {stepId: bool}}}
+let editDailyId = null;
+let modalSteps = [];         // steps being edited in modal
+let isDailyView = false;
+let notifTimers = [];
+
+const DAILY_KEY   = 'tf_daily_routines';
+const DAILYLOG_KEY= 'tf_daily_logs';
+const ICONS_DAILY = ['🔄','⚡','🌅','💪','📚','🏃','🧘','🍎','💼','🎯','🌙','☀️','🔥','✨','🧠','💻','📝','🎵','🏋️','🚀'];
+
+// ── Supabase daily tables ──────────────────────────────────
+const dbDaily = {
+  getRoutines: () => sbFetch('daily_routines?order=sort_order.asc,created_at.asc'),
+  insertRoutine: r => sbFetch('daily_routines', {method:'POST', body:JSON.stringify(r)}),
+  updateRoutine: (id,d) => sbFetch(`daily_routines?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
+  deleteRoutine: id => sbFetch(`daily_routines?id=eq.${id}`, {method:'DELETE', prefer:''}),
+  getLogs: () => sbFetch('daily_logs?order=log_date.desc&limit=400'),
+  upsertLog: l => sbFetch('daily_logs', {method:'POST', prefer:'resolution=merge-duplicates,return=representation', body:JSON.stringify(l)}),
+};
+
+// ── Date helpers ───────────────────────────────────────────
+function getTodayKey(resetHour=0) {
+  const now = new Date();
+  // If current hour < resetHour, still consider "yesterday"
+  if (now.getHours() < resetHour) {
+    const y = new Date(now); y.setDate(y.getDate()-1);
+    return y.toISOString().slice(0,10);
+  }
+  return now.toISOString().slice(0,10);
+}
+
+function getDateKey(daysAgo, resetHour=0) {
+  const d = new Date();
+  if (d.getHours() < resetHour) d.setDate(d.getDate()-1);
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0,10);
+}
+
+function fmtDisplayDate(dateStr) {
+  const d = new Date(dateStr+'T12:00:00');
+  return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'});
+}
+
+// ── Load daily data ────────────────────────────────────────
+async function loadDailyData() {
+  try {
+    const [r, l] = await Promise.all([dbDaily.getRoutines(), dbDaily.getLogs()]);
+    dailyRoutines = r || [];
+    // Build logs index: {routineId_date: {stepId: bool}}
+    dailyLogs = {};
+    (l||[]).forEach(log => {
+      const key = log.routine_id + '_' + log.log_date;
+      if (!dailyLogs[key]) dailyLogs[key] = {};
+      dailyLogs[key][log.step_id] = log.done;
+    });
+  } catch(e) {
+    // fallback to localStorage
+    try { dailyRoutines = JSON.parse(localStorage.getItem(DAILY_KEY)||'[]'); } catch{}
+    try { dailyLogs = JSON.parse(localStorage.getItem(DAILYLOG_KEY)||'{}'); } catch{}
+  }
+  scheduleNotifications();
+  updateDailyBadge();
+}
+
+// ── Get steps done today ───────────────────────────────────
+function getTodaySteps(routine) {
+  const today = getTodayKey(routine.reset_hour||0);
+  const key = routine.id + '_' + today;
+  return dailyLogs[key] || {};
+}
+
+function countDoneToday(routine) {
+  const done = getTodaySteps(routine);
+  return (routine.steps||[]).filter(s => done[s.id]).length;
+}
+
+function isCompleteToday(routine) {
+  return countDoneToday(routine) === (routine.steps||[]).length && (routine.steps||[]).length > 0;
+}
+
+// ── Streak calculation ─────────────────────────────────────
+function calcStreak(routine) {
+  let streak = 0;
+  const rh = routine.reset_hour||0;
+  const steps = routine.steps||[];
+  if (!steps.length) return 0;
+  // Check if today complete (don't break streak if today not done yet)
+  const todayKey = getTodayKey(rh);
+  const todayDone = countDoneToday(routine);
+  let startDay = todayDone === steps.length ? 0 : 1; // if today done, start from today
+  for (let i = startDay; i < 365; i++) {
+    const dk = getDateKey(i, rh);
+    if (dk === todayKey && startDay === 1) { i++; continue; } // skip today if not done
+    const key = routine.id + '_' + dk;
+    const log = dailyLogs[key]||{};
+    const done = steps.filter(s=>log[s.id]).length;
+    if (done === steps.length) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── Toggle step ────────────────────────────────────────────
+async function toggleDailyStep(routineId, stepId) {
+  const routine = dailyRoutines.find(r=>r.id===routineId);
+  if (!routine) return;
+  const today = getTodayKey(routine.reset_hour||0);
+  const key = routineId + '_' + today;
+  if (!dailyLogs[key]) dailyLogs[key] = {};
+  dailyLogs[key][stepId] = !dailyLogs[key][stepId];
+
+  // Optimistic render
+  renderDailyView();
+  updateDailyBadge();
+
+  // Check completion
+  if (isCompleteToday(routine)) {
+    setTimeout(()=>showNotif('ns','🎉 Hoàn thành!',`"${routine.name}" xong hôm nay! 🔥`),200);
+  }
+
+  // Save to Supabase
+  try {
+    await dbDaily.upsertLog({
+      routine_id: routineId,
+      step_id: stepId,
+      log_date: today,
+      done: dailyLogs[key][stepId],
+    });
+    // Also save to localStorage as backup
+    localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
+  } catch(e) {
+    localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
+  }
+}
+
+// ── Update badge ───────────────────────────────────────────
+function updateDailyBadge() {
+  const el = document.getElementById('daily-nav-badge');
+  if (!el) return;
+  const incomplete = dailyRoutines.filter(r => !isCompleteToday(r) && (r.steps||[]).length > 0).length;
+  el.textContent = incomplete > 0 ? incomplete+'  còn lại' : (dailyRoutines.length?'✓ Xong hết':'');
+  el.style.color = incomplete > 0 ? 'var(--wa)' : 'var(--ok)';
+}
+
+// ── Render Daily View ──────────────────────────────────────
+function emptyStepsHtml(routineId) {
+  return `<div style="font-size:12px;color:var(--tx3);text-align:center;padding:10px">Chưa có bước nào — <span style="color:var(--ac);cursor:pointer" onclick="editDaily('${routineId}')">Thêm bước</span></div>`;
+}
+
+function renderDailyView() {
+  const el = document.getElementById('daily-view');
+  if (!el || !isDailyView) return;
+
+  if (!dailyRoutines.length) {
+    el.innerHTML = `
+      <div class="daily-header-row">
+        <div class="daily-title-block">
+          <div class="daily-page-title">🔄 Daily Routines</div>
+          <div class="daily-today">${new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long'})}</div>
+        </div>
+        <button class="daily-add-btn" onclick="openDailyModal()">＋ Tạo routine</button>
+      </div>
+      <div class="daily-empty">
+        <div class="daily-empty-icon">🔄</div>
+        <div style="font-size:16px;font-weight:600;color:var(--tx2);margin-bottom:8px">Chưa có Daily Routine nào</div>
+        <div style="font-size:13px;margin-bottom:20px">Tạo chuỗi hành động lặp lại mỗi ngày</div>
+        <button class="daily-add-btn" onclick="openDailyModal()">＋ Tạo routine đầu tiên</button>
+      </div>`;
+    return;
+  }
+
+  const totalDone = dailyRoutines.filter(r=>isCompleteToday(r)).length;
+  const totalAll  = dailyRoutines.length;
+
+  let html = `
+    <div class="daily-header-row">
+      <div>
+        <div class="daily-page-title">🔄 Daily Routines</div>
+        <div class="daily-today" style="margin-top:3px">${new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long'})} &nbsp;·&nbsp; <span style="color:${totalDone===totalAll?'var(--ok)':'var(--wa)'}">${totalDone}/${totalAll} hoàn thành</span></div>
+      </div>
+      <button class="daily-add-btn" onclick="openDailyModal()">＋ Tạo routine</button>
+    </div>`;
+
+  dailyRoutines.forEach(routine => {
+    const steps = routine.steps||[];
+    const doneTodayMap = getTodaySteps(routine);
+    const doneCount = steps.filter(s=>doneTodayMap[s.id]).length;
+    const pct = steps.length ? Math.round(doneCount/steps.length*100) : 0;
+    const streak = calcStreak(routine);
+    const proj = projects.find(p=>p.id===routine.project_id);
+    const complete = doneCount===steps.length && steps.length>0;
+
+    // Build chain HTML
+    let chainHtml = '<div class="daily-chain">';
+    steps.forEach((step, idx) => {
+      const done = !!doneTodayMap[step.id];
+      chainHtml += `
+        <div class="chain-step">
+          <div class="chain-dot ${done?'done':''}" onclick="toggleDailyStep('${routine.id}','${step.id}')" title="${esc(step.name)}">
+            ${done?'✓':''}
+          </div>
+          <div class="chain-label ${done?'done':''}">${esc(step.name)}</div>
+          ${step.minutes?`<div class="chain-time">⏱${step.minutes}ph</div>`:''}
+        </div>
+        ${idx<steps.length-1?`<div class="chain-connector ${done&&!!doneTodayMap[steps[idx+1]?.id]?'done':''}"></div>`:''}`;
+    });
+    chainHtml += '</div>';
+
+    // History (last 14 days)
+    let histHtml = '<div class="daily-hist-row">';
+    for (let i=13; i>=0; i--) {
+      const dk = getDateKey(i, routine.reset_hour||0);
+      const k = routine.id+'_'+dk;
+      const log = dailyLogs[k]||{};
+      const d = steps.filter(s=>log[s.id]).length;
+      const cls = !steps.length?'none':d===steps.length?'full':d>0?'part':'none';
+      histHtml += `<div class="hist-day ${cls}" title="${fmtDisplayDate(dk)}: ${d}/${steps.length}">${fmtDisplayDate(dk).split('/')[0]}</div>`;
+    }
+    histHtml += '</div>';
+
+    // Total time estimate
+    const totalMin = steps.reduce((a,s)=>a+(s.minutes||0),0);
+
+    html += `
+      <div class="daily-card ${complete?'':''}">
+        <div class="daily-card-header">
+          <span class="daily-card-icon">${routine.icon||'🔄'}</span>
+          <div style="flex:1">
+            <div class="daily-card-name">${esc(routine.name)}</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:3px">
+              ${proj?`<div class="daily-card-proj"><div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}</div>`:''}
+              ${streak>0?`<div class="daily-streak">🔥 ${streak} ngày</div>`:''}
+              ${totalMin>0?`<div style="font-size:11px;color:var(--tx3)">⏱ ~${totalMin}ph/ngày</div>`:''}
+              <div style="font-size:11px;color:var(--tx3)">⏰ Reset ${String(routine.reset_hour||0).padStart(2,'0')}:00</div>
+            </div>
+          </div>
+          <div class="daily-card-actions">
+            <button class="abt" onclick="editDaily('${routine.id}')" title="Sửa">✏️</button>
+            <button class="abt" onclick="deleteDaily('${routine.id}')" title="Xóa">🗑</button>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-bottom:5px">
+          <span>Hôm nay: <strong style="color:${complete?'var(--ok)':'var(--tx)'}">${doneCount}/${steps.length}</strong></span>
+          <span style="color:${complete?'var(--ok)':'var(--tx3)'};font-weight:${complete?700:400}">${complete?'✅ Hoàn thành!':pct+'%'}</span>
+        </div>
+        <div class="daily-prog-bar"><div class="daily-prog-fill" style="width:${pct}%"></div></div>
+
+        <!-- Chain -->
+        ${steps.length ? chainHtml : emptyStepsHtml(routine.id)}
+
+        <!-- History -->
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">
+          <div style="font-size:10px;color:var(--tx3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.8px">Lịch sử 14 ngày</div>
+          ${histHtml}
+        </div>
+      </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+// ── Switch views ───────────────────────────────────────────
+function switchToDailyView() {
+  isDailyView = true;
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('daily-view').style.display = 'block';
+  // Update sidebar active
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-daily')?.classList.add('active');
+  document.getElementById('page-title').textContent = '🔄 Daily Routines';
+  renderDailyView();
+  closeSide();
+}
+
+function switchToTaskView() {
+  isDailyView = false;
+  document.getElementById('content').style.display = '';
+  document.getElementById('daily-view').style.display = 'none';
+}
+
+// Patch setCurView to switch back to task view
+const _origSetCurView = setCurView;
+function setCurView(v) {
+  if (isDailyView) switchToTaskView();
+  _origSetCurView(v);
+}
+
+// ── Daily MODAL ────────────────────────────────────────────
+function openDailyModal() {
+  editDailyId = null; modalSteps = [];
+  document.getElementById('daily-modal-title').textContent = '🔄 Tạo Daily Routine';
+  document.getElementById('dr-name').value = '';
+  document.getElementById('daily-icon-preview').textContent = '🔄';
+  document.getElementById('dr-reset').value = '0';
+  document.getElementById('dr-notif').checked = false;
+  document.getElementById('dr-notif-time').value = '08:00';
+  fillDailyProjSelect('');
+  renderModalSteps();
+  const m = document.getElementById('daily-modal');
+  m.style.display='flex'; requestAnimationFrame(()=>m.classList.add('open'));
+  setTimeout(()=>document.getElementById('dr-name').focus(),350);
+}
+
+function editDaily(id) {
+  const r = dailyRoutines.find(r=>r.id===id); if(!r)return;
+  editDailyId = id;
+  modalSteps = (r.steps||[]).map(s=>({...s}));
+  document.getElementById('daily-modal-title').textContent = '✏️ Chỉnh sửa Routine';
+  document.getElementById('dr-name').value = r.name;
+  document.getElementById('daily-icon-preview').textContent = r.icon||'🔄';
+  document.getElementById('dr-reset').value = String(r.reset_hour||0);
+  document.getElementById('dr-notif').checked = !!r.notify;
+  document.getElementById('dr-notif-time').value = r.notify_time||'08:00';
+  fillDailyProjSelect(r.project_id||'');
+  renderModalSteps();
+  const m = document.getElementById('daily-modal');
+  m.style.display='flex'; requestAnimationFrame(()=>m.classList.add('open'));
+}
+
+function closeDailyModal() {
+  const m=document.getElementById('daily-modal');
+  m.classList.remove('open');
+  setTimeout(()=>{if(!m.classList.contains('open'))m.style.display='none';},320);
+}
+
+function fillDailyProjSelect(val) {
+  document.getElementById('dr-proj').innerHTML =
+    `<option value="">— Không có —</option>` +
+    projects.map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${esc(p.name)}</option>`).join('');
+}
+
+function renderModalSteps() {
+  const el = document.getElementById('step-list');
+  if (!el) return;
+  el.innerHTML = modalSteps.map((s,i)=>`
+    <div class="step-row" id="mstep_${i}" draggable="true"
+      ondragstart="msDragStart(${i})" ondragover="msDragOver(event,${i})" ondrop="msDrop(${i})" ondragend="msDragEnd()">
+      <span class="step-drag">⠿</span>
+      <span class="step-row-name">${esc(s.name)}</span>
+      ${s.minutes?`<span style="font-size:10px;color:var(--tx3)">${s.minutes}ph</span>`:''}
+      <button class="step-del" onclick="removeModalStep(${i})">×</button>
+    </div>`).join('');
+}
+
+function addModalStep() {
+  const nameEl = document.getElementById('step-input');
+  const timeEl = document.getElementById('step-time-input');
+  const name = nameEl.value.trim();
+  if (!name) return;
+  modalSteps.push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name, minutes:parseInt(timeEl.value)||0});
+  nameEl.value=''; timeEl.value='';
+  renderModalSteps();
+  nameEl.focus();
+}
+
+function removeModalStep(i) { modalSteps.splice(i,1); renderModalSteps(); }
+
+// Modal step drag
+let msDragIdx=null;
+function msDragStart(i){msDragIdx=i;setTimeout(()=>document.getElementById('mstep_'+i)?.classList.add('dragging'),0);}
+function msDragOver(e,i){e.preventDefault();document.querySelectorAll('.step-row').forEach(x=>x.classList.remove('drag-over'));document.getElementById('mstep_'+i)?.classList.add('drag-over');}
+function msDrop(i){if(msDragIdx===null||msDragIdx===i)return msDragEnd();const m=modalSteps.splice(msDragIdx,1)[0];modalSteps.splice(i,0,m);renderModalSteps();}
+function msDragEnd(){document.querySelectorAll('.step-row').forEach(x=>{x.classList.remove('dragging');x.classList.remove('drag-over');});msDragIdx=null;}
+
+// Pick icon for daily (reuse emoji from EMOJI_LIB or quick list)
+function pickDailyIcon() {
+  const icons = ICONS_DAILY;
+  // Simple inline picker
+  const existing = document.getElementById('daily-icon-picker');
+  if (existing) { existing.remove(); return; }
+  const wrap = document.getElementById('daily-icon-btn');
+  const picker = document.createElement('div');
+  picker.id = 'daily-icon-picker';
+  picker.style.cssText = 'position:absolute;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:10px;z-index:9999;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;box-shadow:0 8px 32px rgba(0,0,0,.5);margin-top:4px';
+  picker.innerHTML = icons.map(ic=>`<button onclick="setDailyIcon('${ic}')" style="width:36px;height:36px;border:none;background:none;font-size:20px;cursor:pointer;border-radius:7px" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='none'">${ic}</button>`).join('');
+  wrap.style.position='relative';
+  wrap.appendChild(picker);
+}
+function setDailyIcon(ic) {
+  document.getElementById('daily-icon-preview').textContent=ic;
+  document.getElementById('daily-icon-picker')?.remove();
+}
+document.addEventListener('click', e=>{
+  if(!document.getElementById('daily-icon-btn')?.contains(e.target)) document.getElementById('daily-icon-picker')?.remove();
+});
+
+async function saveDaily() {
+  const name = document.getElementById('dr-name').value.trim();
+  if (!name) { showNotif('nw','⚠️ Thiếu tên','Nhập tên routine.'); return; }
+  if (!modalSteps.length) { showNotif('nw','⚠️ Thiếu bước','Thêm ít nhất 1 bước.'); return; }
+  const btn=document.getElementById('save-daily-btn'); btn.textContent='⏳'; btn.disabled=true;
+  const data = {
+    name,
+    icon: document.getElementById('daily-icon-preview').textContent,
+    project_id: document.getElementById('dr-proj').value||null,
+    reset_hour: parseInt(document.getElementById('dr-reset').value)||0,
+    notify: document.getElementById('dr-notif').checked,
+    notify_time: document.getElementById('dr-notif-time').value,
+    steps: modalSteps,
+    sort_order: editDailyId ? dailyRoutines.find(r=>r.id===editDailyId)?.sort_order||0 : dailyRoutines.length,
+  };
+  try {
+    if (editDailyId) {
+      await dbDaily.updateRoutine(editDailyId, {...data, updated_at:new Date().toISOString()});
+      const idx = dailyRoutines.findIndex(r=>r.id===editDailyId);
+      dailyRoutines[idx] = {...dailyRoutines[idx], ...data};
+      showNotif('ns','✅ Đã cập nhật',`"${name}" lưu xong.`);
+    } else {
+      const rec = {...data, id:'dr_'+Date.now(), created_at:new Date().toISOString()};
+      const res = await dbDaily.insertRoutine(rec);
+      dailyRoutines.push(res?res[0]:rec);
+      showNotif('ns','✨ Đã tạo',`"${name}" tạo thành công!`);
+    }
+    scheduleNotifications();
+    updateDailyBadge();
+    renderDailyView();
+    closeDailyModal();
+  } catch(e) { showNotif('nd','❌ Lỗi',e.message); }
+  finally { btn.textContent='💾 Lưu'; btn.disabled=false; }
+}
+
+async function deleteDaily(id) {
+  const r = dailyRoutines.find(r=>r.id===id);
+  if (!confirm(`Xóa routine "${r?.name}"? Toàn bộ lịch sử cũng sẽ bị xóa.`)) return;
+  dailyRoutines = dailyRoutines.filter(r=>r.id!==id);
+  renderDailyView(); updateDailyBadge();
+  try { await dbDaily.deleteRoutine(id); showNotif('ns','🗑 Đã xóa','Routine đã xóa.'); }
+  catch(e) { showNotif('nd','❌ Lỗi',e.message); }
+}
+
+// ── Notifications ──────────────────────────────────────────
+function scheduleNotifications() {
+  notifTimers.forEach(t=>clearTimeout(t));
+  notifTimers = [];
+  if (!('Notification' in window)) return;
+  dailyRoutines.forEach(r => {
+    if (!r.notify || !r.notify_time) return;
+    const [h,m] = r.notify_time.split(':').map(Number);
+    const now = new Date();
+    let target = new Date(now);
+    target.setHours(h,m,0,0);
+    if (target <= now) target.setDate(target.getDate()+1);
+    const ms = target - now;
+    const t = setTimeout(async ()=>{
+      if (isCompleteToday(r)) return;
+      if (Notification.permission==='granted') {
+        new Notification('⏰ TaskFlow Reminder',{body:`Chưa hoàn thành: ${r.name}`,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">⚡</text></svg>'});
+      } else if (Notification.permission!=='denied') {
+        const perm = await Notification.requestPermission();
+        if (perm==='granted') new Notification('⏰ TaskFlow',{body:`Nhắc nhở: ${r.name}`});
+      }
+      showNotif('nw','⏰ Nhắc nhở',`Chưa hoàn thành: "${r.name}"`);
+      scheduleNotifications(); // reschedule for next day
+    }, ms);
+    notifTimers.push(t);
+  });
+}
+
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission==='default') {
+    Notification.requestPermission();
+  }
+}
+
 // ═══════════════════════════════════════
 // DRAG & DROP — Mouse + Touch support
 // ═══════════════════════════════════════
@@ -1753,5 +2304,54 @@ document.addEventListener('keydown',e=>{
 
 window.addEventListener('DOMContentLoaded',initApp);
 </script>
+
+<!-- DAILY ROUTINE MODAL -->
+<div class="overlay" id="daily-modal" onclick="if(event.target===this)closeDailyModal()">
+  <div class="sheet" style="max-width:560px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="daily-modal-title">🔄 Tạo Daily Routine</div>
+    <div class="fg" style="display:flex;align-items:center;gap:10px">
+      <div>
+        <label class="fl">Icon</label>
+        <div style="width:48px;height:48px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer" id="daily-icon-btn" onclick="pickDailyIcon()">
+          <span id="daily-icon-preview">🔄</span>
+        </div>
+      </div>
+      <div style="flex:1"><label class="fl">Tên routine *</label><input class="fi" id="dr-name" placeholder="VD: Công việc hằng ngày..."></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Project</label><select class="fi" id="dr-proj"></select></div>
+      <div class="fg"><label class="fl">Giờ reset mỗi ngày</label>
+        <select class="fi" id="dr-reset">
+          ${Array.from({length:24},(_,h)=>`<option value="${h}" ${h===0?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Nhắc nhở</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--tx2)">
+          <input type="checkbox" id="dr-notif" style="width:16px;height:16px;accent-color:var(--ac)"> Bật thông báo
+        </label>
+        <input class="fi" type="time" id="dr-notif-time" value="08:00" style="width:120px">
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Các bước <span style="color:var(--tx3);font-weight:400">(kéo thả để sắp xếp)</span></label>
+      <div id="step-list" class="step-list"></div>
+      <div class="add-step-row">
+        <input class="fi" id="step-input" placeholder="Tên bước..." onkeydown="if(event.key==='Enter')addModalStep()" style="flex:1">
+        <input class="fi" id="step-time-input" type="number" min="1" max="999" placeholder="phút" style="width:80px">
+        <button class="add-btn" onclick="addModalStep()">＋</button>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btn-g" onclick="closeDailyModal()">Hủy</button>
+      <button class="btn-p" id="save-daily-btn" onclick="saveDaily()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAILY VIEW PANEL (replaces content when active) -->
+<div id="daily-view" class="daily-view" style="display:none"></div>
 </body>
 </html>
