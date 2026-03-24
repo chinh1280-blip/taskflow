@@ -1683,16 +1683,25 @@ async function toggleDailyStep(routineId, stepId) {
   }
 
   // Save to Supabase
+  const isDone = dailyLogs[key][stepId]; // true or false
   try {
-    await dbDaily.upsertLog({
-      routine_id: routineId,
-      step_id: stepId,
-      log_date: today,
-      done: dailyLogs[key][stepId],
-    });
-    // Also save to localStorage as backup
+    if (isDone) {
+      // Tick ON — upsert bản ghi done=true
+      await dbDaily.upsertLog({
+        routine_id: routineId,
+        step_id: stepId,
+        log_date: today,
+        done: true,
+      });
+    } else {
+      // Bỏ tick — xóa bản ghi khỏi Supabase
+      await sbFetch(`daily_logs?routine_id=eq.${routineId}&step_id=eq.${stepId}&log_date=eq.${today}`,
+        {method:'DELETE', prefer:''});
+    }
+    // Cập nhật localStorage theo data thực tế
     localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
   } catch(e) {
+    console.warn('toggleDailyStep save error:', e.message);
     localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
   }
 }
