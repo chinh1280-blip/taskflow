@@ -1154,11 +1154,22 @@ async function manualRefresh(btn){
     dailyRoutines=dr||[];
     const serverLogs2={};
     (dl||[]).forEach(log=>{
+      if (log.actual_minutes != null && log.actual_minutes > 0) {
+        const tk = log.routine_id + '__' + log.step_id + '__' + log.log_date;
+        const existing = stepTimers[tk];
+        const isRunning = existing?.startTs && !existing?.endTs;
+        if (!isRunning && (!existing || existing.fromServer || existing.actualMin == null)) {
+          stepTimers[tk] = stepTimers[tk] || {};
+          stepTimers[tk].actualMin = log.actual_minutes;
+          stepTimers[tk].fromServer = true;
+        }
+      }
       if(!log.done)return;
       const key=log.routine_id+'_'+log.log_date;
       if(!serverLogs2[key])serverLogs2[key]={};
       serverLogs2[key][log.step_id]=true;
     });
+    saveStepTimers();
     const pending2 = getPendingLogs();
     Object.keys(pending2).forEach(dk => {
       Object.keys(pending2[dk]||{}).forEach(sid => {
@@ -1194,11 +1205,25 @@ async function autoRefresh(){
     // Build từ Supabase (chỉ true)
     const serverLogs={};
     (dl||[]).forEach(log=>{
+      if (log.actual_minutes != null && log.actual_minutes > 0) {
+        const tk = log.routine_id + '__' + log.step_id + '__' + log.log_date;
+        const existing = stepTimers[tk];
+        const isRunning = existing?.startTs && !existing?.endTs;
+        if (!isRunning) {
+          // Server có actual_minutes → cập nhật local nếu khác
+          if (!existing || existing.fromServer || existing.actualMin == null) {
+            stepTimers[tk] = stepTimers[tk] || {};
+            stepTimers[tk].actualMin = log.actual_minutes;
+            stepTimers[tk].fromServer = true;
+          }
+        }
+      }
       if(!log.done)return;
       const key=log.routine_id+'_'+log.log_date;
       if(!serverLogs[key])serverLogs[key]={};
       serverLogs[key][log.step_id]=true;
     });
+    saveStepTimers();
     // Merge server + pending. Server confirm tick → xóa khỏi pending
     const pending = getPendingLogs();
     // Xóa pending entries đã được server confirm
@@ -1218,6 +1243,7 @@ async function autoRefresh(){
     else renderContent();
     updateDailyBadge();
     flushPendingOps();
+    flushPendingActual();
   }catch{}
 }
 
@@ -1705,20 +1731,47 @@ async function loadDailyData() {
   try {
     const [r, l] = await Promise.all([dbDaily.getRoutines(), dbDaily.getLogs()]);
     dailyRoutines = r || [];
-    // Build logs index: {routineId_date: {stepId: bool}}
-    dailyLogs = {};
+    const newLogs = {};
     (l||[]).forEach(log => {
+      // Đọc actual_minutes từ server → stepTimers
+      if (log.actual_minutes != null && log.actual_minutes > 0) {
+        const tk = log.routine_id + '__' + log.step_id + '__' + log.log_date;
+        // Không overwrite nếu timer đang chạy (startTs có nhưng chưa endTs)
+        const existing = stepTimers[tk];
+        const isRunning = existing?.startTs && !existing?.endTs;
+        if (!isRunning) {
+          stepTimers[tk] = stepTimers[tk] || {};
+          stepTimers[tk].actualMin = log.actual_minutes;
+          stepTimers[tk].fromServer = true;
+        }
+      }
+      // Đọc done
+      if (!log.done) return;
       const key = log.routine_id + '_' + log.log_date;
-      if (!dailyLogs[key]) dailyLogs[key] = {};
-      dailyLogs[key][log.step_id] = log.done;
+      if (!newLogs[key]) newLogs[key] = {};
+      newLogs[key][log.step_id] = true;
     });
+    saveStepTimers();
+    // Merge với pending
+    const pendingL = getPendingLogs();
+    Object.keys(pendingL).forEach(dk => {
+      Object.keys(pendingL[dk]||{}).forEach(sid => {
+        if (newLogs[dk]?.[sid]) delete pendingL[dk][sid];
+      });
+      if (!Object.keys(pendingL[dk]||{}).length) delete pendingL[dk];
+    });
+    savePendingLogs(pendingL);
+    dailyLogs = mergeLogs(newLogs, pendingL);
+    localStorage.setItem(DAILY_KEY, JSON.stringify(dailyRoutines));
+    localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
   } catch(e) {
-    // fallback to localStorage
+    console.warn('loadDailyData error:', e.message);
     try { dailyRoutines = JSON.parse(localStorage.getItem(DAILY_KEY)||'[]'); } catch{}
-    try { dailyLogs = JSON.parse(localStorage.getItem(DAILYLOG_KEY)||'{}'); } catch{}
+    try { dailyLogs     = JSON.parse(localStorage.getItem(DAILYLOG_KEY)||'{}'); } catch{}
   }
   scheduleNotifications();
   updateDailyBadge();
+  flushPendingOps();
 }
 
 // ── Get steps done today ───────────────────────────────────
@@ -1926,7 +1979,12 @@ function saveStepTimers() {
 function timerKey(routineId, stepId) {
   const today = dailyRoutines.find(r=>r.id===routineId);
   const date = getTodayKey(today?.reset_hour||0);
-  return `${routineId}_${stepId}_${date}`;
+  return routineId + '__' + stepId + '__' + date;
+}
+// Parse timerKey ngược lại
+function parseTimerKey(tk) {
+  const parts = tk.split('__');
+  return { routineId: parts[0], stepId: parts[1], date: parts[2] };
 }
 
 function isTimerRunning(routineId, stepId) {
@@ -1952,6 +2010,79 @@ function startTimer(routineId, stepId) {
   renderDailyView();
 }
 
+
+// ── Sync actual_minutes lên Supabase ───────────────────────────
+async function syncActualMinutes(routineId, stepId, actualMin) {
+  const routine = dailyRoutines.find(r=>r.id===routineId);
+  if (!routine) return;
+  const today = getTodayKey(routine.reset_hour||0);
+  // Cập nhật local stepTimers ngay (để thiết bị này hiển thị đúng)
+  const tk = routineId + '__' + stepId + '__' + today;
+  if (!stepTimers[tk]) stepTimers[tk] = {};
+  stepTimers[tk].actualMin = actualMin;
+  stepTimers[tk].fromServer = false; // local edit
+  saveStepTimers();
+  // Gửi lên Supabase
+  try {
+    // Kiểm tra row đã tồn tại chưa
+    const existing = await sbFetch(
+      `daily_logs?routine_id=eq.${routineId}&step_id=eq.${stepId}&log_date=eq.${today}&select=id`
+    );
+    if (existing && existing.length > 0) {
+      // Cập nhật row có sẵn
+      await sbFetch(
+        `daily_logs?routine_id=eq.${routineId}&step_id=eq.${stepId}&log_date=eq.${today}`,
+        {method:'PATCH', body:JSON.stringify({actual_minutes: actualMin})}
+      );
+    } else {
+      // Tạo row mới (bước chưa được tick)
+      await sbFetch('daily_logs', {
+        method:'POST',
+        body: JSON.stringify({
+          routine_id: routineId, step_id: stepId,
+          log_date: today, done: false, actual_minutes: actualMin
+        })
+      });
+    }
+  } catch(e) {
+    console.warn('syncActualMinutes error:', e.message);
+    // Thêm vào pending để retry
+    addPendingActual(routineId, stepId, today, actualMin);
+  }
+}
+
+// Pending queue cho actual_minutes (phòng mất mạng)
+const PENDING_ACTUAL_KEY = 'tf_pending_actual';
+function addPendingActual(rid, sid, date, min) {
+  try {
+    const q = JSON.parse(localStorage.getItem(PENDING_ACTUAL_KEY)||'{}');
+    q[rid+'__'+sid+'__'+date] = min;
+    localStorage.setItem(PENDING_ACTUAL_KEY, JSON.stringify(q));
+  } catch {}
+}
+async function flushPendingActual() {
+  try {
+    const q = JSON.parse(localStorage.getItem(PENDING_ACTUAL_KEY)||'{}');
+    const done = [];
+    for (const [k, min] of Object.entries(q)) {
+      const [rid, sid, date] = k.split('__');
+      try {
+        const ex = await sbFetch(`daily_logs?routine_id=eq.${rid}&step_id=eq.${sid}&log_date=eq.${date}&select=id`);
+        if (ex && ex.length > 0) {
+          await sbFetch(`daily_logs?routine_id=eq.${rid}&step_id=eq.${sid}&log_date=eq.${date}`,
+            {method:'PATCH', body:JSON.stringify({actual_minutes: min})});
+        } else {
+          await sbFetch('daily_logs', {method:'POST',
+            body:JSON.stringify({routine_id:rid,step_id:sid,log_date:date,done:false,actual_minutes:min})});
+        }
+        done.push(k);
+      } catch {}
+    }
+    done.forEach(k => delete q[k]);
+    localStorage.setItem(PENDING_ACTUAL_KEY, JSON.stringify(q));
+  } catch {}
+}
+
 function stopTimer(routineId, stepId) {
   const k = timerKey(routineId, stepId);
   if (!stepTimers[k]?.startTs) return;
@@ -1959,6 +2090,8 @@ function stopTimer(routineId, stepId) {
   stepTimers[k].actualMin = Math.round((stepTimers[k].endTs - stepTimers[k].startTs) / 60000);
   if (stepTimers[k].actualMin < 1) stepTimers[k].actualMin = 1;
   saveStepTimers();
+  // Sync lên Supabase
+  syncActualMinutes(routineId, stepId, stepTimers[k].actualMin);
   // Auto-tick bước này là done
   const routine = dailyRoutines.find(r=>r.id===routineId);
   if (routine) {
@@ -1994,6 +2127,8 @@ function saveActualTime(routineId, stepId, el) {
   stepTimers[k].actualMin = val;
   if (!stepTimers[k].startTs) stepTimers[k].startTs = Date.now() - val*60000;
   saveStepTimers();
+  // Sync lên Supabase
+  syncActualMinutes(routineId, stepId, val);
   el.style.display = 'none';
   renderDailyView();
 }
