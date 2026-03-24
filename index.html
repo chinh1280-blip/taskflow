@@ -424,9 +424,22 @@ textarea.fi{min-height:58px;resize:vertical}
 </div>
 
 <div id="loading" class="loading">
-  <span class="spin">⚡</span>
-  <div style="font-size:13px;color:var(--tx2)">Đang kết nối Supabase...</div>
-  <div style="font-size:11px;color:var(--tx3)" id="loading-sub">Khởi tạo...</div>
+  <span class="spin" id="loading-icon">⚡</span>
+  <div style="font-size:14px;color:var(--tx2);font-weight:500" id="loading-title">Đang kết nối Supabase...</div>
+  <div style="font-size:12px;color:var(--tx3);text-align:center;max-width:280px;line-height:1.6" id="loading-sub">Khởi tạo...</div>
+  <div id="loading-error" style="display:none;margin-top:8px;background:rgba(255,79,109,.1);border:1px solid rgba(255,79,109,.3);border-radius:10px;padding:12px 16px;max-width:300px;text-align:center">
+    <div style="font-size:12px;color:var(--er);margin-bottom:10px" id="loading-err-msg"></div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button onclick="retryConnect()" style="padding:7px 16px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer">↻ Thử lại</button>
+      <button onclick="resetConfig()" style="padding:7px 16px;border-radius:8px;border:none;background:var(--s2);color:var(--tx2);font-size:12px;cursor:pointer">⚙️ Đổi cấu hình</button>
+    </div>
+  </div>
+  <div id="loading-progress" style="margin-top:16px;width:200px">
+    <div style="height:2px;background:var(--s3);border-radius:1px;overflow:hidden">
+      <div id="loading-bar" style="height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:1px;width:0%;transition:width .4s ease"></div>
+    </div>
+    <div style="font-size:10px;color:var(--tx3);text-align:center;margin-top:6px" id="loading-hint"></div>
+  </div>
 </div>
 
 <div id="app" class="app" style="display:none">
@@ -453,8 +466,7 @@ textarea.fi{min-height:58px;resize:vertical}
         <span class="ni">🔄</span><span class="nlabel">Daily Routines</span>
         <span id="daily-nav-badge" class="daily-count"></span>
       </button>
-    <div style="display:none"><!-- placeholder
-    </div>
+
     <div class="sidebar-footer">
       <div class="sync-pill sync-idle" id="sync-pill"></div>
       <div class="clock-box">
@@ -845,12 +857,30 @@ let dragSrc=null,dragType=null,dragTaskId=null;
 // BOOT
 // ═══════════════════════════════════════
 async function testAndSaveConfig(){
-  const u=document.getElementById('setup-url').value.trim(),k=document.getElementById('setup-key').value.trim();
+  const uEl=document.getElementById('setup-url');
+  const kEl=document.getElementById('setup-key');
   const st=document.getElementById('setup-status');
-  if(!u||!k){st.className='cfg-status err';st.textContent='⚠️ Vui lòng nhập đủ URL và Key';return;}
-  st.className='cfg-status ok';st.textContent='⏳ Đang kiểm tra...';
-  try{await testConnection(u,k);saveConfig(u,k);st.textContent='✅ Thành công! Đang tải...';setTimeout(startApp,800);}
-  catch(e){st.className='cfg-status err';st.textContent='❌ '+e.message;}
+  if(!uEl||!kEl){console.error('Setup elements not found');return;}
+  const u=uEl.value.trim(), k=kEl.value.trim();
+  const setStatus=(cls,msg)=>{ if(st){st.className='cfg-status '+cls;st.textContent=msg;} };
+  if(!u||!k){ setStatus('err','⚠️ Vui lòng nhập đủ URL và Key'); return; }
+  setStatus('ok','⏳ Đang kiểm tra kết nối...');
+  try{
+    await testConnection(u,k);
+    saveConfig(u,k);
+    setStatus('ok','✅ Kết nối thành công! Đang tải...');
+    setTimeout(()=>{
+      document.getElementById('setup-screen').style.display='none';
+      startApp();
+    }, 800);
+  }
+  catch(e){
+    let msg = e.message||'Lỗi không xác định';
+    if(msg.includes('401')||msg.includes('403')) msg='Sai API Key — kiểm tra lại key Supabase';
+    else if(msg.includes('404')) msg='URL không đúng — kiểm tra lại Project URL';
+    else if(msg.includes('Failed to fetch')) msg='Không kết nối được — kiểm tra URL và internet';
+    setStatus('err','❌ '+msg);
+  }
 }
 // ═══════════════════════════════════════
 // AUTH — Password protection
@@ -974,25 +1004,106 @@ async function initApp(){
     setTimeout(()=>document.getElementById('pw-input').focus(),100);
   }
 }
+
+function setLoadingProgress(pct, sub, hint){
+  try{
+    const bar=document.getElementById('loading-bar');
+    const subEl=document.getElementById('loading-sub');
+    const hintEl=document.getElementById('loading-hint');
+    const title=document.getElementById('loading-title');
+    if(bar)bar.style.width=pct+'%';
+    if(subEl)subEl.textContent=sub||'';
+    if(hintEl)hintEl.textContent=hint||'';
+    if(title&&pct<100)title.textContent='Đang kết nối Supabase...';
+  }catch(e){}
+}
+
+function showLoadingError(msg){
+  try{
+    const icon=document.getElementById('loading-icon');
+    const title=document.getElementById('loading-title');
+    const errMsg=document.getElementById('loading-err-msg');
+    const errBox=document.getElementById('loading-error');
+    const prog=document.getElementById('loading-progress');
+    if(icon){icon.style.animation='none';icon.textContent='⚠️';}
+    if(title){title.textContent='Không thể kết nối';title.style.color='var(--er)';}
+    if(errMsg)errMsg.textContent=msg;
+    if(errBox)errBox.style.display='block';
+    if(prog)prog.style.display='none';
+    const loadEl=document.getElementById('loading');
+    if(loadEl)loadEl.style.display='flex';
+  }catch(e){}
+}
+
+function retryConnect(){
+  try{
+    const icon=document.getElementById('loading-icon');
+    const title=document.getElementById('loading-title');
+    const errBox=document.getElementById('loading-error');
+    const prog=document.getElementById('loading-progress');
+    const bar=document.getElementById('loading-bar');
+    if(icon){icon.style.animation='';icon.textContent='⚡';}
+    if(title){title.textContent='Đang kết nối Supabase...';title.style.color='';}
+    if(errBox)errBox.style.display='none';
+    if(prog)prog.style.display='block';
+    if(bar)bar.style.width='0%';
+  }catch(e){}
+  startApp();
+}
+
+function resetConfig(){
+  localStorage.removeItem(CFG_KEY);
+  sessionStorage.removeItem(SES_KEY);
+  location.reload();
+}
+
+let _appStarted = false;
 async function startApp(){
+  if(_appStarted){ 
+    // App đã chạy, chỉ refresh data
+    try{ const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]); projects=p||[];tasks=t||[]; render(); }catch{}
+    return;
+  }
   document.getElementById('setup-screen').style.display='none';
   document.getElementById('loading').style.display='flex';
-  document.getElementById('loading-sub').textContent='Đang tải dữ liệu...';
+  setLoadingProgress(10,'Đang kết nối...','Lần đầu có thể mất 10-30 giây');
+
+  const _warnT=setTimeout(()=>setLoadingProgress(35,'Đang chờ Supabase...','Project có thể đang wake up, vui lòng đợi...'),8000);
+  let _timedOut=false;
+  const _errT=setTimeout(()=>{
+    _timedOut=true;clearTimeout(_warnT);
+    showLoadingError('Timeout 45 giây. Supabase đang khởi động lại. Nhấn "Thử lại".');
+  },45000);
+
   try{
     const cfg=getConfig();SB_URL=cfg.url;SB_KEY=cfg.key;
-    const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]);
+    if(!cfg||!cfg.url||!cfg.key)throw new Error('Chưa có cấu hình Supabase');
+    setLoadingProgress(30,'Đang tải projects...');
+    const p=await db.getProjects();if(_timedOut)return;
+    setLoadingProgress(60,'Đang tải tasks...');
+    const t=await db.getTasks();if(_timedOut)return;
+    clearTimeout(_warnT);clearTimeout(_errT);
     projects=p||[];tasks=t||[];
     if(!projects.length)await seedDefaults();
-    document.getElementById('loading').style.display='none';
-    document.getElementById('app').style.display='flex';
-    render();setInterval(tickClock,1000);tickClock();
-    setInterval(checkDeadlines,60000);setInterval(autoRefresh,30000);
-    loadDailyData();  // load daily routines
-    requestNotifPermission();
-    showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
+    setLoadingProgress(100,'Hoàn tất!');
+    setTimeout(()=>{
+      document.getElementById('loading').style.display='none';
+      document.getElementById('app').style.display='flex';
+      _appStarted = true;
+      render();setInterval(tickClock,1000);tickClock();
+      setInterval(checkDeadlines,60000);setInterval(autoRefresh,30000);
+      loadDailyData();requestNotifPermission();
+      showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
+    },300);
   }catch(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('setup-screen').style.display='flex';
+    if(_timedOut)return;
+    clearTimeout(_warnT);clearTimeout(_errT);
+    let msg=e.message||'Lỗi không xác định';
+    if(msg.includes('401')||msg.includes('403'))msg='Sai API Key. Kiểm tra lại Supabase Key.';
+    else if(msg.includes('404'))msg='Sai URL. Kiểm tra lại Supabase URL.';
+    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError'))msg='Mất kết nối mạng hoặc URL sai.';
+    showLoadingError(msg);
+    document.getElementById('loading').style.display='flex'; // keep loading visible to show error
     const st=document.getElementById('setup-status');
     if(st){st.className='cfg-status err';st.textContent='❌ '+e.message;}
   }
