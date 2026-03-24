@@ -2079,24 +2079,7 @@ function renderDailyView() {
         }
       </div>`;
 
-      // Time info: 2 rows aligned, only show if has data
-      let timeInfo = '';
-      if (estMin > 0 || actualMin != null) {
-        timeInfo = `<div class="step-time-info">
-          ${estMin > 0 ? `<span class="step-time-label">Ước tính:</span>
-            <span class="step-time-val">${fmtMinutes(estMin)}</span>` : ''}
-          <span class="step-time-label">Thực tế:</span>
-          <span class="step-time-val actual ${isOvertime?'overtime':''}"
-            onclick="event.stopPropagation();editActualTime('${routine.id}','${step.id}')"
-            title="Click để chỉnh sửa" style="cursor:pointer">
-            ${running ? '⏱'+fmtMinutes(actualMin) : (actualMin!=null ? fmtMinutes(actualMin) : '—')}
-          </span>
-          <input class="actual-time-edit" id="actual_edit_${tk}"
-            type="number" min="0" style="display:none"
-            onblur="saveActualTime('${routine.id}','${step.id}',this)"
-            onkeydown="if(event.key==='Enter')saveActualTime('${routine.id}','${step.id}',this);if(event.key==='Escape')this.style.display='none'">
-        </div>`;
-      }
+      // timeInfo removed — shown compactly per step
 
       chainHtml += `<div class="chain-step ${done?'done':''}">
           ${timerRow}
@@ -2104,7 +2087,8 @@ function renderDailyView() {
             onclick="toggleDailyStep('${routine.id}','${step.id}')"
             title="${esc(step.name)}">${done?'✓':''}</div>
           <div class="chain-label ${done?'done':''}">${esc(step.name)}</div>
-          ${timeInfo}
+          ${step.minutes ? `<div class="chain-time">⏱${fmtMinutes(step.minutes)}</div>` : ''}
+          ${running ? `<div style="font-size:9px;color:var(--ok);margin-top:2px;font-family:'Roboto Mono',monospace">⏱ ${fmtMinutes(getActualMinutes(routine.id,step.id))}</div>` : (getActualMinutes(routine.id,step.id)!=null ? `<div style="font-size:9px;color:${isOvertime?'var(--wa)':'var(--ok)'};margin-top:2px;font-family:'Roboto Mono',monospace">✓ ${fmtMinutes(getActualMinutes(routine.id,step.id))}</div>` : '')}
         </div>`;
     });
     chainHtml += '</div>';
@@ -2117,11 +2101,13 @@ function renderDailyView() {
       const log = dailyLogs[k]||{};
       const d = steps.filter(s=>log[s.id]).length;
       const cls = !steps.length?'none':d===steps.length?'full':d>0?'part':'none';
-      const [dayN, monN] = fmtDisplayDate(dk).split('/');
+      // Parse day/month safely from date string (format: YYYY-MM-DD)
+      const [, , ddStr] = dk.split('-');  // "2025-03-24" → "24"
+      const mmStr = dk.slice(5,7);         // "03"
       histHtml += `<div class="hist-day ${cls}" title="${fmtDisplayDate(dk)}: ${d}/${steps.length}">
-        <span class="hist-day-num">${dayN}</span>
+        <span class="hist-day-num">${ddStr}</span>
         <span class="hist-day-sep">─</span>
-        <span class="hist-day-mon">${monN}</span>
+        <span class="hist-day-mon">${mmStr}</span>
       </div>`;
     }
     histHtml += '</div>';
@@ -2138,7 +2124,13 @@ function renderDailyView() {
             <div style="display:flex;align-items:center;gap:10px;margin-top:3px">
               ${proj?`<div class="daily-card-proj"><div class="proj-dot" style="background:${proj.color}"></div>${esc(proj.name)}</div>`:''}
               ${streak>0?`<div class="daily-streak">🔥 ${streak} ngày</div>`:''}
-              ${totalMin>0?`<div style="font-size:11px;color:var(--tx3)">⏱ ~${totalMin}ph/ngày</div>`:''}
+              ${totalMin>0?`<div style="font-size:11px;color:var(--tx3)">⏱ ~${fmtMinutes(totalMin)}/ngày</div>`:''}
+              ${(()=>{
+                const actualTotal=steps.reduce((a,s)=>{const m=getActualMinutes(routine.id,s.id);return a+(m||0);},0);
+                if(!actualTotal)return '';
+                const ot=totalMin>0&&actualTotal>totalMin;
+                return `<div style="font-size:11px;color:${ot?'var(--wa)':'var(--ok)'}">✓ ${fmtMinutes(actualTotal)} thực tế</div>`;
+              })()}
               <div style="font-size:11px;color:var(--tx3)">⏰ Reset ${String(routine.reset_hour||0).padStart(2,'0')}:00</div>
             </div>
           </div>
