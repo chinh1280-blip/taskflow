@@ -327,6 +327,24 @@ textarea.fi{min-height:58px;resize:vertical}
 .chain-label{font-size:10px;color:var(--tx2);text-align:center;margin-top:6px;line-height:1.3;width:76px;word-break:break-word}
 .chain-label.done{color:var(--ok)}
 .chain-time{font-size:9px;color:var(--tx3);margin-top:2px;text-align:center}
+/* Timer controls above dot */
+.chain-timer-row{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;min-height:20px}
+.timer-btn{width:20px;height:20px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.timer-btn.start{background:rgba(34,211,160,.15);color:var(--ok)}
+.timer-btn.start:hover{background:rgba(34,211,160,.3)}
+.timer-btn.stop{background:rgba(255,79,109,.15);color:var(--er)}
+.timer-btn.stop:hover{background:rgba(255,79,109,.3)}
+.timer-btn.running{background:var(--ok);color:#fff;animation:timerPulse 1.2s ease-in-out infinite}
+@keyframes timerPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,211,160,.4)}50%{box-shadow:0 0 0 5px rgba(34,211,160,0)}}
+/* Time info below label — 2 rows aligned */
+.step-time-info{margin-top:5px;display:flex;flex-direction:column;align-items:flex-start;width:76px;font-size:9px;gap:2px}
+.step-time-row{display:flex;align-items:center;gap:4px;width:100%}
+.step-time-label{color:var(--tx3);white-space:nowrap;flex-shrink:0;min-width:36px}
+.step-time-val{color:var(--tx2);font-family:'Roboto Mono',monospace;font-weight:500}
+.step-time-val.actual{color:var(--ok)}
+.step-time-val.actual.overtime{color:var(--wa)}
+/* Inline edit actual time */
+.actual-time-edit{width:44px;background:var(--s3);border:1px solid var(--ac);border-radius:4px;padding:1px 4px;font-size:9px;font-family:'Roboto Mono',monospace;color:var(--tx);outline:none;text-align:center}
 /* Progress bar on card */
 .daily-prog-bar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:12px}
 .daily-prog-fill{height:100%;border-radius:2px;transition:width .5s ease;background:linear-gradient(90deg,var(--ok),#22d3d3)}
@@ -1121,19 +1139,56 @@ async function manualRefresh(btn){
   if(btn){btn.classList.add('spin');btn.disabled=true;}
   setSyncUI('loading');
   try{
-    const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]);
+    // Load tất cả data song song
+    const[p,t,dr,dl]=await Promise.all([
+      db.getProjects(),
+      db.getTasks(),
+      dbDaily.getRoutines(),
+      dbDaily.getLogs(),
+    ]);
     projects=p||[];tasks=t||[];
-    // reload subtasks for open drawer
+
+    // Cập nhật daily routines
+    dailyRoutines=dr||[];
+    dailyLogs={};
+    (dl||[]).forEach(log=>{
+      const key=log.routine_id+'_'+log.log_date;
+      if(!dailyLogs[key])dailyLogs[key]={};
+      if(log.done)dailyLogs[key][log.step_id]=true;
+    });
+    localStorage.setItem(DAILYLOG_KEY,JSON.stringify(dailyLogs));
+
+    // Reload subtasks nếu drawer đang mở
     if(openDrawerTaskId){
       subtasksCache[openDrawerTaskId]=await db.getSubtasks(openDrawerTaskId)||[];
       renderDrawer(openDrawerTaskId);
     }
-    renderContent();setSyncUI('ok');showNotif('ns','↻ Đã đồng bộ','Dữ liệu mới nhất đã được tải.');
+
+    // Render đúng view đang hiện
+    if(isDailyView) renderDailyView();
+    else renderContent();
+
+    updateDailyBadge();
+    setSyncUI('ok');
+    showNotif('ns','↻ Đã đồng bộ','Dữ liệu mới nhất đã được tải.');
   }catch(e){setSyncUI('err');showNotif('nd','❌ Lỗi đồng bộ',e.message);}
   finally{if(btn){btn.classList.remove('spin');btn.disabled=false;}}
 }
 async function autoRefresh(){
-  try{const[p,t]=await Promise.all([db.getProjects(),db.getTasks()]);projects=p||[];tasks=t||[];renderContent();}catch{}
+  try{
+    const[p,t,dr,dl]=await Promise.all([db.getProjects(),db.getTasks(),dbDaily.getRoutines(),dbDaily.getLogs()]);
+    projects=p||[];tasks=t||[];
+    dailyRoutines=dr||[];
+    dailyLogs={};
+    (dl||[]).forEach(log=>{
+      const key=log.routine_id+'_'+log.log_date;
+      if(!dailyLogs[key])dailyLogs[key]={};
+      if(log.done)dailyLogs[key][log.step_id]=true;
+    });
+    if(isDailyView)renderDailyView();
+    else renderContent();
+    updateDailyBadge();
+  }catch{}
 }
 
 // ═══════════════════════════════════════
@@ -1579,7 +1634,7 @@ const dbDaily = {
   updateRoutine: (id,d) => sbFetch(`daily_routines?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
   deleteRoutine: id => sbFetch(`daily_routines?id=eq.${id}`, {method:'DELETE', prefer:''}),
   getLogs: () => sbFetch('daily_logs?order=log_date.desc&limit=400'),
-  upsertLog: l => sbFetch('daily_logs', {method:'POST', prefer:'resolution=merge-duplicates,return=representation', body:JSON.stringify(l)}),
+  upsertLog: async (l) => { try { await sbFetch(`daily_logs?routine_id=eq.${l.routine_id}&step_id=eq.${l.step_id}&log_date=eq.${l.log_date}`,{method:'PATCH',body:JSON.stringify({done:l.done})}); } catch { await sbFetch('daily_logs',{method:'POST',body:JSON.stringify(l)}); } },
 };
 
 // ── Date helpers ───────────────────────────────────────────
@@ -1716,6 +1771,120 @@ function updateDailyBadge() {
 }
 
 // ── Render Daily View ──────────────────────────────────────
+
+// ════════════════════════════════════════════════
+// STEP TIMER — đo thời gian thực tế mỗi bước
+// ════════════════════════════════════════════════
+// stepTimers[routineId_stepId_date] = { startTs, endTs, actualMin }
+let stepTimers = {};
+let timerTickInterval = null;
+const TIMER_KEY = 'tf_step_timers';
+
+function loadStepTimers() {
+  try { stepTimers = JSON.parse(localStorage.getItem(TIMER_KEY)||'{}'); } catch {}
+  // Clear timers older than 7 days
+  const cutoff = Date.now() - 7*86400000;
+  Object.keys(stepTimers).forEach(k => {
+    if ((stepTimers[k].startTs||0) < cutoff) delete stepTimers[k];
+  });
+  startTimerTick();
+}
+
+function saveStepTimers() {
+  localStorage.setItem(TIMER_KEY, JSON.stringify(stepTimers));
+}
+
+function timerKey(routineId, stepId) {
+  const today = dailyRoutines.find(r=>r.id===routineId);
+  const date = getTodayKey(today?.reset_hour||0);
+  return `${routineId}_${stepId}_${date}`;
+}
+
+function isTimerRunning(routineId, stepId) {
+  const k = timerKey(routineId, stepId);
+  return !!(stepTimers[k]?.startTs && !stepTimers[k]?.endTs);
+}
+
+function getActualMinutes(routineId, stepId) {
+  const k = timerKey(routineId, stepId);
+  const t = stepTimers[k];
+  if (!t) return null;
+  if (t.actualMin != null) return t.actualMin; // manually edited
+  if (t.startTs && t.endTs) return Math.round((t.endTs - t.startTs) / 60000);
+  if (t.startTs && !t.endTs) return Math.round((Date.now() - t.startTs) / 60000); // running
+  return null;
+}
+
+function startTimer(routineId, stepId) {
+  const k = timerKey(routineId, stepId);
+  if (stepTimers[k]?.startTs && !stepTimers[k]?.endTs) return; // already running
+  stepTimers[k] = { startTs: Date.now(), endTs: null, actualMin: null };
+  saveStepTimers();
+  renderDailyView();
+}
+
+function stopTimer(routineId, stepId) {
+  const k = timerKey(routineId, stepId);
+  if (!stepTimers[k]?.startTs) return;
+  stepTimers[k].endTs = Date.now();
+  stepTimers[k].actualMin = Math.round((stepTimers[k].endTs - stepTimers[k].startTs) / 60000);
+  if (stepTimers[k].actualMin < 1) stepTimers[k].actualMin = 1;
+  saveStepTimers();
+  // Auto-tick bước này là done
+  const routine = dailyRoutines.find(r=>r.id===routineId);
+  if (routine) {
+    const today = getTodayKey(routine.reset_hour||0);
+    const dk = routineId + '_' + today;
+    if (!dailyLogs[dk]) dailyLogs[dk] = {};
+    if (!dailyLogs[dk][stepId]) {
+      dailyLogs[dk][stepId] = true;
+      dbDaily.upsertLog({ routine_id: routineId, step_id: stepId, log_date: today, done: true }).catch(()=>{});
+      localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
+    }
+  }
+  renderDailyView();
+  updateDailyBadge();
+}
+
+function editActualTime(routineId, stepId) {
+  const k = timerKey(routineId, stepId);
+  const current = getActualMinutes(routineId, stepId) || 0;
+  const elId = `actual_edit_${k.replace(/[^a-z0-9]/gi,'_')}`;
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.style.display = 'inline-block';
+  el.value = current;
+  el.focus(); el.select();
+}
+
+function saveActualTime(routineId, stepId, el) {
+  const val = parseInt(el.value);
+  if (isNaN(val) || val < 0) { el.style.display='none'; return; }
+  const k = timerKey(routineId, stepId);
+  if (!stepTimers[k]) stepTimers[k] = {};
+  stepTimers[k].actualMin = val;
+  if (!stepTimers[k].startTs) stepTimers[k].startTs = Date.now() - val*60000;
+  saveStepTimers();
+  el.style.display = 'none';
+  renderDailyView();
+}
+
+function startTimerTick() {
+  if (timerTickInterval) clearInterval(timerTickInterval);
+  timerTickInterval = setInterval(() => {
+    // Only re-render if any timer is running and daily view is active
+    if (!isDailyView) return;
+    const anyRunning = Object.values(stepTimers).some(t => t.startTs && !t.endTs);
+    if (anyRunning) renderDailyView();
+  }, 30000); // update every 30s
+}
+
+function fmtMinutes(min) {
+  if (min == null) return '—';
+  if (min < 60) return min + 'ph';
+  return Math.floor(min/60) + 'g' + (min%60 ? String(min%60).padStart(2,'0') : '');
+}
+
 function emptyStepsHtml(routineId) {
   return `<div style="font-size:12px;color:var(--tx3);text-align:center;padding:10px">Chưa có bước nào — <span style="color:var(--ac);cursor:pointer" onclick="editDaily('${routineId}')">Thêm bước</span></div>`;
 }
@@ -1763,17 +1932,54 @@ function renderDailyView() {
     const proj = projects.find(p=>p.id===routine.project_id);
     const complete = doneCount===steps.length && steps.length>0;
 
-    // Build chain HTML — single loop, each .chain-step has dot+label
-    // Connector line drawn via CSS ::before pseudo-element
+    // Build chain HTML — single loop with timer controls
     let chainHtml = '<div class="daily-chain">';
     steps.forEach((step, i) => {
-      const done = !!doneTodayMap[step.id];
+      const done      = !!doneTodayMap[step.id];
+      const running   = isTimerRunning(routine.id, step.id);
+      const actualMin = getActualMinutes(routine.id, step.id);
+      const tk        = timerKey(routine.id, step.id).replace(/[^a-z0-9]/gi,'_');
+      const estMin    = step.minutes || 0;
+      const isOvertime = actualMin != null && estMin > 0 && actualMin > estMin;
+
+      // Timer buttons above dot
+      const timerRow = `<div class="chain-timer-row">
+        ${running
+          ? `<button class="timer-btn stop running" onclick="event.stopPropagation();stopTimer('${routine.id}','${step.id}')" title="Dừng đếm giờ">⏹</button>`
+          : `<button class="timer-btn start" onclick="event.stopPropagation();startTimer('${routine.id}','${step.id}')" title="Bắt đầu đếm giờ">▶</button>`
+        }
+      </div>`;
+
+      // Time info: 2 rows aligned, only show if has data
+      let timeInfo = '';
+      if (estMin > 0 || actualMin != null) {
+        timeInfo = `<div class="step-time-info">
+          ${estMin > 0 ? `<div class="step-time-row">
+            <span class="step-time-label">Ước tính:</span>
+            <span class="step-time-val">${fmtMinutes(estMin)}</span>
+          </div>` : ''}
+          <div class="step-time-row">
+            <span class="step-time-label">Thực tế:</span>
+            <span class="step-time-val actual ${isOvertime?'overtime':''}"
+              onclick="event.stopPropagation();editActualTime('${routine.id}','${step.id}')"
+              title="Click để chỉnh sửa" style="cursor:pointer">
+              ${running ? '⏱' + fmtMinutes(actualMin) : (actualMin != null ? fmtMinutes(actualMin) : '—')}
+            </span>
+            <input class="actual-time-edit" id="actual_edit_${tk}"
+              type="number" min="0" style="display:none"
+              onblur="saveActualTime('${routine.id}','${step.id}',this)"
+              onkeydown="if(event.key==='Enter')saveActualTime('${routine.id}','${step.id}',this);if(event.key==='Escape')this.style.display='none'">
+          </div>
+        </div>`;
+      }
+
       chainHtml += `<div class="chain-step ${done?'done':''}">
+          ${timerRow}
           <div class="chain-dot ${done?'done':''}"
             onclick="toggleDailyStep('${routine.id}','${step.id}')"
             title="${esc(step.name)}">${done?'✓':''}</div>
           <div class="chain-label ${done?'done':''}">${esc(step.name)}</div>
-          ${step.minutes?`<div class="chain-time">⏱${step.minutes}ph</div>`:''}
+          ${timeInfo}
         </div>`;
     });
     chainHtml += '</div>';
