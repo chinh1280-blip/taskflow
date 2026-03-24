@@ -337,10 +337,9 @@ textarea.fi{min-height:58px;resize:vertical}
 .timer-btn.running{background:var(--ok);color:#fff;animation:timerPulse 1.2s ease-in-out infinite}
 @keyframes timerPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,211,160,.4)}50%{box-shadow:0 0 0 5px rgba(34,211,160,0)}}
 /* Time info below label — 2 rows aligned */
-.step-time-info{margin-top:5px;display:flex;flex-direction:column;align-items:flex-start;width:76px;font-size:9px;gap:2px}
-.step-time-row{display:flex;align-items:center;gap:4px;width:100%}
-.step-time-label{color:var(--tx3);white-space:nowrap;flex-shrink:0;min-width:36px}
-.step-time-val{color:var(--tx2);font-family:'Roboto Mono',monospace;font-weight:500}
+.step-time-info{margin-top:6px;width:80px;font-size:9px;display:grid;grid-template-columns:auto 1fr;gap:1px 5px;align-items:center}
+.step-time-label{color:var(--tx3);white-space:nowrap;font-size:9px;line-height:1.6}
+.step-time-val{color:var(--tx2);font-family:'Roboto Mono',monospace;font-weight:500;font-size:9px;line-height:1.6}
 .step-time-val.actual{color:var(--ok)}
 .step-time-val.actual.overtime{color:var(--wa)}
 /* Inline edit actual time */
@@ -350,7 +349,10 @@ textarea.fi{min-height:58px;resize:vertical}
 .daily-prog-fill{height:100%;border-radius:2px;transition:width .5s ease;background:linear-gradient(90deg,var(--ok),#22d3d3)}
 /* History view */
 .daily-hist-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
-.hist-day{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:default;transition:all .2s;position:relative}
+.hist-day{width:28px;height:34px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default;transition:all .2s;position:relative;gap:0;line-height:1.1}
+.hist-day-num{font-size:10px;font-weight:700;line-height:1.2}
+.hist-day-sep{font-size:7px;line-height:1;opacity:.6}
+.hist-day-mon{font-size:8px;line-height:1.2;opacity:.8}
 .hist-day.full{background:rgba(34,211,160,.25);color:var(--ok);border:1px solid rgba(34,211,160,.4)}
 .hist-day.part{background:rgba(255,179,71,.15);color:var(--wa);border:1px solid rgba(255,179,71,.3)}
 .hist-day.none{background:var(--s2);color:var(--tx3);border:1px solid var(--bd)}
@@ -2081,22 +2083,18 @@ function renderDailyView() {
       let timeInfo = '';
       if (estMin > 0 || actualMin != null) {
         timeInfo = `<div class="step-time-info">
-          ${estMin > 0 ? `<div class="step-time-row">
-            <span class="step-time-label">Ước tính:</span>
-            <span class="step-time-val">${fmtMinutes(estMin)}</span>
-          </div>` : ''}
-          <div class="step-time-row">
-            <span class="step-time-label">Thực tế:</span>
-            <span class="step-time-val actual ${isOvertime?'overtime':''}"
-              onclick="event.stopPropagation();editActualTime('${routine.id}','${step.id}')"
-              title="Click để chỉnh sửa" style="cursor:pointer">
-              ${running ? '⏱' + fmtMinutes(actualMin) : (actualMin != null ? fmtMinutes(actualMin) : '—')}
-            </span>
-            <input class="actual-time-edit" id="actual_edit_${tk}"
-              type="number" min="0" style="display:none"
-              onblur="saveActualTime('${routine.id}','${step.id}',this)"
-              onkeydown="if(event.key==='Enter')saveActualTime('${routine.id}','${step.id}',this);if(event.key==='Escape')this.style.display='none'">
-          </div>
+          ${estMin > 0 ? `<span class="step-time-label">Ước tính:</span>
+            <span class="step-time-val">${fmtMinutes(estMin)}</span>` : ''}
+          <span class="step-time-label">Thực tế:</span>
+          <span class="step-time-val actual ${isOvertime?'overtime':''}"
+            onclick="event.stopPropagation();editActualTime('${routine.id}','${step.id}')"
+            title="Click để chỉnh sửa" style="cursor:pointer">
+            ${running ? '⏱'+fmtMinutes(actualMin) : (actualMin!=null ? fmtMinutes(actualMin) : '—')}
+          </span>
+          <input class="actual-time-edit" id="actual_edit_${tk}"
+            type="number" min="0" style="display:none"
+            onblur="saveActualTime('${routine.id}','${step.id}',this)"
+            onkeydown="if(event.key==='Enter')saveActualTime('${routine.id}','${step.id}',this);if(event.key==='Escape')this.style.display='none'">
         </div>`;
       }
 
@@ -2119,7 +2117,12 @@ function renderDailyView() {
       const log = dailyLogs[k]||{};
       const d = steps.filter(s=>log[s.id]).length;
       const cls = !steps.length?'none':d===steps.length?'full':d>0?'part':'none';
-      histHtml += `<div class="hist-day ${cls}" title="${fmtDisplayDate(dk)}: ${d}/${steps.length}">${fmtDisplayDate(dk).split('/')[0]}</div>`;
+      const [dayN, monN] = fmtDisplayDate(dk).split('/');
+      histHtml += `<div class="hist-day ${cls}" title="${fmtDisplayDate(dk)}: ${d}/${steps.length}">
+        <span class="hist-day-num">${dayN}</span>
+        <span class="hist-day-sep">─</span>
+        <span class="hist-day-mon">${monN}</span>
+      </div>`;
     }
     histHtml += '</div>';
 
