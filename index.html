@@ -1150,12 +1150,14 @@ async function manualRefresh(btn){
 
     // Cập nhật daily routines
     dailyRoutines=dr||[];
-    dailyLogs={};
+    const serverLogs2={};
     (dl||[]).forEach(log=>{
+      if(!log.done)return;
       const key=log.routine_id+'_'+log.log_date;
-      if(!dailyLogs[key])dailyLogs[key]={};
-      if(log.done)dailyLogs[key][log.step_id]=true;
+      if(!serverLogs2[key])serverLogs2[key]={};
+      serverLogs2[key][log.step_id]=true;
     });
+    dailyLogs = mergeLogs(serverLogs2, getPendingLogs());
     localStorage.setItem(DAILYLOG_KEY,JSON.stringify(dailyLogs));
 
     // Reload subtasks nếu drawer đang mở
@@ -1179,15 +1181,21 @@ async function autoRefresh(){
     const[p,t,dr,dl]=await Promise.all([db.getProjects(),db.getTasks(),dbDaily.getRoutines(),dbDaily.getLogs()]);
     projects=p||[];tasks=t||[];
     dailyRoutines=dr||[];
-    dailyLogs={};
+    // Build từ Supabase (chỉ true)
+    const serverLogs={};
     (dl||[]).forEach(log=>{
+      if(!log.done)return;
       const key=log.routine_id+'_'+log.log_date;
-      if(!dailyLogs[key])dailyLogs[key]={};
-      if(log.done)dailyLogs[key][log.step_id]=true;
+      if(!serverLogs[key])serverLogs[key]={};
+      serverLogs[key][log.step_id]=true;
     });
+    // Merge với pending — KHÔNG xóa tick chưa kịp sync
+    dailyLogs = mergeLogs(serverLogs, getPendingLogs());
+    localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
     if(isDailyView)renderDailyView();
     else renderContent();
     updateDailyBadge();
+    flushPendingOps();
   }catch{}
 }
 
@@ -1726,40 +1734,27 @@ async function toggleDailyStep(routineId, stepId) {
   const today = getTodayKey(routine.reset_hour||0);
   const key = routineId + '_' + today;
   if (!dailyLogs[key]) dailyLogs[key] = {};
-  dailyLogs[key][stepId] = !dailyLogs[key][stepId];
+  const newState = !dailyLogs[key][stepId];
+  dailyLogs[key][stepId] = newState;
 
-  // Optimistic render
+  // Cập nhật localStorage ngay lập tức
+  localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
+
+  // Thêm vào pending queue (bảo vệ khi mất mạng)
+  addPendingOp(routineId, stepId, today, newState ? 'add' : 'remove');
+
+  // Render ngay (optimistic)
   renderDailyView();
   updateDailyBadge();
 
-  // Check completion
   if (isCompleteToday(routine)) {
     setTimeout(()=>showNotif('ns','🎉 Hoàn thành!',`"${routine.name}" xong hôm nay! 🔥`),200);
   }
 
-  // Save to Supabase
-  const isDone = dailyLogs[key][stepId]; // true or false
-  try {
-    if (isDone) {
-      // Tick ON — upsert bản ghi done=true
-      await dbDaily.upsertLog({
-        routine_id: routineId,
-        step_id: stepId,
-        log_date: today,
-        done: true,
-      });
-    } else {
-      // Bỏ tick — xóa bản ghi khỏi Supabase
-      await sbFetch(`daily_logs?routine_id=eq.${routineId}&step_id=eq.${stepId}&log_date=eq.${today}`,
-        {method:'DELETE', prefer:''});
-    }
-    // Cập nhật localStorage theo data thực tế
-    localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
-  } catch(e) {
-    console.warn('toggleDailyStep save error:', e.message);
-    localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
-  }
+  // Flush lên Supabase (fire and forget — đã có pending queue bảo vệ)
+  flushPendingOps();
 }
+
 
 // ── Update badge ───────────────────────────────────────────
 function updateDailyBadge() {
@@ -1779,6 +1774,110 @@ function updateDailyBadge() {
 let stepTimers = {};
 let timerTickInterval = null;
 const TIMER_KEY = 'tf_step_timers';
+
+
+// ════════════════════════════════════════════════════
+// PENDING OPS QUEUE — bảo vệ tick khi mất mạng tạm thời
+// ════════════════════════════════════════════════════
+const PENDING_KEY = 'tf_pending_ops';  // {routineId_stepId_date: 'add'|'remove'}
+const PENDING_LOG_KEY = 'tf_pending_logs'; // {routineId_date: {stepId: true}}
+
+function getPendingOps() {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY)||'{}'); } catch { return {}; }
+}
+function savePendingOps(ops) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify(ops));
+}
+function getPendingLogs() {
+  try { return JSON.parse(localStorage.getItem(PENDING_LOG_KEY)||'{}'); } catch { return {}; }
+}
+function savePendingLogs(logs) {
+  localStorage.setItem(PENDING_LOG_KEY, JSON.stringify(logs));
+}
+
+// Merge 2 log objects — pendingLogs luôn thắng (ưu tiên local)
+function mergeLogs(serverLogs, pendingLogs) {
+  const merged = JSON.parse(JSON.stringify(serverLogs)); // deep clone
+  Object.keys(pendingLogs).forEach(key => {
+    if (!merged[key]) merged[key] = {};
+    Object.assign(merged[key], pendingLogs[key]);
+  });
+  return merged;
+}
+
+// Thêm vào pending queue khi tick/bỏ tick
+function addPendingOp(routineId, stepId, date, action) {
+  const ops = getPendingOps();
+  const k = `${routineId}__${stepId}__${date}`;
+  if (action === 'add') {
+    ops[k] = 'add';
+    // Thêm vào pending logs
+    const logs = getPendingLogs();
+    if (!logs[routineId+'_'+date]) logs[routineId+'_'+date] = {};
+    logs[routineId+'_'+date][stepId] = true;
+    savePendingLogs(logs);
+  } else {
+    ops[k] = 'remove';
+    // Xóa khỏi pending logs
+    const logs = getPendingLogs();
+    if (logs[routineId+'_'+date]) {
+      delete logs[routineId+'_'+date][stepId];
+    }
+    savePendingLogs(logs);
+  }
+  savePendingOps(ops);
+}
+
+// Flush pending ops lên Supabase
+let isFlushing = false;
+async function flushPendingOps() {
+  if (isFlushing) return;
+  const ops = getPendingOps();
+  if (!Object.keys(ops).length) return;
+  isFlushing = true;
+  const succeeded = [];
+  for (const [k, action] of Object.entries(ops)) {
+    const [routineId, stepId, date] = k.split('__');
+    if (!routineId || !stepId || !date) { succeeded.push(k); continue; }
+    try {
+      if (action === 'add') {
+        await dbDaily.upsertLog({ routine_id: routineId, step_id: stepId, log_date: date, done: true });
+      } else {
+        await sbFetch(`daily_logs?routine_id=eq.${routineId}&step_id=eq.${stepId}&log_date=eq.${date}`,
+          {method:'DELETE', prefer:''});
+        // Xóa khỏi pending logs
+        const logs = getPendingLogs();
+        if (logs[routineId+'_'+date]) delete logs[routineId+'_'+date][stepId];
+        savePendingLogs(logs);
+      }
+      succeeded.push(k);
+    } catch(e) {
+      // Giữ lại trong queue, thử lần sau
+    }
+  }
+  // Xóa những op đã thành công
+  const remaining = getPendingOps();
+  succeeded.forEach(k => delete remaining[k]);
+  savePendingOps(remaining);
+  isFlushing = false;
+  if (Object.keys(remaining).length === 0) {
+    // Tất cả đã sync — xóa pending logs (Supabase là nguồn sự thật)
+    savePendingLogs({});
+  }
+}
+
+// upsertLog an toàn dùng ON CONFLICT
+const dbDailySafe = {
+  upsertLog: async (l) => {
+    // Dùng POST với ON CONFLICT header (Supabase REST API)
+    return sbFetch('daily_logs', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: JSON.stringify(l),
+      headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'}
+    });
+  }
+};
 
 function loadStepTimers() {
   try { stepTimers = JSON.parse(localStorage.getItem(TIMER_KEY)||'{}'); } catch {}
