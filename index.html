@@ -1157,7 +1157,15 @@ async function manualRefresh(btn){
       if(!serverLogs2[key])serverLogs2[key]={};
       serverLogs2[key][log.step_id]=true;
     });
-    dailyLogs = mergeLogs(serverLogs2, getPendingLogs());
+    const pending2 = getPendingLogs();
+    Object.keys(pending2).forEach(dk => {
+      Object.keys(pending2[dk]||{}).forEach(sid => {
+        if (serverLogs2[dk]?.[sid]) delete pending2[dk][sid];
+      });
+      if (!Object.keys(pending2[dk]||{}).length) delete pending2[dk];
+    });
+    savePendingLogs(pending2);
+    dailyLogs = mergeLogs(serverLogs2, pending2);
     localStorage.setItem(DAILYLOG_KEY,JSON.stringify(dailyLogs));
 
     // Reload subtasks nếu drawer đang mở
@@ -1189,8 +1197,20 @@ async function autoRefresh(){
       if(!serverLogs[key])serverLogs[key]={};
       serverLogs[key][log.step_id]=true;
     });
-    // Merge với pending — KHÔNG xóa tick chưa kịp sync
-    dailyLogs = mergeLogs(serverLogs, getPendingLogs());
+    // Merge server + pending. Server confirm tick → xóa khỏi pending
+    const pending = getPendingLogs();
+    // Xóa pending entries đã được server confirm
+    Object.keys(pending).forEach(dk => {
+      Object.keys(pending[dk]||{}).forEach(sid => {
+        const [rid, date] = dk.split('_');
+        if (serverLogs[dk]?.[sid]) {
+          delete pending[dk][sid]; // server đã có, không cần pending nữa
+        }
+      });
+      if (!Object.keys(pending[dk]||{}).length) delete pending[dk];
+    });
+    savePendingLogs(pending);
+    dailyLogs = mergeLogs(serverLogs, pending);
     localStorage.setItem(DAILYLOG_KEY, JSON.stringify(dailyLogs));
     if(isDailyView)renderDailyView();
     else renderContent();
@@ -1642,7 +1662,17 @@ const dbDaily = {
   updateRoutine: (id,d) => sbFetch(`daily_routines?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
   deleteRoutine: id => sbFetch(`daily_routines?id=eq.${id}`, {method:'DELETE', prefer:''}),
   getLogs: () => sbFetch('daily_logs?order=log_date.desc&limit=400'),
-  upsertLog: async (l) => { try { await sbFetch(`daily_logs?routine_id=eq.${l.routine_id}&step_id=eq.${l.step_id}&log_date=eq.${l.log_date}`,{method:'PATCH',body:JSON.stringify({done:l.done})}); } catch { await sbFetch('daily_logs',{method:'POST',body:JSON.stringify(l)}); } },
+  upsertLog: async (l) => {
+    // Thử POST trước, nếu conflict (409) thì PATCH
+    try {
+      await sbFetch('daily_logs', {method:'POST', body:JSON.stringify(l)});
+    } catch(e) {
+      if (String(e.message).includes('409') || String(e.message).includes('23505') || String(e.message).includes('duplicate')) {
+        await sbFetch(`daily_logs?routine_id=eq.${l.routine_id}&step_id=eq.${l.step_id}&log_date=eq.${l.log_date}`,
+          {method:'PATCH', body:JSON.stringify({done:l.done})});
+      } else { throw e; }
+    }
+  },
 };
 
 // ── Date helpers ───────────────────────────────────────────
@@ -1860,10 +1890,8 @@ async function flushPendingOps() {
   succeeded.forEach(k => delete remaining[k]);
   savePendingOps(remaining);
   isFlushing = false;
-  if (Object.keys(remaining).length === 0) {
-    // Tất cả đã sync — xóa pending logs (Supabase là nguồn sự thật)
-    savePendingLogs({});
-  }
+  // KHÔNG xóa pendingLogs — chỉ xóa khi autoRefresh confirm từ server
+  // pendingLogs luôn được merge vào dailyLogs
 }
 
 // upsertLog an toàn dùng ON CONFLICT
