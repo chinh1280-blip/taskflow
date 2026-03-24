@@ -313,19 +313,18 @@ textarea.fi{min-height:58px;resize:vertical}
 .daily-streak{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--wa)}
 .daily-completion{font-size:11px;color:var(--tx3)}
 /* Chain — 2-row layout: dots on top, labels below */
-.daily-chain{display:flex;flex-direction:column;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin;gap:0}
-.chain-dots-row{display:flex;align-items:center;gap:0;padding:4px 0}
-.chain-labels-row{display:flex;align-items:flex-start;gap:0}
-.chain-step{display:flex;flex-direction:column;align-items:center;width:90px;flex-shrink:0}
-.chain-step-top{display:flex;align-items:center;width:90px;flex-shrink:0;justify-content:center}
-.chain-connector{flex:1;height:2px;background:var(--bd);transition:background .3s;min-width:20px;max-width:60px}
-.chain-connector.done{background:var(--ok)}
-.chain-dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--bd);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:12px;font-weight:700;flex-shrink:0;z-index:1}
+/* Chain — each step is a column: dot on top, label below, connector is bg of the gap */
+.daily-chain{display:flex;align-items:flex-start;overflow-x:auto;padding:6px 0 8px;scrollbar-width:thin}
+.chain-step{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:80px;position:relative}
+/* connector line: drawn as ::before on all steps except first */
+.chain-step+.chain-step::before{content:'';position:absolute;top:13px;right:calc(50% + 13px);left:calc(-100% + 40px + 13px);height:2px;background:var(--bd);z-index:0;transition:background .3s}
+.chain-step.done+.chain-step.done::before{background:var(--ok)}
+.chain-step.done+.chain-step::before{background:var(--ok)}
+.chain-dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--bd);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:12px;font-weight:700;flex-shrink:0;position:relative;z-index:1}
 .chain-dot.done{background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:0 0 10px rgba(34,211,160,.4)}
 .chain-dot:not(.done){background:var(--s1);border-color:var(--er);color:var(--er)}
 .chain-dot:hover{transform:scale(1.15)}
-.chain-label-wrap{width:90px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:5px}
-.chain-label{font-size:10px;color:var(--tx2);text-align:center;line-height:1.3;max-width:80px;word-break:break-word}
+.chain-label{font-size:10px;color:var(--tx2);text-align:center;margin-top:6px;line-height:1.3;width:76px;word-break:break-word}
 .chain-label.done{color:var(--ok)}
 .chain-time{font-size:9px;color:var(--tx3);margin-top:2px;text-align:center}
 /* Progress bar on card */
@@ -355,11 +354,10 @@ textarea.fi{min-height:58px;resize:vertical}
 .step-del:hover{color:var(--er)}
 .add-step-row{display:flex;gap:7px;margin-top:4px}
 @media(max-width:600px){
-  .chain-step-top{width:70px}
-  .chain-label-wrap{width:70px}
-  .chain-label{max-width:65px;font-size:9px}
+  .chain-step{width:64px}
+  .chain-label{width:60px;font-size:9px}
   .chain-dot{width:22px;height:22px}
-  .chain-connector{min-width:14px;max-width:36px}
+  .chain-step+.chain-step::before{top:11px;right:calc(50% + 11px);left:calc(-100% + 32px + 11px)}
 }
 </style>
 </head>
@@ -1756,28 +1754,20 @@ function renderDailyView() {
     const proj = projects.find(p=>p.id===routine.project_id);
     const complete = doneCount===steps.length && steps.length>0;
 
-    // Build chain HTML — 2-row: dots row + labels row
-    let dotsRow = '<div class="chain-dots-row">';
-    let labelsRow = '<div class="chain-labels-row">';
-    steps.forEach((step, idx) => {
+    // Build chain HTML — single loop, each .chain-step has dot+label
+    // Connector line drawn via CSS ::before pseudo-element
+    let chainHtml = '<div class="daily-chain">';
+    steps.forEach((step, i) => {
       const done = !!doneTodayMap[step.id];
-      const nextDone = idx < steps.length-1 ? !!doneTodayMap[steps[idx+1]?.id] : false;
-      dotsRow += `<div class="chain-step-top">
+      chainHtml += `<div class="chain-step ${done?'done':''}">
           <div class="chain-dot ${done?'done':''}"
             onclick="toggleDailyStep('${routine.id}','${step.id}')"
             title="${esc(step.name)}">${done?'✓':''}</div>
-        </div>`;
-      if (idx < steps.length-1) {
-        dotsRow += `<div class="chain-connector ${done&&nextDone?'done':''}"></div>`;
-      }
-      labelsRow += `<div class="chain-label-wrap">
           <div class="chain-label ${done?'done':''}">${esc(step.name)}</div>
           ${step.minutes?`<div class="chain-time">⏱${step.minutes}ph</div>`:''}
         </div>`;
     });
-    dotsRow += '</div>';
-    labelsRow += '</div>';
-    let chainHtml = `<div class="daily-chain">${dotsRow}${labelsRow}</div>`;
+    chainHtml += '</div>';
 
     // History (last 14 days)
     let histHtml = '<div class="daily-hist-row">';
