@@ -458,6 +458,92 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-tag-input{flex:1;background:none;border:none;outline:none;font-size:12px;color:var(--tx2);font-family:Roboto,sans-serif}
 .note-tag-input::placeholder{color:var(--tx3)}
 .note-save-btn{padding:7px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+
+/* ═══ BOARDS — Kế hoạch dạng bảng ═══ */
+.boards-view{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.boards-topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0}
+.boards-page-title{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.boards-subtitle{font-size:12px;color:var(--tx3);margin-top:2px}
+.boards-add-btn{padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;box-shadow:0 0 20px rgba(79,124,255,.2)}
+
+/* Board container */
+.board-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:16px;overflow:hidden;margin-bottom:4px;transition:all .2s}
+.board-header{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;transition:background .15s}
+.board-header:hover{background:rgba(79,124,255,.05)}
+.board-color-bar{width:4px;height:36px;border-radius:2px;flex-shrink:0}
+.board-info{flex:1;min-width:0}
+.board-name{font-size:15px;font-weight:700;color:var(--tx)}
+.board-desc{font-size:12px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+.board-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.board-prog-pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.board-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.board-wrap:hover .board-actions{opacity:1}
+.board-act-btn{width:28px;height:28px;border-radius:8px;border:none;background:none;color:var(--tx3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.board-act-btn:hover{background:var(--s2);color:var(--tx)}
+.board-chevron{font-size:14px;color:var(--tx3);transition:transform .25s;flex-shrink:0}
+.board-chevron.open{transform:rotate(90deg)}
+
+/* Columns scroll area */
+.board-cols-wrap{overflow-x:auto;padding:0 16px 16px;scrollbar-width:thin}
+.board-cols{display:flex;gap:12px;align-items:flex-start;min-width:max-content}
+
+/* Column */
+.board-col{width:220px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;border:1px solid var(--bd);overflow:hidden}
+.board-col-head{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.board-col-title{flex:1;font-size:13px;font-weight:600;color:var(--tx);outline:none;background:none;border:none;font-family:Roboto,sans-serif;min-width:0}
+.board-col-title:focus{color:var(--ac)}
+.board-col-count{font-size:10px;color:var(--tx3);flex-shrink:0}
+.board-col-del{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer;opacity:0;transition:opacity .15s;flex-shrink:0;padding:2px}
+.board-col:hover .board-col-del{opacity:1}
+.board-col-items{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:40px}
+
+/* Item */
+.board-item{background:var(--s1);border:1px solid var(--bd);border-radius:9px;padding:9px 10px;cursor:pointer;transition:all .15s;position:relative}
+.board-item:hover{border-color:rgba(79,124,255,.3);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.board-item.done{opacity:.5}
+.board-item-row{display:flex;align-items:flex-start;gap:8px}
+.board-item-cb{width:18px;height:18px;border-radius:5px;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;font-weight:700;color:#fff;transition:all .15s;margin-top:1px}
+.board-item-cb.on{background:var(--ok);border-color:var(--ok)}
+.board-item-name{flex:1;font-size:13px;color:var(--tx);line-height:1.4;word-break:break-word}
+.board-item-name.done{text-decoration:line-through;color:var(--tx3)}
+.board-item-note{font-size:11px;color:var(--tx3);margin-top:4px;padding-left:26px;line-height:1.4}
+.board-item-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s;padding:2px}
+.board-item:hover .board-item-del{opacity:1}
+
+/* Add item */
+.board-add-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--tx3);border:1px dashed var(--bd);background:none;width:100%;text-align:left;margin:4px 0 0;transition:all .15s}
+.board-add-item:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.05)}
+
+/* Add column */
+.board-add-col{width:180px;flex-shrink:0;background:rgba(79,124,255,.05);border:1px dashed rgba(79,124,255,.3);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;color:var(--tx3);cursor:pointer;min-height:80px;transition:all .15s}
+.board-add-col:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.08)}
+
+/* Progress bar */
+.board-prog-bar{height:3px;background:var(--s3);border-radius:2px;overflow:hidden;margin:0 16px 12px}
+.board-prog-fill{height:100%;border-radius:2px;transition:width .5s ease;background:linear-gradient(90deg,var(--ok),#22d3d3)}
+
+/* Inline add forms */
+.inline-add-wrap{padding:4px 8px 8px}
+.inline-add-input{width:100%;background:var(--s3);border:1px solid var(--ac);border-radius:7px;padding:7px 9px;font-size:12px;color:var(--tx);outline:none;font-family:Roboto,sans-serif;margin-bottom:4px}
+.inline-add-note{width:100%;background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:5px 9px;font-size:11px;color:var(--tx2);outline:none;font-family:Roboto,sans-serif;resize:none;margin-bottom:5px}
+.inline-add-note:focus{border-color:var(--ac)}
+.inline-add-row{display:flex;gap:5px}
+.inline-add-ok{padding:5px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+.inline-add-cancel{padding:5px 8px;border-radius:7px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer}
+
+/* Item edit modal */
+.item-edit-popup{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px;z-index:300;width:260px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.item-edit-popup input,.item-edit-popup textarea{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--tx);outline:none;font-family:Roboto,sans-serif;margin-bottom:8px}
+.item-edit-popup textarea{resize:vertical;min-height:56px;font-size:12px}
+.item-edit-popup input:focus,.item-edit-popup textarea:focus{border-color:var(--ac)}
+
+/* Boards empty */
+.boards-empty{text-align:center;padding:60px 20px;color:var(--tx3)}
+
+/* Board modal */
+.board-modal-color-row{display:flex;gap:7px;flex-wrap:wrap}
+.bm-color{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.bm-color.active,.bm-color:hover{border-color:#fff;transform:scale(1.15)}
 </style>
 </head>
 <body>
@@ -572,6 +658,13 @@ textarea.fi{min-height:58px;resize:vertical}
         <span class="ni">📝</span><span class="nlabel">Kế hoạch & Ý tưởng</span>
         <span id="notes-nav-badge" style="font-size:10px;color:var(--tx3);margin-left:auto"></span>
       </button>
+    </div>
+    <div class="side-section">
+      <div class="side-label">Boards</div>
+      <button class="nav-item" id="nav-boards" onclick="switchToBoardsView()" style="width:100%;text-align:left">
+        <span class="ni">🗂</span><span class="nlabel">Kế hoạch & Mục tiêu</span>
+        <span id="boards-nav-badge" style="font-size:10px;color:var(--tx3);margin-left:auto"></span>
+      </button>
     <div style="display:none"><!-- placeholder-->
 
     <div class="sidebar-footer">
@@ -609,6 +702,7 @@ textarea.fi{min-height:58px;resize:vertical}
     <div class="content" id="content"></div>
     <div id="daily-view" class="daily-view" style="display:none"></div>
     <div id="notes-view" class="notes-view" style="display:none"></div>
+    <div id="boards-view" class="boards-view" style="display:none"></div>
   </main>
 </div>
 
@@ -3264,6 +3358,429 @@ setInterval(() => {
   if (content) localStorage.setItem('tf_note_draft', content);
 }, 30000);
 
+
+// ══════════════════════════════════════════════════════════════
+//  BOARDS — Kế hoạch & Mục tiêu
+// ══════════════════════════════════════════════════════════════
+// Data structure:
+// board = { id, name, desc, color, collapsed, sort_order, created_at, updated_at }
+// board.columns = [{ id, name, sort_order, items:[{ id, name, note, done, sort_order }] }]
+// All stored as JSON in boards.data column
+
+let boards = [];
+let isBoardsView = false;
+let editBoardId = null;
+let boardColor = '#4f7cff';
+let activeAddCol = null;   // {boardId, colId} — which inline add is open
+let editItemCtx = null;    // {boardId, colId, itemId} — item being edited
+
+const BOARD_COLORS = ['#4f7cff','#7c5fff','#22d3a0','#ffb347','#ff4f6d','#a78bfa','#f472b6','#34d399'];
+
+const dbBoards = {
+  getAll: () => sbFetch('boards?order=sort_order.asc,created_at.asc'),
+  insert: b => sbFetch('boards', {method:'POST', body:JSON.stringify(b)}),
+  update: (id,d) => sbFetch(`boards?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
+  delete: id => sbFetch(`boards?id=eq.${id}`, {method:'DELETE', prefer:''}),
+};
+
+// ── Load ──────────────────────────────────────────────────────
+async function loadBoards() {
+  try {
+    const raw = await dbBoards.getAll() || [];
+    boards = raw.map(b => ({
+      ...b,
+      columns: tryParseJSON(b.data, [])
+    }));
+  } catch(e) {
+    try { boards = JSON.parse(localStorage.getItem('tf_boards')||'[]'); } catch {}
+  }
+  updateBoardsBadge();
+  if (isBoardsView) renderBoardsView();
+}
+
+function tryParseJSON(s, fallback) {
+  try { return JSON.parse(s||'null') || fallback; } catch { return fallback; }
+}
+
+async function saveBoardData(boardId) {
+  const b = boards.find(b=>b.id===boardId);
+  if (!b) return;
+  const data = JSON.stringify(b.columns||[]);
+  try {
+    await dbBoards.update(boardId, {data, updated_at: new Date().toISOString()});
+    localStorage.setItem('tf_boards', JSON.stringify(boards));
+  } catch(e) {
+    localStorage.setItem('tf_boards', JSON.stringify(boards));
+  }
+}
+
+function updateBoardsBadge() {
+  const el = document.getElementById('boards-nav-badge');
+  if (el) el.textContent = boards.length ? boards.length+' board' : '';
+}
+
+// ── Switch view ───────────────────────────────────────────────
+function switchToBoardsView() {
+  isBoardsView = true;
+  if (isDailyView) switchToTaskView();
+  if (isNotesView) switchFromNotesView();
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('daily-view').style.display = 'none';
+  document.getElementById('notes-view').style.display = 'none';
+  document.getElementById('boards-view').style.display = 'flex';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-boards')?.classList.add('active');
+  document.getElementById('page-title').textContent = '🗂 Kế hoạch & Mục tiêu';
+  if (!boards.length) loadBoards();
+  else renderBoardsView();
+  closeSide();
+}
+
+function switchFromBoardsView() {
+  isBoardsView = false;
+  document.getElementById('boards-view').style.display = 'none';
+  document.getElementById('nav-boards')?.classList.remove('active');
+}
+
+// Patch setCurView
+const _setCurViewBoards = setCurView;
+setCurView = function(v) {
+  if (isBoardsView) switchFromBoardsView();
+  _setCurViewBoards(v);
+};
+const _switchToDailyBoards = switchToDailyView;
+switchToDailyView = function() {
+  if (isBoardsView) switchFromBoardsView();
+  _switchToDailyBoards();
+};
+const _switchToNotesBoards = switchToNotesView;
+switchToNotesView = function() {
+  if (isBoardsView) switchFromBoardsView();
+  _switchToNotesBoards();
+};
+
+// ── Render boards list ────────────────────────────────────────
+function renderBoardsView() {
+  const el = document.getElementById('boards-view');
+  if (!el || !isBoardsView) return;
+
+  if (!boards.length) {
+    el.innerHTML = `
+      <div class="boards-topbar">
+        <div><div class="boards-page-title">🗂 Kế hoạch & Mục tiêu</div>
+        <div class="boards-subtitle">Tổ chức kế hoạch theo từng bước rõ ràng</div></div>
+        <button class="boards-add-btn" onclick="openBoardModal()">＋ Tạo Board</button>
+      </div>
+      <div class="boards-empty">
+        <div style="font-size:44px;margin-bottom:14px;opacity:.4">🗂</div>
+        <div style="font-size:16px;font-weight:600;color:var(--tx2);margin-bottom:8px">Chưa có Board nào</div>
+        <div style="font-size:13px;margin-bottom:20px">Tạo Board để tổ chức kế hoạch, mục tiêu theo từng bước</div>
+        <button class="boards-add-btn" onclick="openBoardModal()">＋ Tạo Board đầu tiên</button>
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="boards-topbar">
+      <div><div class="boards-page-title">🗂 Kế hoạch & Mục tiêu</div>
+      <div class="boards-subtitle">${boards.length} board</div></div>
+      <button class="boards-add-btn" onclick="openBoardModal()">＋ Tạo Board</button>
+    </div>`;
+
+  boards.forEach(b => {
+    const cols = b.columns||[];
+    const totalItems = cols.reduce((a,col)=>a+(col.items||[]).length,0);
+    const doneItems  = cols.reduce((a,col)=>a+(col.items||[]).filter(i=>i.done).length,0);
+    const pct = totalItems ? Math.round(doneItems/totalItems*100) : 0;
+    const isOpen = !b.collapsed;
+    const progColor = pct===100?'var(--ok)':pct>=50?'var(--ac)':'var(--wa)';
+
+    html += `<div class="board-wrap" id="bw_${b.id}">
+      <div class="board-header" onclick="toggleBoardCollapse('${b.id}')">
+        <div class="board-color-bar" style="background:${b.color||'#4f7cff'}"></div>
+        <div class="board-info">
+          <div class="board-name">${esc(b.name)}</div>
+          ${b.description?`<div class="board-desc">${esc(b.description)}</div>`:''}
+        </div>
+        <div class="board-meta">
+          ${totalItems?`<span class="board-prog-pill" style="background:${pct===100?'rgba(34,211,160,.15)':'rgba(79,124,255,.1)'};color:${progColor}">${pct}% · ${doneItems}/${totalItems}</span>`:''}
+          <div class="board-actions" onclick="event.stopPropagation()">
+            <button class="board-act-btn" onclick="openBoardModal('${b.id}')" title="Sửa">✏️</button>
+            <button class="board-act-btn" onclick="deleteBoard('${b.id}')" title="Xóa">🗑</button>
+          </div>
+          <span class="board-chevron ${isOpen?'open':''}">›</span>
+        </div>
+      </div>
+      ${totalItems?`<div class="board-prog-bar"><div class="board-prog-fill" style="width:${pct}%"></div></div>`:''}
+      ${isOpen ? renderBoardCols(b) : ''}
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function renderBoardCols(b) {
+  const cols = b.columns||[];
+  let html = '<div class="board-cols-wrap"><div class="board-cols">';
+
+  cols.forEach((col,ci) => {
+    const items = col.items||[];
+    const doneCount = items.filter(i=>i.done).length;
+    const isAddOpen = activeAddCol?.boardId===b.id && activeAddCol?.colId===col.id;
+
+    html += `<div class="board-col" id="bc_${b.id}_${col.id}">
+      <div class="board-col-head">
+        <input class="board-col-title" value="${esc(col.name)}"
+          onblur="renameCol('${b.id}','${col.id}',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()">
+        <span class="board-col-count">${doneCount}/${items.length}</span>
+        <button class="board-col-del" onclick="deleteCol('${b.id}','${col.id}')" title="Xóa cột">×</button>
+      </div>
+      <div class="board-col-items">
+        ${items.map(item => renderBoardItem(b.id, col.id, item)).join('')}
+      </div>
+      ${isAddOpen ? renderInlineAdd(b.id, col.id) : `<button class="board-add-item" onclick="openInlineAdd('${b.id}','${col.id}')">＋ Thêm</button>`}
+    </div>`;
+  });
+
+  // Add column button
+  html += `<div class="board-add-col" onclick="addCol('${b.id}')">＋ Thêm cột</div>`;
+  html += '</div></div>';
+  return html;
+}
+
+function renderBoardItem(boardId, colId, item) {
+  return `<div class="board-item ${item.done?'done':''}" id="bi_${item.id}">
+    <div class="board-item-row">
+      <div class="board-item-cb ${item.done?'on':''}"
+        onclick="event.stopPropagation();toggleItem('${boardId}','${colId}','${item.id}')">
+        ${item.done?'✓':''}
+      </div>
+      <div class="board-item-name ${item.done?'done':''}"
+        ondblclick="event.stopPropagation();openItemEdit('${boardId}','${colId}','${item.id}',event)">
+        ${esc(item.name)}
+      </div>
+    </div>
+    ${item.note?`<div class="board-item-note">${esc(item.note)}</div>`:''}
+    <button class="board-item-del" onclick="event.stopPropagation();deleteItem('${boardId}','${colId}','${item.id}')">×</button>
+  </div>`;
+}
+
+function renderInlineAdd(boardId, colId) {
+  return `<div class="inline-add-wrap">
+    <input class="inline-add-input" id="iai_${boardId}_${colId}" placeholder="Tên việc cần làm..."
+      onkeydown="if(event.key==='Enter')confirmAddItem('${boardId}','${colId}');if(event.key==='Escape')closeInlineAdd()">
+    <textarea class="inline-add-note" id="ian_${boardId}_${colId}" placeholder="Ghi chú ngắn (tuỳ chọn)..." rows="2"
+      onkeydown="if(event.key==='Escape')closeInlineAdd()"></textarea>
+    <div class="inline-add-row">
+      <button class="inline-add-ok" onclick="confirmAddItem('${boardId}','${colId}')">＋ Thêm</button>
+      <button class="inline-add-cancel" onclick="closeInlineAdd()">Hủy</button>
+    </div>
+  </div>`;
+}
+
+// ── Board actions ─────────────────────────────────────────────
+function toggleBoardCollapse(boardId) {
+  const b = boards.find(b=>b.id===boardId);
+  if (!b) return;
+  b.collapsed = !b.collapsed;
+  renderBoardsView();
+  dbBoards.update(boardId, {collapsed: b.collapsed}).catch(()=>{});
+}
+
+// ── Column actions ────────────────────────────────────────────
+function addCol(boardId) {
+  const b = boards.find(b=>b.id===boardId);
+  if (!b) return;
+  if (!b.columns) b.columns = [];
+  const col = { id:'c_'+Date.now(), name:'Bước mới', sort_order:b.columns.length, items:[] };
+  b.columns.push(col);
+  renderBoardsView();
+  saveBoardData(boardId);
+  // Focus new col title
+  setTimeout(() => {
+    const el = document.querySelector(`#bc_${boardId}_${col.id} .board-col-title`);
+    if (el) { el.focus(); el.select(); }
+  }, 100);
+}
+
+function renameCol(boardId, colId, name) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  if (!col || col.name===name) return;
+  col.name = name.trim()||'Bước';
+  saveBoardData(boardId);
+}
+
+function deleteCol(boardId, colId) {
+  const b = boards.find(b=>b.id===boardId);
+  if (!b) return;
+  const col = (b.columns||[]).find(c=>c.id===colId);
+  if (col?.items?.length && !confirm(`Xóa cột "${col.name}"? (${col.items.length} việc sẽ bị xóa)`)) return;
+  b.columns = (b.columns||[]).filter(c=>c.id!==colId);
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
+// ── Item actions ──────────────────────────────────────────────
+function openInlineAdd(boardId, colId) {
+  activeAddCol = {boardId, colId};
+  renderBoardsView();
+  setTimeout(() => document.getElementById(`iai_${boardId}_${colId}`)?.focus(), 80);
+}
+
+function closeInlineAdd() {
+  activeAddCol = null;
+  renderBoardsView();
+}
+
+function confirmAddItem(boardId, colId) {
+  const nameEl = document.getElementById(`iai_${boardId}_${colId}`);
+  const noteEl = document.getElementById(`ian_${boardId}_${colId}`);
+  const name = nameEl?.value.trim();
+  if (!name) return;
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  if (!col) return;
+  if (!col.items) col.items = [];
+  col.items.push({id:'i_'+Date.now()+'_'+Math.random().toString(36).slice(2,5), name, note:noteEl?.value.trim()||'', done:false, sort_order:col.items.length});
+  activeAddCol = null;
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
+function toggleItem(boardId, colId, itemId) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  const item = (col?.items||[]).find(i=>i.id===itemId);
+  if (!item) return;
+  item.done = !item.done;
+  // Re-render just this item for performance
+  const el = document.getElementById('bi_'+itemId);
+  if (el) el.outerHTML = renderBoardItem(boardId, colId, item);
+  // Update progress
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
+function deleteItem(boardId, colId, itemId) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  if (!col) return;
+  col.items = (col.items||[]).filter(i=>i.id!==itemId);
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
+// ── Item edit popup ───────────────────────────────────────────
+function openItemEdit(boardId, colId, itemId, evt) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  const item = (col?.items||[]).find(i=>i.id===itemId);
+  if (!item) return;
+  editItemCtx = {boardId, colId, itemId};
+  const popup = document.getElementById('item-edit-popup');
+  document.getElementById('iep-name').value = item.name;
+  document.getElementById('iep-note').value = item.note||'';
+  popup.style.display = 'block';
+  // Position near click
+  const x = Math.min(evt.clientX, window.innerWidth-280);
+  const y = Math.min(evt.clientY+10, window.innerHeight-200);
+  popup.style.left = x+'px'; popup.style.top = y+'px';
+  setTimeout(()=>document.getElementById('iep-name').focus(),50);
+}
+
+function closeItemEdit() {
+  document.getElementById('item-edit-popup').style.display='none';
+  editItemCtx = null;
+}
+
+function saveItemEdit() {
+  if (!editItemCtx) return;
+  const {boardId,colId,itemId} = editItemCtx;
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  const item = (col?.items||[]).find(i=>i.id===itemId);
+  if (!item) return;
+  item.name = document.getElementById('iep-name').value.trim()||item.name;
+  item.note = document.getElementById('iep-note').value.trim();
+  closeItemEdit();
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
+document.addEventListener('click', e => {
+  const popup = document.getElementById('item-edit-popup');
+  if (popup && popup.style.display!=='none' && !popup.contains(e.target)) closeItemEdit();
+});
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') closeItemEdit();
+});
+
+// ── Board MODAL ───────────────────────────────────────────────
+function openBoardModal(id) {
+  editBoardId = id||null;
+  const b = id ? boards.find(b=>b.id===id) : null;
+  boardColor = b?.color||'#4f7cff';
+  document.getElementById('board-modal-title').textContent = id ? '✏️ Chỉnh sửa Board' : '🗂 Tạo Board mới';
+  document.getElementById('bm-name').value = b?.name||'';
+  document.getElementById('bm-desc').value = b?.description||'';
+  document.getElementById('bm-colors').innerHTML = BOARD_COLORS.map(col=>
+    `<div class="bm-color ${col===boardColor?'active':''}" style="background:${col}" onclick="setBoardColor('${col}',this)"></div>`
+  ).join('');
+  const m = document.getElementById('board-modal');
+  m.style.display='flex'; requestAnimationFrame(()=>m.classList.add('open'));
+  setTimeout(()=>document.getElementById('bm-name').focus(),350);
+}
+
+function closeBoardModal() {
+  const m=document.getElementById('board-modal');
+  m.classList.remove('open');
+  setTimeout(()=>{if(!m.classList.contains('open'))m.style.display='none';},320);
+  editBoardId=null;
+}
+
+function setBoardColor(col,el) {
+  boardColor=col;
+  document.querySelectorAll('.bm-color').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function saveBoard() {
+  const name = document.getElementById('bm-name').value.trim();
+  if (!name) { showNotif('nw','⚠️','Nhập tên Board.'); return; }
+  const btn=document.getElementById('save-board-btn'); btn.textContent='⏳'; btn.disabled=true;
+  const now = new Date().toISOString();
+  const data = {name, description:document.getElementById('bm-desc').value.trim()||null, color:boardColor, updated_at:now};
+  try {
+    if (editBoardId) {
+      await dbBoards.update(editBoardId, data);
+      const b=boards.find(b=>b.id===editBoardId);
+      if (b) Object.assign(b, data);
+      showNotif('ns','✅ Đã cập nhật',`"${name}" lưu xong.`);
+    } else {
+      const rec={...data, id:'b_'+Date.now(), data:'[]', columns:[], collapsed:false, sort_order:boards.length, created_at:now};
+      const res=await dbBoards.insert({...rec, data:'[]'});
+      boards.push(res?{...res[0], columns:[]}:rec);
+      showNotif('ns','✨ Đã tạo',`Board "${name}" tạo xong!`);
+    }
+    localStorage.setItem('tf_boards',JSON.stringify(boards));
+    updateBoardsBadge();
+    renderBoardsView();
+    closeBoardModal();
+  } catch(e) { showNotif('nd','❌ Lỗi',e.message); }
+  finally { btn.textContent='💾 Lưu'; btn.disabled=false; }
+}
+
+async function deleteBoard(id) {
+  const b=boards.find(b=>b.id===id);
+  if(!confirm(`Xóa Board "${b?.name}"? Tất cả dữ liệu sẽ mất.`))return;
+  boards=boards.filter(b=>b.id!==id);
+  renderBoardsView(); updateBoardsBadge();
+  try { await dbBoards.delete(id); localStorage.setItem('tf_boards',JSON.stringify(boards)); }
+  catch(e) { showNotif('nd','❌ Lỗi',e.message); }
+}
+
 window.addEventListener('DOMContentLoaded',initApp);
 </script>
 
@@ -3407,6 +3924,35 @@ window.addEventListener('DOMContentLoaded',initApp);
       <input class="note-tag-input" id="ne-tags" placeholder="Tags: công việc, ý tưởng...">
       <button class="note-save-btn" onclick="saveNote()">💾 Lưu</button>
     </div>
+  </div>
+</div>
+
+<!-- BOARD MODAL -->
+<div class="overlay" id="board-modal" onclick="if(event.target===this)closeBoardModal()">
+  <div class="sheet" style="max-width:500px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="board-modal-title">🗂 Tạo Board mới</div>
+    <div class="fg"><label class="fl">Tên Board *</label><input class="fi" id="bm-name" placeholder="VD: Học tiếng Anh, Dự án X..."></div>
+    <div class="fg"><label class="fl">Mô tả / Mục tiêu</label><textarea class="fi" id="bm-desc" placeholder="Mục tiêu cần đạt được..." rows="2"></textarea></div>
+    <div class="fg">
+      <label class="fl">Màu sắc</label>
+      <div class="board-modal-color-row" id="bm-colors"></div>
+    </div>
+    <div class="mactions">
+      <button class="btn-g" onclick="closeBoardModal()">Hủy</button>
+      <button class="btn-p" id="save-board-btn" onclick="saveBoard()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM EDIT POPUP (floating) -->
+<div id="item-edit-popup" class="item-edit-popup" style="display:none">
+  <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Chỉnh sửa</div>
+  <input id="iep-name" placeholder="Tên việc cần làm...">
+  <textarea id="iep-note" placeholder="Ghi chú ngắn (tuỳ chọn)..." rows="2"></textarea>
+  <div style="display:flex;gap:6px;justify-content:flex-end">
+    <button onclick="closeItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--s3);color:var(--tx2);font-size:12px;cursor:pointer">Hủy</button>
+    <button onclick="saveItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer">✓ Lưu</button>
   </div>
 </div>
 </body>
