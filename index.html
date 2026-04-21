@@ -3751,7 +3751,13 @@ async function saveBoard() {
   if (!name) { showNotif('nw','⚠️','Nhập tên Board.'); return; }
   const btn=document.getElementById('save-board-btn'); btn.textContent='⏳'; btn.disabled=true;
   const now = new Date().toISOString();
-  const data = {name, description:document.getElementById('bm-desc').value.trim()||null, color:boardColor, updated_at:now};
+  // Chỉ các field có trong bảng Supabase
+    const data = {
+      name,
+      description: document.getElementById('bm-desc').value.trim()||null,
+      color: boardColor,
+      updated_at: now
+    };
   try {
     if (editBoardId) {
       await dbBoards.update(editBoardId, data);
@@ -3759,9 +3765,23 @@ async function saveBoard() {
       if (b) Object.assign(b, data);
       showNotif('ns','✅ Đã cập nhật',`"${name}" lưu xong.`);
     } else {
-      const rec={...data, id:'b_'+Date.now(), data:'[]', columns:[], collapsed:false, sort_order:boards.length, created_at:now};
-      const res=await dbBoards.insert({...rec, data:'[]'});
-      boards.push(res?{...res[0], columns:[]}:rec);
+      const newId = 'b_'+Date.now();
+      // Chỉ gửi các field có trong bảng Supabase (không gửi 'columns')
+      const dbRec = {
+        id: newId,
+        name: data.name,
+        description: data.description||null,
+        color: data.color,
+        data: '[]',
+        collapsed: false,
+        sort_order: boards.length,
+        created_at: now,
+        updated_at: now
+      };
+      const res = await dbBoards.insert(dbRec);
+      // Local record có thêm 'columns' để app dùng
+      const rec = {...dbRec, columns:[]};
+      boards.push(res ? {...res[0], columns:tryParseJSON(res[0]?.data,[])} : rec);
       showNotif('ns','✨ Đã tạo',`Board "${name}" tạo xong!`);
     }
     localStorage.setItem('tf_boards',JSON.stringify(boards));
