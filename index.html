@@ -464,7 +464,13 @@ textarea.fi{min-height:58px;resize:vertical}
 .boards-topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0}
 .boards-page-title{font-size:20px;font-weight:700;letter-spacing:-.5px}
 .boards-subtitle{font-size:12px;color:var(--tx3);margin-top:2px}
-.boards-add-btn{padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;box-shadow:0 0 20px rgba(79,124,255,.2)}
+.boards-add-btn{
+  padding:8px 16px;border-radius:10px;
+  border:1px solid rgba(79,124,255,.5);
+  background:transparent;color:var(--ac);font-size:13px;font-weight:500;
+  cursor:pointer;white-space:nowrap;transition:all .2s ease
+}
+.boards-add-btn:hover{background:var(--ac);color:#fff;border-color:var(--ac);box-shadow:0 0 16px rgba(79,124,255,.35)}
 
 /* Board container */
 .board-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:16px;overflow:hidden;margin-bottom:4px;transition:all .2s}
@@ -488,17 +494,56 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-cols{display:flex;gap:12px;align-items:flex-start;min-width:max-content}
 
 /* Column */
-.board-col{width:220px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;border:1px solid var(--bd);overflow:hidden}
+
+/* ── Column color theming ── */
+.board-col{--col-color:#2e3450}
+.board-col-head{border-bottom:1px solid rgba(var(--col-rgb,46,52,80),.6)}
+.board-col-top-bar{height:3px;border-radius:0;background:var(--col-color);opacity:.85;transition:opacity .2s}
+.board-col:hover .board-col-top-bar{opacity:1}
+.board-item:hover{border-color:var(--col-color)!important;box-shadow:0 2px 12px rgba(0,0,0,.3),0 0 0 1px rgba(var(--col-rgb,79,124,255),.15)}
+/* Col color picker */
+.col-color-picker{display:flex;gap:5px;padding:6px 10px 8px;flex-wrap:wrap;border-bottom:1px solid var(--bd)}
+.col-cpick{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.col-cpick:hover,.col-cpick.active{border-color:#fff;transform:scale(1.2)}
+/* Board color vars — applied to left bar + hover border */
+.board-col[data-color="#4f7cff"] .board-col-top-bar{background:#4f7cff}
+
+.board-col{
+  width:220px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;
+  border:1px solid rgba(255,255,255,.07);overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);transition:box-shadow .2s
+}
+.board-col:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
 .board-col-head{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--bd)}
 .board-col-title{flex:1;font-size:13px;font-weight:600;color:var(--tx);outline:none;background:none;border:none;font-family:Roboto,sans-serif;min-width:0}
 .board-col-title:focus{color:var(--ac)}
 .board-col-count{font-size:10px;color:var(--tx3);flex-shrink:0}
 .board-col-del{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer;opacity:0;transition:opacity .15s;flex-shrink:0;padding:2px}
 .board-col:hover .board-col-del{opacity:1}
-.board-col-items{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:40px}
+.board-col-items{
+  padding:8px;display:flex;flex-direction:column;gap:6px;min-height:40px;
+  max-height:calc(100vh - 320px);overflow-y:auto;
+}
+.board-col-items::-webkit-scrollbar{width:5px}
+.board-col-items::-webkit-scrollbar-track{background:transparent}
+.board-col-items::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:10px}
+.board-col-items::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.22)}
 
 /* Item */
-.board-item{background:var(--s1);border:1px solid var(--bd);border-radius:9px;padding:9px 10px;cursor:pointer;transition:all .15s;position:relative}
+.board-item{
+  background:var(--s1);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;padding:9px 10px;cursor:pointer;
+  transition:all .2s ease;position:relative;
+  box-shadow:0 1px 3px rgba(0,0,0,.25)
+}
+.board-item:hover{
+  background:rgba(255,255,255,.04);
+  border-color:var(--col-color,var(--ac));
+  box-shadow:0 3px 12px rgba(0,0,0,.35),0 0 0 1px rgba(79,124,255,.15);
+  transform:translateY(-1px)
+}
+.board-item.done{opacity:.45;transform:none!important}
 .board-item:hover{border-color:rgba(79,124,255,.3);box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .board-item.done{opacity:.5}
 .board-item-row{display:flex;align-items:flex-start;gap:8px}
@@ -506,16 +551,28 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-item-cb.on{background:var(--ok);border-color:var(--ok)}
 .board-item-name{flex:1;font-size:13px;color:var(--tx);line-height:1.4;word-break:break-word}
 .board-item-name.done{text-decoration:line-through;color:var(--tx3)}
-.board-item-note{font-size:11px;color:var(--tx3);margin-top:4px;padding-left:26px;line-height:1.4}
+.board-item-note{font-size:11px;color:var(--tx3);margin-top:4px;padding-left:26px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .board-item-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s;padding:2px}
 .board-item:hover .board-item-del{opacity:1}
 
 /* Add item */
-.board-add-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--tx3);border:1px dashed var(--bd);background:none;width:100%;text-align:left;margin:4px 0 0;transition:all .15s}
+.board-add-item{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;
+  cursor:pointer;font-size:12px;color:var(--tx3);
+  border:1px dashed rgba(255,255,255,.1);background:none;
+  width:100%;text-align:left;margin:4px 0 0;transition:all .2s ease
+}
+.board-add-item:hover{border-color:var(--col-color,var(--ac));color:var(--col-color,var(--ac));background:rgba(79,124,255,.06)}
 .board-add-item:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.05)}
 
 /* Add column */
-.board-add-col{width:180px;flex-shrink:0;background:rgba(79,124,255,.05);border:1px dashed rgba(79,124,255,.3);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;color:var(--tx3);cursor:pointer;min-height:80px;transition:all .15s}
+.board-add-col{
+  width:180px;flex-shrink:0;background:transparent;
+  border:1px dashed rgba(255,255,255,.1);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:13px;color:var(--tx3);cursor:pointer;min-height:80px;transition:all .2s ease
+}
+.board-add-col:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.07)}
 .board-add-col:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.08)}
 
 /* Progress bar */
@@ -3528,14 +3585,20 @@ function renderBoardCols(b) {
     const doneCount = items.filter(i=>i.done).length;
     const isAddOpen = activeAddCol?.boardId===b.id && activeAddCol?.colId===col.id;
 
-    html += `<div class="board-col" id="bc_${b.id}_${col.id}">
+    const colColor = col.color || '#4f7cff';
+    const colColors = ["#4f7cff", "#7c5fff", "#22d3a0", "#ffb347", "#ff6b6b", "#a78bfa", "#34d399", "#fb7185", "#38bdf8", "#e879f9"];
+    const isColorOpen = activeColColor?.boardId===b.id && activeColColor?.colId===col.id;
+    html += `<div class="board-col" id="bc_${b.id}_${col.id}" style="--col-color:${colColor}">
+      <div class="board-col-top-bar" style="background:${colColor}"></div>
       <div class="board-col-head">
         <input class="board-col-title" value="${esc(col.name)}"
           onblur="renameCol('${b.id}','${col.id}',this.value)"
           onkeydown="if(event.key==='Enter')this.blur()">
         <span class="board-col-count">${doneCount}/${items.length}</span>
+        <button class="board-col-del" onclick="event.stopPropagation();openColColor('${b.id}','${col.id}')" title="Đổi màu" style="font-size:12px;opacity:.7">🎨</button>
         <button class="board-col-del" onclick="deleteCol('${b.id}','${col.id}')" title="Xóa cột">×</button>
       </div>
+      ${isColorOpen ? `<div class="col-color-picker">${colColors.map(cc=>`<div class="col-cpick ${cc===colColor?'active':''}" style="background:${cc}" onclick="setColColor('${b.id}','${col.id}','${cc}')"></div>`).join('')}</div>` : ''}
       <div class="board-col-items">
         ${items.map(item => renderBoardItem(b.id, col.id, item)).join('')}
       </div>
@@ -3623,6 +3686,29 @@ function deleteCol(boardId, colId) {
 }
 
 // ── Item actions ──────────────────────────────────────────────
+
+// Column color picker state
+let activeColColor = null;
+
+function openColColor(boardId, colId) {
+  if (activeColColor?.boardId===boardId && activeColColor?.colId===colId) {
+    activeColColor = null;
+  } else {
+    activeColColor = {boardId, colId};
+  }
+  renderBoardsView();
+}
+
+function setColColor(boardId, colId, color) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  if (!col) return;
+  col.color = color;
+  activeColColor = null;
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
 function openInlineAdd(boardId, colId) {
   activeAddCol = {boardId, colId};
   renderBoardsView();
