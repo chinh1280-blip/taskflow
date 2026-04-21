@@ -379,6 +379,85 @@ textarea.fi{min-height:58px;resize:vertical}
   .chain-dot{width:22px;height:22px}
   .chain-step+.chain-step::before{top:11px;right:calc(50% + 11px);left:calc(-100% + 32px + 11px)}
 }
+
+/* ═══ NOTES / KẾ HOẠCH ═══ */
+.notes-view{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.notes-topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0}
+.notes-title-block{display:flex;align-items:center;gap:10px}
+.notes-page-title{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.notes-subtitle{font-size:12px;color:var(--tx3);margin-top:2px}
+
+/* Note cards grid */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+@media(max-width:600px){.notes-grid{grid-template-columns:1fr}}
+
+/* Note card */
+.note-card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden;transition:all .2s;display:flex;flex-direction:column}
+.note-card:hover{border-color:rgba(79,124,255,.3);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.note-card.pinned{border-color:rgba(255,179,71,.4);background:rgba(255,179,71,.04)}
+.note-card-top{display:flex;align-items:center;gap:8px;padding:13px 14px 10px;border-bottom:1px solid var(--bd)}
+.note-card-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.note-card-title{flex:1;font-size:14px;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-card-title:empty::before{content:'Ghi chú mới';color:var(--tx3)}
+.note-card-actions{display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.note-card:hover .note-card-actions{opacity:1}
+.note-act-btn{width:26px;height:26px;border-radius:7px;border:none;background:none;color:var(--tx3);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.note-act-btn:hover{background:var(--s2);color:var(--tx)}
+.note-act-btn.pin-on{color:var(--wa)}
+.note-card-body{padding:13px 14px;flex:1;min-height:100px;max-height:320px;overflow-y:auto}
+.note-card-footer{padding:8px 14px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--tx3)}
+.note-tags{display:flex;gap:5px;flex-wrap:wrap}
+.note-tag{padding:2px 8px;border-radius:20px;background:var(--s2);border:1px solid var(--bd);font-size:10px;color:var(--tx3)}
+
+/* Add note btn */
+.notes-add-btn{padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;box-shadow:0 0 20px rgba(79,124,255,.2)}
+
+/* Empty state */
+.notes-empty{text-align:center;padding:60px 20px;color:var(--tx3)}
+
+/* ── NOTE EDITOR MODAL ── */
+.note-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:250;display:none;align-items:flex-end;justify-content:center}
+.note-editor-overlay.open{display:flex}
+.note-editor-sheet{background:var(--s1);border:1px solid var(--bd);border-radius:18px 18px 0 0;padding:0;width:100%;max-width:680px;height:92vh;display:flex;flex-direction:column;box-shadow:0 -16px 64px rgba(0,0,0,.6);overflow:hidden}
+.note-editor-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.note-editor-close{background:none;border:none;color:var(--tx3);font-size:22px;cursor:pointer;padding:2px}
+.note-editor-title-input{flex:1;background:none;border:none;outline:none;font-size:17px;font-weight:700;color:var(--tx);font-family:Roboto,sans-serif}
+.note-editor-title-input::placeholder{color:var(--tx3)}
+.note-color-dots{display:flex;gap:5px;align-items:center}
+.note-color-dot{width:14px;height:14px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.note-color-dot.active,.note-color-dot:hover{border-color:#fff;transform:scale(1.2)}
+
+/* Toolbar */
+.note-toolbar{display:flex;align-items:center;gap:2px;padding:8px 14px;border-bottom:1px solid var(--bd);flex-wrap:wrap;flex-shrink:0;background:var(--s1)}
+.tb-btn{min-width:30px;height:28px;border-radius:7px;border:none;background:none;color:var(--tx2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0 6px;font-family:Roboto,sans-serif;white-space:nowrap}
+.tb-btn:hover{background:var(--s2);color:var(--tx)}
+.tb-btn.active{background:rgba(79,124,255,.18);color:var(--ac)}
+.tb-sep{width:1px;height:20px;background:var(--bd);margin:0 4px;flex-shrink:0}
+.tb-select{background:var(--s2);border:1px solid var(--bd);color:var(--tx2);border-radius:7px;padding:3px 7px;font-size:12px;outline:none;cursor:pointer;height:28px}
+
+/* Content editable area */
+.note-editor-body{flex:1;overflow-y:auto;padding:16px}
+.note-content{outline:none;min-height:200px;font-size:14px;line-height:1.7;color:var(--tx);word-break:break-word}
+.note-content:empty::before{content:'Bắt đầu viết ý tưởng...';color:var(--tx3);pointer-events:none}
+.note-content h1{font-size:22px;font-weight:700;margin:8px 0 6px;color:var(--tx)}
+.note-content h2{font-size:18px;font-weight:600;margin:8px 0 5px;color:var(--tx)}
+.note-content h3{font-size:15px;font-weight:600;margin:6px 0 4px;color:var(--ac)}
+.note-content ul{padding-left:20px;margin:4px 0}
+.note-content ol{padding-left:20px;margin:4px 0}
+.note-content li{margin:3px 0}
+.note-content blockquote{border-left:3px solid var(--ac);margin:8px 0;padding:6px 12px;background:rgba(79,124,255,.07);border-radius:0 8px 8px 0;color:var(--tx2)}
+.note-content a{color:var(--ac)}
+.note-content code{background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-family:'Roboto Mono',monospace;font-size:12px}
+.note-content hr{border:none;border-top:1px solid var(--bd);margin:12px 0}
+.note-content table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
+.note-content table td,.note-content table th{border:1px solid var(--bd);padding:6px 10px}
+.note-content table th{background:var(--s2);font-weight:600;color:var(--tx)}
+
+/* Tags input */
+.note-editor-footer{padding:10px 16px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.note-tag-input{flex:1;background:none;border:none;outline:none;font-size:12px;color:var(--tx2);font-family:Roboto,sans-serif}
+.note-tag-input::placeholder{color:var(--tx3)}
+.note-save-btn{padding:7px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -486,6 +565,14 @@ textarea.fi{min-height:58px;resize:vertical}
         <span class="ni">🔄</span><span class="nlabel">Daily Routines</span>
         <span id="daily-nav-badge" class="daily-count"></span>
       </button>
+    </div>
+    <div class="side-section">
+      <div class="side-label">Ghi chú</div>
+      <button class="nav-item" id="nav-notes" onclick="switchToNotesView()" style="width:100%;text-align:left">
+        <span class="ni">📝</span><span class="nlabel">Kế hoạch & Ý tưởng</span>
+        <span id="notes-nav-badge" style="font-size:10px;color:var(--tx3);margin-left:auto"></span>
+      </button>
+    <div style="display:none"><!-- placeholder-->
 
     <div class="sidebar-footer">
       <div class="sync-pill sync-idle" id="sync-pill"></div>
@@ -521,6 +608,7 @@ textarea.fi{min-height:58px;resize:vertical}
     </header>
     <div class="content" id="content"></div>
     <div id="daily-view" class="daily-view" style="display:none"></div>
+    <div id="notes-view" class="notes-view" style="display:none"></div>
   </main>
 </div>
 
@@ -2890,6 +2978,292 @@ document.addEventListener('keydown',e=>{
 // ALTER TABLE subtasks ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0;
 // (nếu chưa có bảng subtasks, chạy SQL đầy đủ từ lần trước)
 
+
+// ══════════════════════════════════════════════════════════════
+//  NOTES — Kế hoạch & Ý tưởng
+// ══════════════════════════════════════════════════════════════
+let notes = [];
+let editNoteId = null;
+let isNotesView = false;
+let noteColor = '#4f7cff';
+let notePinned = false;
+
+const NOTE_COLORS = ['#4f7cff','#7c5fff','#22d3a0','#ffb347','#ff4f6d','#e8ecf5'];
+
+const dbNotes = {
+  getAll: () => sbFetch('notes?order=pinned.desc,updated_at.desc'),
+  insert: n => sbFetch('notes', {method:'POST', body:JSON.stringify(n)}),
+  update: (id,d) => sbFetch(`notes?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
+  delete: id => sbFetch(`notes?id=eq.${id}`, {method:'DELETE', prefer:''}),
+};
+
+// ── Load ─────────────────────────────────────────────────────
+async function loadNotes() {
+  try {
+    notes = await dbNotes.getAll() || [];
+  } catch(e) {
+    try { notes = JSON.parse(localStorage.getItem('tf_notes')||'[]'); } catch {}
+  }
+  updateNotesBadge();
+  if (isNotesView) renderNotesView();
+}
+
+function updateNotesBadge() {
+  const el = document.getElementById('notes-nav-badge');
+  if (el) el.textContent = notes.length ? notes.length + ' ghi chú' : '';
+}
+
+// ── Switch view ───────────────────────────────────────────────
+function switchToNotesView() {
+  isNotesView = true;
+  if (isDailyView) switchToTaskView();
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('daily-view').style.display = 'none';
+  document.getElementById('notes-view').style.display = 'flex';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-notes')?.classList.add('active');
+  document.getElementById('page-title').textContent = '📝 Kế hoạch & Ý tưởng';
+  if (!notes.length) loadNotes();
+  else renderNotesView();
+  closeSide();
+}
+
+function switchFromNotesView() {
+  isNotesView = false;
+  document.getElementById('notes-view').style.display = 'none';
+  document.getElementById('nav-notes')?.classList.remove('active');
+}
+
+// Patch setCurView
+const _origSetCurViewNotes = setCurView;
+setCurView = function(v) {
+  if (isNotesView) switchFromNotesView();
+  _origSetCurViewNotes(v);
+};
+
+// Patch switchToDailyView
+const _origSwitchToDaily = switchToDailyView;
+switchToDailyView = function() {
+  if (isNotesView) switchFromNotesView();
+  _origSwitchToDaily();
+};
+
+// ── Render notes grid ─────────────────────────────────────────
+function renderNotesView() {
+  const el = document.getElementById('notes-view');
+  if (!el) return;
+  const pinned = notes.filter(n => n.pinned);
+  const rest   = notes.filter(n => !n.pinned);
+
+  if (!notes.length) {
+    el.innerHTML = `
+      <div class="notes-topbar">
+        <div class="notes-title-block">
+          <div class="notes-page-title">📝 Kế hoạch & Ý tưởng</div>
+          <div class="notes-subtitle">Lưu lại ý tưởng, kế hoạch, flow trước khi quên</div>
+        </div>
+        <button class="notes-add-btn" onclick="openNoteEditor()">＋ Ghi chú mới</button>
+      </div>
+      <div class="notes-empty">
+        <div style="font-size:44px;margin-bottom:14px;opacity:.4">💡</div>
+        <div style="font-size:16px;font-weight:600;color:var(--tx2);margin-bottom:8px">Chưa có ghi chú nào</div>
+        <div style="font-size:13px;margin-bottom:20px">Lưu lại ý tưởng, kế hoạch, flow công việc</div>
+        <button class="notes-add-btn" onclick="openNoteEditor()">＋ Tạo ghi chú đầu tiên</button>
+      </div>`;
+    return;
+  }
+
+  const renderCards = (arr) => arr.map(n => {
+    const preview = stripHtml(n.content||'').slice(0,120);
+    const tags = (n.tags||[]);
+    const dot = n.color || '#4f7cff';
+    const upd = n.updated_at ? new Date(n.updated_at).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="note-card ${n.pinned?'pinned':''}" onclick="openNoteEditor('${n.id}')">
+      <div class="note-card-top">
+        <div class="note-card-color" style="background:${dot}"></div>
+        <div class="note-card-title">${esc(n.title||'')}</div>
+        <div class="note-card-actions">
+          <button class="note-act-btn ${n.pinned?'pin-on':''}" onclick="event.stopPropagation();pinNote('${n.id}')" title="${n.pinned?'Bỏ ghim':'Ghim'}">${n.pinned?'📌':'📍'}</button>
+          <button class="note-act-btn" onclick="event.stopPropagation();deleteNote('${n.id}')" title="Xóa">🗑</button>
+        </div>
+      </div>
+      <div class="note-card-body">
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap">${esc(preview)}${(n.content||'').length>120?'…':''}</div>
+      </div>
+      <div class="note-card-footer">
+        <div class="note-tags">${tags.map(t=>`<span class="note-tag">#${esc(t)}</span>`).join('')}</div>
+        <span>${upd}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="notes-topbar">
+      <div class="notes-title-block">
+        <div>
+          <div class="notes-page-title">📝 Kế hoạch & Ý tưởng</div>
+          <div class="notes-subtitle">${notes.length} ghi chú</div>
+        </div>
+      </div>
+      <button class="notes-add-btn" onclick="openNoteEditor()">＋ Ghi chú mới</button>
+    </div>
+    ${pinned.length ? `<div style="font-size:11px;font-weight:700;color:var(--wa);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📌 Đã ghim</div><div class="notes-grid">${renderCards(pinned)}</div>` : ''}
+    ${rest.length ? `<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:${pinned.length?'14px':'0'} 0 6px">Tất cả</div><div class="notes-grid">${renderCards(rest)}</div>` : ''}`;
+}
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+// ── Note Editor ───────────────────────────────────────────────
+function openNoteEditor(id) {
+  editNoteId = id || null;
+  const note = id ? notes.find(n=>n.id===id) : null;
+  noteColor = note?.color || '#4f7cff';
+  notePinned = note?.pinned || false;
+
+  document.getElementById('ne-title').value = note?.title || '';
+  document.getElementById('ne-content').innerHTML = note?.content || '';
+  document.getElementById('ne-tags').value = (note?.tags||[]).join(', ');
+  document.getElementById('ne-pin-btn').classList.toggle('pin-on', notePinned);
+
+  // Build color dots
+  document.getElementById('ne-colors').innerHTML = NOTE_COLORS.map(col =>
+    `<div class="note-color-dot ${col===noteColor?'active':''}"
+      style="background:${col}"
+      onclick="setNoteColor('${col}',this)"></div>`
+  ).join('');
+
+  document.getElementById('note-editor-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('ne-title').focus(), 100);
+}
+
+function closeNoteEditor() {
+  document.getElementById('note-editor-overlay').classList.remove('open');
+  editNoteId = null;
+}
+
+function setNoteColor(col, el) {
+  noteColor = col;
+  document.querySelectorAll('.note-color-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleNotePin() {
+  notePinned = !notePinned;
+  document.getElementById('ne-pin-btn').classList.toggle('pin-on', notePinned);
+  document.getElementById('ne-pin-btn').title = notePinned ? 'Bỏ ghim' : 'Ghim';
+}
+
+async function saveNote() {
+  const title   = document.getElementById('ne-title').value.trim();
+  const content = document.getElementById('ne-content').innerHTML;
+  const tagsRaw = document.getElementById('ne-tags').value;
+  const tags    = tagsRaw.split(',').map(t=>t.trim()).filter(Boolean);
+  if (!title && !stripHtml(content).trim()) { showNotif('nw','⚠️ Thiếu nội dung','Nhập tiêu đề hoặc nội dung.'); return; }
+  const btn = document.querySelector('.note-save-btn');
+  btn.textContent = '⏳'; btn.disabled = true;
+  const now = new Date().toISOString();
+  const data = { title: title||'(Không có tiêu đề)', content, tags, color: noteColor, pinned: notePinned, updated_at: now };
+  try {
+    if (editNoteId) {
+      await dbNotes.update(editNoteId, data);
+      const idx = notes.findIndex(n=>n.id===editNoteId);
+      if (idx>=0) notes[idx] = {...notes[idx], ...data};
+      showNotif('ns','✅ Đã lưu','Ghi chú cập nhật xong.');
+    } else {
+      const rec = {...data, id:'n_'+Date.now(), created_at:now};
+      const res = await dbNotes.insert(rec);
+      notes.unshift(res?res[0]:rec);
+      showNotif('ns','✨ Đã tạo','Ghi chú mới tạo xong!');
+    }
+    localStorage.setItem('tf_notes', JSON.stringify(notes));
+    updateNotesBadge();
+    renderNotesView();
+    closeNoteEditor();
+  } catch(e) { showNotif('nd','❌ Lỗi',e.message); }
+  finally { btn.textContent='💾 Lưu'; btn.disabled=false; }
+}
+
+async function deleteNote(id) {
+  if (!confirm('Xóa ghi chú này?')) return;
+  notes = notes.filter(n=>n.id!==id);
+  renderNotesView(); updateNotesBadge();
+  try { await dbNotes.delete(id); localStorage.setItem('tf_notes',JSON.stringify(notes)); }
+  catch(e) { showNotif('nd','❌ Lỗi',e.message); }
+}
+
+async function pinNote(id) {
+  const n = notes.find(n=>n.id===id); if(!n) return;
+  n.pinned = !n.pinned;
+  notes.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  renderNotesView(); updateNotesBadge();
+  try { await dbNotes.update(id,{pinned:n.pinned,updated_at:new Date().toISOString()}); }
+  catch{}
+}
+
+// ── Toolbar commands ──────────────────────────────────────────
+function execCmd(cmd, val) {
+  document.getElementById('ne-content').focus();
+  document.execCommand(cmd, false, val||null);
+  updateToolbarState();
+}
+
+function execForeColor(color) {
+  document.getElementById('ne-content').focus();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, color);
+  document.execCommand('styleWithCSS', false, false);
+  updateToolbarState();
+}
+
+function insertHR() {
+  document.getElementById('ne-content').focus();
+  document.execCommand('insertHTML', false, '<hr>');
+}
+
+function insertLink() {
+  const url = prompt('Nhập URL:');
+  if (url) {
+    document.getElementById('ne-content').focus();
+    document.execCommand('createLink', false, url);
+  }
+}
+
+function insertTable() {
+  const html = `<table><tr><th>Cột 1</th><th>Cột 2</th><th>Cột 3</th></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></table><p><br></p>`;
+  document.getElementById('ne-content').focus();
+  document.execCommand('insertHTML', false, html);
+}
+
+function updateToolbarState() {
+  try {
+    document.querySelectorAll('.tb-btn[onclick*="execCmd(\'bold"]').forEach(b => b.classList.toggle('active', document.queryCommandState('bold')));
+    document.querySelectorAll('.tb-btn[onclick*="execCmd(\'italic"]').forEach(b => b.classList.toggle('active', document.queryCommandState('italic')));
+    document.querySelectorAll('.tb-btn[onclick*="execCmd(\'underline"]').forEach(b => b.classList.toggle('active', document.queryCommandState('underline')));
+  } catch {}
+}
+
+// Update toolbar state on selection change
+document.addEventListener('selectionchange', () => {
+  const active = document.getElementById('note-editor-overlay')?.classList.contains('open');
+  if (active) updateToolbarState();
+});
+
+// Keyboard shortcuts in editor
+document.getElementById('ne-content')?.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveNote(); }
+});
+
+// Auto-save draft every 30s while editor open
+setInterval(() => {
+  if (!document.getElementById('note-editor-overlay')?.classList.contains('open')) return;
+  const content = document.getElementById('ne-content')?.innerHTML;
+  if (content) localStorage.setItem('tf_note_draft', content);
+}, 30000);
+
 window.addEventListener('DOMContentLoaded',initApp);
 </script>
 
@@ -2962,5 +3336,78 @@ window.addEventListener('DOMContentLoaded',initApp);
   </div>
 </div>
 
+
+<!-- NOTE EDITOR MODAL -->
+<div class="note-editor-overlay" id="note-editor-overlay" onclick="if(event.target===this)closeNoteEditor()">
+  <div class="note-editor-sheet" onclick="event.stopPropagation()">
+
+    <!-- Header: title + color + close -->
+    <div class="note-editor-header">
+      <button class="note-editor-close" onclick="closeNoteEditor()">✕</button>
+      <input class="note-editor-title-input" id="ne-title" placeholder="Tiêu đề...">
+      <div class="note-color-dots" id="ne-colors"></div>
+      <button class="note-act-btn" id="ne-pin-btn" onclick="toggleNotePin()" title="Ghim">📌</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="note-toolbar" id="ne-toolbar">
+      <!-- Heading -->
+      <select class="tb-select" onchange="execCmd('formatBlock',this.value);this.value=''" title="Kiểu chữ">
+        <option value="">Kiểu</option>
+        <option value="h1">Tiêu đề 1</option>
+        <option value="h2">Tiêu đề 2</option>
+        <option value="h3">Tiêu đề 3</option>
+        <option value="p">Đoạn văn</option>
+      </select>
+      <div class="tb-sep"></div>
+      <!-- Format -->
+      <button class="tb-btn" onclick="execCmd('bold')" title="In đậm (Ctrl+B)"><b>B</b></button>
+      <button class="tb-btn" onclick="execCmd('italic')" title="In nghiêng (Ctrl+I)"><i>I</i></button>
+      <button class="tb-btn" onclick="execCmd('underline')" title="Gạch chân (Ctrl+U)" style="text-decoration:underline">U</button>
+      <button class="tb-btn" onclick="execCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+      <div class="tb-sep"></div>
+      <!-- Color -->
+      <button class="tb-btn" onclick="execForeColor('#4f7cff')" title="Màu xanh" style="color:#4f7cff;font-size:15px">A</button>
+      <button class="tb-btn" onclick="execForeColor('#22d3a0')" title="Màu xanh lá" style="color:#22d3a0;font-size:15px">A</button>
+      <button class="tb-btn" onclick="execForeColor('#ffb347')" title="Màu vàng" style="color:#ffb347;font-size:15px">A</button>
+      <button class="tb-btn" onclick="execForeColor('#ff4f6d')" title="Màu đỏ" style="color:#ff4f6d;font-size:15px">A</button>
+      <button class="tb-btn" onclick="execForeColor('#e8ecf5')" title="Màu mặc định" style="font-size:15px">A</button>
+      <div class="tb-sep"></div>
+      <!-- Lists -->
+      <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
+      <button class="tb-btn" onclick="execCmd('insertOrderedList')" title="Danh sách đánh số">1. ≡</button>
+      <button class="tb-btn" onclick="execCmd('formatBlock','blockquote')" title="Trích dẫn">" "</button>
+      <div class="tb-sep"></div>
+      <!-- Indent -->
+      <button class="tb-btn" onclick="execCmd('indent')" title="Thụt vào">→</button>
+      <button class="tb-btn" onclick="execCmd('outdent')" title="Thụt ra">←</button>
+      <div class="tb-sep"></div>
+      <!-- Align -->
+      <button class="tb-btn" onclick="execCmd('justifyLeft')" title="Căn trái">⬅</button>
+      <button class="tb-btn" onclick="execCmd('justifyCenter')" title="Căn giữa">↔</button>
+      <button class="tb-btn" onclick="execCmd('justifyRight')" title="Căn phải">➡</button>
+      <div class="tb-sep"></div>
+      <!-- Insert -->
+      <button class="tb-btn" onclick="insertHR()" title="Đường kẻ ngang">─</button>
+      <button class="tb-btn" onclick="insertLink()" title="Chèn link">🔗</button>
+      <button class="tb-btn" onclick="insertTable()" title="Chèn bảng">⊞</button>
+      <div class="tb-sep"></div>
+      <!-- Clear -->
+      <button class="tb-btn" onclick="execCmd('removeFormat')" title="Xóa định dạng" style="font-size:10px">✕fmt</button>
+    </div>
+
+    <!-- Editor body -->
+    <div class="note-editor-body">
+      <div class="note-content" id="ne-content" contenteditable="true" spellcheck="false"></div>
+    </div>
+
+    <!-- Footer: tags + save -->
+    <div class="note-editor-footer">
+      <span style="font-size:12px;color:var(--tx3);flex-shrink:0">🏷</span>
+      <input class="note-tag-input" id="ne-tags" placeholder="Tags: công việc, ý tưởng...">
+      <button class="note-save-btn" onclick="saveNote()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
