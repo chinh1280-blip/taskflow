@@ -404,7 +404,7 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-act-btn{width:26px;height:26px;border-radius:7px;border:none;background:none;color:var(--tx3);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .note-act-btn:hover{background:var(--s2);color:var(--tx)}
 .note-act-btn.pin-on{color:var(--wa)}
-.note-card-body{padding:13px 14px;flex:1;min-height:80px;max-height:280px;overflow-y:auto}
+/* note-card-body moved to expand section */
 .note-card-preview{font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-word;pointer-events:none}
 .note-card-preview h1{font-size:16px;font-weight:700;color:var(--tx);margin:4px 0 3px}
 .note-card-preview h2{font-size:14px;font-weight:600;color:var(--tx);margin:3px 0 2px}
@@ -535,17 +535,19 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-col[data-color="#4f7cff"] .board-col-top-bar{background:#4f7cff}
 
 .board-col{
-  width:220px;min-width:160px;max-width:600px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;
+  width:220px;min-width:160px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;
   border:1px solid rgba(255,255,255,.07);overflow:visible;
   box-shadow:0 2px 8px rgba(0,0,0,.3);transition:box-shadow .2s;
-  resize:horizontal;/* browser native resize handle */
+  position:relative;
 }
-/* Resize handle visual cue */
-.board-col::after{content:'';position:absolute;bottom:6px;right:4px;
-  width:10px;height:10px;pointer-events:none;opacity:0;transition:opacity .2s;
-  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.2) 0,rgba(255,255,255,.2) 1px,transparent 0,transparent 50%) 0/6px 6px;
+/* Custom resize handle — bottom-right corner */
+.col-resize-handle{
+  position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;
+  z-index:10;border-radius:0 0 12px 0;
+  background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.18) 40%,rgba(255,255,255,.18) 55%,transparent 55%,transparent 65%,rgba(255,255,255,.1) 65%,rgba(255,255,255,.1) 80%,transparent 80%);
+  opacity:0;transition:opacity .2s;
 }
-.board-col:hover::after{opacity:1}
+.board-col:hover .col-resize-handle{opacity:1}
 /* Clip chỉ phần top-bar và head */
 .board-col-top-bar{border-radius:12px 12px 0 0;overflow:hidden}
 .board-col:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
@@ -557,7 +559,8 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-col:hover .board-col-del{opacity:1}
 .board-col-items{
   padding:8px;display:flex;flex-direction:column;gap:6px;min-height:40px;
-  max-height:360px;overflow-y:auto;
+  max-height:var(--col-items-max-h, 360px);overflow-y:auto;
+  transition:max-height .2s;
 }
 .board-col-items::-webkit-scrollbar{width:5px}
 .board-col-items::-webkit-scrollbar-track{background:transparent}
@@ -660,6 +663,33 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-modal-color-row{display:flex;gap:7px;flex-wrap:wrap}
 .bm-color{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
 .bm-color.active,.bm-color:hover{border-color:#fff;transform:scale(1.15)}
+
+/* Colored blockquotes */
+.note-content blockquote[data-color="blue"]{border-left-color:#4f7cff;background:rgba(79,124,255,.08)}
+.note-content blockquote[data-color="green"]{border-left-color:#22d3a0;background:rgba(34,211,160,.08)}
+.note-content blockquote[data-color="yellow"]{border-left-color:#fbbf24;background:rgba(251,191,36,.08)}
+.note-content blockquote[data-color="red"]{border-left-color:#ff4f6d;background:rgba(255,79,109,.08)}
+.note-content blockquote[data-color="purple"]{border-left-color:#a78bfa;background:rgba(167,139,250,.08)}
+.note-content blockquote[data-color="orange"]{border-left-color:#f97316;background:rgba(249,115,22,.08)}
+.board-item-note blockquote{border-left:2px solid var(--ac);padding:3px 8px;margin:3px 0;background:rgba(79,124,255,.07);border-radius:0 5px 5px 0}
+.board-item-note blockquote[data-color="blue"]{border-left-color:#4f7cff;background:rgba(79,124,255,.08)}
+.board-item-note blockquote[data-color="green"]{border-left-color:#22d3a0;background:rgba(34,211,160,.08)}
+.board-item-note blockquote[data-color="yellow"]{border-left-color:#fbbf24;background:rgba(251,191,36,.08)}
+.board-item-note blockquote[data-color="red"]{border-left-color:#ff4f6d;background:rgba(255,79,109,.08)}
+.board-item-note blockquote[data-color="purple"]{border-left-color:#a78bfa;background:rgba(167,139,250,.08)}
+.board-item-note blockquote[data-color="orange"]{border-left-color:#f97316;background:rgba(249,115,22,.08)}
+/* Blockquote color picker popup */
+.bq-color-popup{position:absolute;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:8px;z-index:700;display:flex;gap:6px;flex-wrap:wrap;width:160px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.bq-cpick{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.bq-cpick:hover{border-color:#fff;transform:scale(1.15)}
+
+/* Note card expand/collapse */
+.note-card-body{padding:13px 14px;flex:1;min-height:80px;overflow-y:auto;transition:max-height .3s ease}
+.note-card-body.collapsed{max-height:140px}
+.note-card-body.expanded{max-height:none;max-height:unset}
+.note-card-body.resizable{resize:vertical;overflow:auto}
+.note-expand-btn{background:none;border:none;color:var(--tx3);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:5px;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.note-expand-btn:hover{background:var(--s2);color:var(--ac)}
 </style>
 </head>
 <body>
@@ -3293,9 +3323,7 @@ function renderNotesView() {
   }
 
   const renderCards = (arr) => arr.map(n => {
-    // Hiển thị HTML có định dạng (cắt bớt nếu quá dài)
     const rawHtml = n.content||'';
-    const previewHtml = rawHtml.length > 400 ? rawHtml.slice(0,400)+'…' : rawHtml;
     const tags = (n.tags||[]);
     const dot = n.color || '#4f7cff';
     const upd = n.updated_at ? new Date(n.updated_at).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
@@ -3308,12 +3336,15 @@ function renderNotesView() {
           <button class="note-act-btn" onclick="event.stopPropagation();deleteNote('${n.id}')" title="Xóa">🗑</button>
         </div>
       </div>
-      <div class="note-card-body">
-        <div class="note-card-preview">${previewHtml}</div>
+      <div class="note-card-body ${expandedNotes.has(n.id) ? 'expanded' : 'collapsed'}">
+        <div class="note-card-preview">${rawHtml}</div>
       </div>
       <div class="note-card-footer">
         <div class="note-tags">${tags.map(t=>`<span class="note-tag">#${esc(t)}</span>`).join('')}</div>
-        <span>${upd}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>${upd}</span>
+          ${rawHtml.length > 200 ? `<button class="note-expand-btn" onclick="toggleNoteExpand('${n.id}',event)">${expandedNotes.has(n.id) ? '▲ Rút gọn' : '▼ Mở rộng'}</button>` : ''}
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -3332,6 +3363,18 @@ function renderNotesView() {
     ${rest.length ? `<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:${pinned.length?'14px':'0'} 0 6px">Tất cả</div><div class="notes-grid">${renderCards(rest)}</div>` : ''}`;
 }
 
+
+// Note card expand state
+const expandedNotes = new Set();
+function toggleNoteExpand(noteId, e) {
+  e.stopPropagation();
+  if (expandedNotes.has(noteId)) {
+    expandedNotes.delete(noteId);
+  } else {
+    expandedNotes.add(noteId);
+  }
+  renderNotesView();
+}
 function stripHtml(html) {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
@@ -3676,7 +3719,9 @@ function renderBoardCols(b) {
     const colColor = col.color || '#4f7cff';
     const colColors = ["#4f7cff", "#7c5fff", "#22d3a0", "#ffb347", "#ff6b6b", "#a78bfa", "#34d399", "#fb7185", "#38bdf8", "#e879f9"];
     const isColorOpen = activeColColor?.boardId===b.id && activeColColor?.colId===col.id;
-    html += `<div class="board-col" id="bc_${b.id}_${col.id}" style="--col-color:${colColor}">
+    const savedW = col.width ? `width:${col.width}px;` : '';
+    const savedH = col.maxHeight || 360;
+    html += `<div class="board-col" id="bc_${b.id}_${col.id}" style="--col-color:${colColor};${savedW}">
       <div class="board-col-top-bar" style="background:${colColor}"></div>
       <div class="board-col-head">
         <input class="board-col-title" value="${esc(col.name)}"
@@ -3687,10 +3732,13 @@ function renderBoardCols(b) {
         <button class="board-col-del" onclick="deleteCol('${b.id}','${col.id}')" title="Xóa cột">×</button>
       </div>
       ${isColorOpen ? `<div class="col-color-picker">${colColors.map(cc=>`<div class="col-cpick ${cc===colColor?'active':''}" style="background:${cc}" onclick="setColColor('${b.id}','${col.id}','${cc}')"></div>`).join('')}</div>` : ''}
-      <div class="board-col-items">
+      <div class="board-col-items" style="max-height:${savedH}px">
         ${items.map(item => renderBoardItem(b.id, col.id, item)).join('')}
       </div>
       ${isAddOpen ? renderInlineAdd(b.id, col.id) : `<button class="board-add-item" onclick="openInlineAdd('${b.id}','${col.id}')">＋ Thêm</button>`}
+      <div class="col-resize-handle" 
+        onmousedown="startColResize(event,'${b.id}','${col.id}')" 
+        title="Kéo để thay đổi kích thước cột"></div>
     </div>`;
   });
 
@@ -3797,6 +3845,60 @@ function setColColor(boardId, colId, color) {
   saveBoardData(boardId);
 }
 
+
+// ── Column resize (drag bottom-right handle) ──────────────────
+let colResizeState = null;
+
+function startColResize(e, boardId, colId) {
+  e.preventDefault();
+  e.stopPropagation();
+  const colEl = document.getElementById(`bc_${boardId}_${colId}`);
+  if (!colEl) return;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const startW = colEl.offsetWidth;
+  const itemsEl = colEl.querySelector('.board-col-items');
+  const startMaxH = itemsEl ? (parseInt(getComputedStyle(itemsEl).maxHeight)||360) : 360;
+
+  colResizeState = { boardId, colId, startX, startY, startW, startMaxH, colEl, itemsEl };
+  document.addEventListener('mousemove', onColResizeMove);
+  document.addEventListener('mouseup', onColResizeEnd);
+  document.body.style.cursor = 'se-resize';
+  document.body.style.userSelect = 'none';
+}
+
+function onColResizeMove(e) {
+  if (!colResizeState) return;
+  const { startX, startY, startW, startMaxH, colEl, itemsEl } = colResizeState;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  const newW = Math.max(160, Math.min(700, startW + dx));
+  const newH = Math.max(80, startMaxH + dy);
+  colEl.style.width = newW + 'px';
+  if (itemsEl) {
+    itemsEl.style.setProperty('--col-items-max-h', newH + 'px');
+    itemsEl.style.maxHeight = newH + 'px';
+  }
+}
+
+function onColResizeEnd() {
+  if (!colResizeState) return;
+  document.removeEventListener('mousemove', onColResizeMove);
+  document.removeEventListener('mouseup', onColResizeEnd);
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+  // Save size to column data
+  const { boardId, colId, colEl, itemsEl } = colResizeState;
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  if (col) {
+    col.width = colEl.offsetWidth;
+    col.maxHeight = itemsEl ? parseInt(itemsEl.style.maxHeight)||360 : 360;
+    saveBoardData(boardId);
+  }
+  colResizeState = null;
+}
+
 function openInlineAdd(boardId, colId) {
   activeAddCol = {boardId, colId};
   renderBoardsView();
@@ -3875,6 +3977,45 @@ function openItemEdit(boardId, colId, itemId, evt) {
 
 
 // Item edit popup toolbar commands
+
+
+// ── Colored blockquote ────────────────────────────────────────
+function insertColorBlockquote(color, editorId) {
+  const editor = document.getElementById(editorId||'ne-content');
+  editor.focus();
+  document.execCommand('formatBlock', false, 'blockquote');
+  // Apply color via data attribute
+  setTimeout(() => {
+    const bqs = editor.querySelectorAll('blockquote');
+    const sel = window.getSelection();
+    bqs.forEach(bq => {
+      if (sel && bq.contains(sel.anchorNode)) {
+        bq.setAttribute('data-color', color);
+      }
+    });
+    // If no selection in bq, apply to last bq
+    if (bqs.length) bqs[bqs.length-1].setAttribute('data-color', color);
+  }, 50);
+}
+
+function showBqColorPicker(btnEl, editorId) {
+  // Remove existing popup
+  document.getElementById('bq-color-popup')?.remove();
+  const popup = document.createElement('div');
+  popup.id = 'bq-color-popup';
+  popup.className = 'bq-color-popup';
+  const bqColors = [('blue', '#4f7cff'), ('green', '#22d3a0'), ('yellow', '#fbbf24'), ('red', '#ff4f6d'), ('purple', '#a78bfa'), ('orange', '#f97316')];
+  popup.innerHTML = bqColors.map(([name,col]) =>
+    `<div class="bq-cpick" style="background:${col}" onclick="insertColorBlockquote('${name}','${editorId}');document.getElementById('bq-color-popup')?.remove()" title="${name}"></div>`
+  ).join('');
+  // Position below button
+  const rect = btnEl.getBoundingClientRect();
+  popup.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px`;
+  document.body.appendChild(popup);
+  setTimeout(() => document.addEventListener('click', function removeBqPicker(e){
+    if(!popup.contains(e.target)&&e.target!==btnEl){popup.remove();document.removeEventListener('click',removeBqPicker);}
+  }), 50);
+}
 
 function plainToHtml(text) {
   return text
@@ -4169,7 +4310,8 @@ window.addEventListener('DOMContentLoaded',initApp);
       <!-- Lists -->
       <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
       <button class="tb-btn" onclick="execCmd('insertOrderedList')" title="Danh sách đánh số">1. ≡</button>
-      <button class="tb-btn" onclick="execCmd('formatBlock','blockquote')" title="Trích dẫn">" "</button>
+      <button class="tb-btn" onclick="execCmd('formatBlock','blockquote')" title="Trích dẫn thường">" "</button>
+      <button class="tb-btn" onclick="showBqColorPicker(this,'ne-content')" title="Trích dẫn có màu">🎨"</button>
       <div class="tb-sep"></div>
       <!-- Indent -->
       <button class="tb-btn" onclick="execCmd('indent')" title="Thụt vào">→</button>
