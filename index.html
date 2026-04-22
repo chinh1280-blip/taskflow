@@ -404,7 +404,18 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-act-btn{width:26px;height:26px;border-radius:7px;border:none;background:none;color:var(--tx3);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .note-act-btn:hover{background:var(--s2);color:var(--tx)}
 .note-act-btn.pin-on{color:var(--wa)}
-.note-card-body{padding:13px 14px;flex:1;min-height:100px;max-height:320px;overflow-y:auto}
+.note-card-body{padding:13px 14px;flex:1;min-height:80px;max-height:280px;overflow-y:auto}
+.note-card-preview{font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-word;pointer-events:none}
+.note-card-preview h1{font-size:16px;font-weight:700;color:var(--tx);margin:4px 0 3px}
+.note-card-preview h2{font-size:14px;font-weight:600;color:var(--tx);margin:3px 0 2px}
+.note-card-preview h3{font-size:13px;font-weight:600;color:var(--ac);margin:3px 0 2px}
+.note-card-preview ul,.note-card-preview ol{padding-left:16px;margin:3px 0}
+.note-card-preview li{margin:2px 0}
+.note-card-preview blockquote{border-left:2px solid var(--ac);padding:3px 8px;margin:4px 0;background:rgba(79,124,255,.07);border-radius:0 5px 5px 0;color:var(--tx3)}
+.note-card-preview b,.note-card-preview strong{color:var(--tx);font-weight:600}
+.note-card-preview a{color:var(--ac);text-decoration:underline}
+.note-card-preview code{background:var(--s3);padding:1px 4px;border-radius:3px;font-size:11px;font-family:"Roboto Mono",monospace}
+.note-card-preview hr{border:none;border-top:1px solid var(--bd);margin:6px 0}
 .note-card-footer{padding:8px 14px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--tx3)}
 .note-tags{display:flex;gap:5px;flex-wrap:wrap}
 .note-tag{padding:2px 8px;border-radius:20px;background:var(--s2);border:1px solid var(--bd);font-size:10px;color:var(--tx3)}
@@ -524,10 +535,17 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-col[data-color="#4f7cff"] .board-col-top-bar{background:#4f7cff}
 
 .board-col{
-  width:220px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;
+  width:220px;min-width:160px;max-width:600px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;
   border:1px solid rgba(255,255,255,.07);overflow:visible;
-  box-shadow:0 2px 8px rgba(0,0,0,.3);transition:box-shadow .2s
+  box-shadow:0 2px 8px rgba(0,0,0,.3);transition:box-shadow .2s;
+  resize:horizontal;/* browser native resize handle */
 }
+/* Resize handle visual cue */
+.board-col::after{content:'';position:absolute;bottom:6px;right:4px;
+  width:10px;height:10px;pointer-events:none;opacity:0;transition:opacity .2s;
+  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.2) 0,rgba(255,255,255,.2) 1px,transparent 0,transparent 50%) 0/6px 6px;
+}
+.board-col:hover::after{opacity:1}
 /* Clip chỉ phần top-bar và head */
 .board-col-top-bar{border-radius:12px 12px 0 0;overflow:hidden}
 .board-col:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
@@ -575,6 +593,8 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-item-note b,.board-item-note strong{color:var(--tx);font-weight:600}
 .board-item-note i{color:var(--tx2)}
 .board-item-note code{background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px;font-size:10px;font-family:'Roboto Mono',monospace}
+.board-item-note a{color:var(--ac);text-decoration:underline;cursor:pointer}
+.board-item-note a:hover{color:var(--ac2)}
 .board-item-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s;padding:2px}
 .board-item:hover .board-item-del{opacity:1}
 
@@ -3273,7 +3293,9 @@ function renderNotesView() {
   }
 
   const renderCards = (arr) => arr.map(n => {
-    const preview = stripHtml(n.content||'').slice(0,120);
+    // Hiển thị HTML có định dạng (cắt bớt nếu quá dài)
+    const rawHtml = n.content||'';
+    const previewHtml = rawHtml.length > 400 ? rawHtml.slice(0,400)+'…' : rawHtml;
     const tags = (n.tags||[]);
     const dot = n.color || '#4f7cff';
     const upd = n.updated_at ? new Date(n.updated_at).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
@@ -3287,7 +3309,7 @@ function renderNotesView() {
         </div>
       </div>
       <div class="note-card-body">
-        <div style="font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap">${esc(preview)}${(n.content||'').length>120?'…':''}</div>
+        <div class="note-card-preview">${previewHtml}</div>
       </div>
       <div class="note-card-footer">
         <div class="note-tags">${tags.map(t=>`<span class="note-tag">#${esc(t)}</span>`).join('')}</div>
@@ -3358,6 +3380,10 @@ function toggleNotePin() {
 
 async function saveNote() {
   const title   = document.getElementById('ne-title').value.trim();
+  // Ensure all links open in new tab
+  document.querySelectorAll('#ne-content a').forEach(a=>{
+    a.setAttribute('target','_blank'); a.setAttribute('rel','noopener');
+  });
   const content = document.getElementById('ne-content').innerHTML;
   const tagsRaw = document.getElementById('ne-tags').value;
   const tags    = tagsRaw.split(',').map(t=>t.trim()).filter(Boolean);
@@ -3424,11 +3450,24 @@ function insertHR() {
 }
 
 function insertLink() {
-  const url = prompt('Nhập URL:');
-  if (url) {
-    document.getElementById('ne-content').focus();
-    document.execCommand('createLink', false, url);
+  const sel = window.getSelection();
+  const hasText = sel && sel.toString().trim().length > 0;
+  const url = prompt('Nhập URL (ví dụ: https://google.com):');
+  if (!url) return;
+  const fullUrl = url.startsWith('http')||url.startsWith('file')||url.startsWith('mailto') ? url : 'https://'+url;
+  document.getElementById('ne-content').focus();
+  if (hasText) {
+    document.execCommand('createLink', false, fullUrl);
+  } else {
+    const label = prompt('Tên hiển thị (để trống = dùng URL):') || fullUrl;
+    document.execCommand('insertHTML', false,
+      `<a href="${fullUrl}" target="_blank" rel="noopener">${label}</a>`);
   }
+  // Ensure all links open in new tab
+  document.querySelectorAll('#ne-content a').forEach(a => {
+    a.setAttribute('target','_blank');
+    a.setAttribute('rel','noopener');
+  });
 }
 
 function insertTable() {
@@ -3845,6 +3884,27 @@ function plainToHtml(text) {
     .split('\n').join('<br>');
 }
 
+
+function iepInsertLink() {
+  const sel = window.getSelection();
+  const hasText = sel && sel.toString().trim().length > 0;
+  const url = prompt('Nhập URL:');
+  if (!url) return;
+  const fullUrl = url.startsWith('http')||url.startsWith('file') ? url : 'https://'+url;
+  document.getElementById('iep-note').focus();
+  if (hasText) {
+    document.execCommand('createLink', false, fullUrl);
+  } else {
+    const label = prompt('Tên hiển thị (để trống = dùng URL):') || fullUrl;
+    document.execCommand('insertHTML', false,
+      `<a href="${fullUrl}" target="_blank" rel="noopener">${label}</a>`);
+  }
+  document.querySelectorAll('#iep-note a').forEach(a => {
+    a.setAttribute('target','_blank');
+    a.setAttribute('rel','noopener');
+  });
+}
+
 function iepCmd(cmd, val) {
   document.getElementById('iep-note').focus();
   document.execCommand(cmd, false, val||null);
@@ -3967,6 +4027,29 @@ async function deleteBoard(id) {
   catch(e) { showNotif('nd','❌ Lỗi',e.message); }
 }
 
+
+// Make links inside contenteditable open on Ctrl+click (editor mode)
+// In card preview, links are always clickable
+document.addEventListener('click', e => {
+  const a = e.target.closest('a');
+  if (!a) return;
+  const inEditor = a.closest('#ne-content') || a.closest('#iep-note');
+  if (inEditor) {
+    // In editor: need Ctrl/Cmd+click to open
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      window.open(a.href, '_blank', 'noopener');
+    }
+  } else {
+    // In card preview or board item: always open
+    const href = a.getAttribute('href');
+    if (href && !a.closest('[contenteditable]')) {
+      e.preventDefault();
+      window.open(href, '_blank', 'noopener');
+    }
+  }
+});
+
 window.addEventListener('DOMContentLoaded',initApp);
 </script>
 
@@ -4070,11 +4153,18 @@ window.addEventListener('DOMContentLoaded',initApp);
       <button class="tb-btn" onclick="execCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
       <div class="tb-sep"></div>
       <!-- Color -->
-      <button class="tb-btn" onclick="execForeColor('#4f7cff')" title="Màu xanh" style="color:#4f7cff;font-size:15px">A</button>
-      <button class="tb-btn" onclick="execForeColor('#22d3a0')" title="Màu xanh lá" style="color:#22d3a0;font-size:15px">A</button>
-      <button class="tb-btn" onclick="execForeColor('#ffb347')" title="Màu vàng" style="color:#ffb347;font-size:15px">A</button>
-      <button class="tb-btn" onclick="execForeColor('#ff4f6d')" title="Màu đỏ" style="color:#ff4f6d;font-size:15px">A</button>
-      <button class="tb-btn" onclick="execForeColor('#e8ecf5')" title="Màu mặc định" style="font-size:15px">A</button>
+      <button class="tb-btn" onclick="execForeColor('#4f7cff')" title="Xanh dương" style="color:#4f7cff;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#7c5fff')" title="Tím" style="color:#7c5fff;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#22d3a0')" title="Xanh lá neon" style="color:#22d3a0;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#ffb347')" title="Cam" style="color:#ffb347;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#ff4f6d')" title="Đỏ hồng" style="color:#ff4f6d;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#e8ecf5')" title="Mặc định" style="color:#e8ecf5;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#38bdf8')" title="Sky blue" style="color:#38bdf8;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#fb7185')" title="Hồng" style="color:#fb7185;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#a78bfa')" title="Tím nhạt" style="color:#a78bfa;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#34d399')" title="Mint" style="color:#34d399;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#fbbf24')" title="Vàng" style="color:#fbbf24;font-size:15px;font-weight:700">A</button>
+      <button class="tb-btn" onclick="execForeColor('#f97316')" title="Cam đậm" style="color:#f97316;font-size:15px;font-weight:700">A</button>
       <div class="tb-sep"></div>
       <!-- Lists -->
       <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
@@ -4094,6 +4184,7 @@ window.addEventListener('DOMContentLoaded',initApp);
       <button class="tb-btn" onclick="insertHR()" title="Đường kẻ ngang">─</button>
       <button class="tb-btn" onclick="insertLink()" title="Chèn link">🔗</button>
       <button class="tb-btn" onclick="insertTable()" title="Chèn bảng">⊞</button>
+      <button class="tb-btn" onclick="insertLink()" title="Chèn link">🔗</button>
       <div class="tb-sep"></div>
       <!-- Clear -->
       <button class="tb-btn" onclick="execCmd('removeFormat')" title="Xóa định dạng" style="font-size:10px">✕fmt</button>
@@ -4145,13 +4236,22 @@ window.addEventListener('DOMContentLoaded',initApp);
     <button class="iep-tb-btn" onclick="iepCmd('insertUnorderedList')" title="Danh sách">• ≡</button>
     <button class="iep-tb-btn" onclick="iepCmd('insertOrderedList')" title="Đánh số">1≡</button>
     <div class="iep-tb-sep"></div>
-    <button class="iep-tb-btn" onclick="iepForeColor('#4f7cff')" title="Xanh" style="color:#4f7cff;font-size:13px">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#22d3a0')" title="Xanh lá" style="color:#22d3a0;font-size:13px">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#ffb347')" title="Cam" style="color:#ffb347;font-size:13px">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#ff4f6d')" title="Đỏ" style="color:#ff4f6d;font-size:13px">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#e8ecf5')" title="Mặc định" style="font-size:13px">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#4f7cff')" title="Xanh" style="color:#4f7cff;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#7c5fff')" title="Tím" style="color:#7c5fff;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#22d3a0')" title="Xanh lá" style="color:#22d3a0;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#ffb347')" title="Cam" style="color:#ffb347;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#ff4f6d')" title="Đỏ" style="color:#ff4f6d;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#e8ecf5')" title="Trắng" style="color:#e8ecf5;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#38bdf8')" title="Sky" style="color:#38bdf8;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#fb7185')" title="Hồng" style="color:#fb7185;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#a78bfa')" title="Lavender" style="color:#a78bfa;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#34d399')" title="Mint" style="color:#34d399;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#fbbf24')" title="Vàng" style="color:#fbbf24;font-size:13px;font-weight:700">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#f97316')" title="Cam đậm" style="color:#f97316;font-size:13px;font-weight:700">A</button>
     <div class="iep-tb-sep"></div>
-    <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
+    <button class="iep-tb-btn" onclick="iepInsertLink()" title="Chèn link">🔗</button>
+    <div class="iep-tb-sep"></div>
+        <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
   </div>
   <div class="iep-note-editor" id="iep-note" contenteditable="true" spellcheck="false"></div>
   <div class="iep-footer">
