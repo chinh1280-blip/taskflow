@@ -460,7 +460,11 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-save-btn{padding:7px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
 
 /* ═══ BOARDS — Kế hoạch dạng bảng ═══ */
-.boards-view{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.boards-view{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:16px;display:flex;flex-direction:column;gap:14px;
+  /* boards-view tự scroll dọc, không giới hạn chiều cao */
+}
 .boards-topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0}
 .boards-page-title{font-size:20px;font-weight:700;letter-spacing:-.5px}
 .boards-subtitle{font-size:12px;color:var(--tx3);margin-top:2px}
@@ -473,7 +477,10 @@ textarea.fi{min-height:58px;resize:vertical}
 .boards-add-btn:hover{background:var(--ac);color:#fff;border-color:var(--ac);box-shadow:0 0 16px rgba(79,124,255,.35)}
 
 /* Board container */
-.board-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:16px;overflow:hidden;margin-bottom:4px;transition:all .2s}
+.board-wrap{
+  background:var(--s1);border:1px solid var(--bd);border-radius:16px;
+  margin-bottom:4px;transition:all .2s;overflow:visible
+}
 .board-header{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;transition:background .15s}
 .board-header:hover{background:rgba(79,124,255,.05)}
 .board-color-bar{width:4px;height:36px;border-radius:2px;flex-shrink:0}
@@ -490,7 +497,15 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-chevron.open{transform:rotate(90deg)}
 
 /* Columns scroll area */
-.board-cols-wrap{overflow-x:auto;padding:0 16px 16px;scrollbar-width:thin}
+.board-cols-wrap{
+  overflow-x:auto;overflow-y:visible;
+  padding:0 16px 16px;
+  scrollbar-width:thin;
+  border-radius:0 0 16px 16px;
+}
+.board-cols-wrap::-webkit-scrollbar{height:5px}
+.board-cols-wrap::-webkit-scrollbar-track{background:transparent}
+.board-cols-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:10px}
 .board-cols{display:flex;gap:12px;align-items:flex-start;min-width:max-content}
 
 /* Column */
@@ -510,9 +525,11 @@ textarea.fi{min-height:58px;resize:vertical}
 
 .board-col{
   width:220px;flex-shrink:0;background:var(--s2);border-radius:12px;padding:0;
-  border:1px solid rgba(255,255,255,.07);overflow:hidden;
+  border:1px solid rgba(255,255,255,.07);overflow:visible;
   box-shadow:0 2px 8px rgba(0,0,0,.3);transition:box-shadow .2s
 }
+/* Clip chỉ phần top-bar và head */
+.board-col-top-bar{border-radius:12px 12px 0 0;overflow:hidden}
 .board-col:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
 .board-col-head{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--bd)}
 .board-col-title{flex:1;font-size:13px;font-weight:600;color:var(--tx);outline:none;background:none;border:none;font-family:Roboto,sans-serif;min-width:0}
@@ -522,7 +539,7 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-col:hover .board-col-del{opacity:1}
 .board-col-items{
   padding:8px;display:flex;flex-direction:column;gap:6px;min-height:40px;
-  max-height:calc(100vh - 320px);overflow-y:auto;
+  max-height:360px;overflow-y:auto;
 }
 .board-col-items::-webkit-scrollbar{width:5px}
 .board-col-items::-webkit-scrollbar-track{background:transparent}
@@ -551,7 +568,13 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-item-cb.on{background:var(--ok);border-color:var(--ok)}
 .board-item-name{flex:1;font-size:13px;color:var(--tx);line-height:1.4;word-break:break-word}
 .board-item-name.done{text-decoration:line-through;color:var(--tx3)}
-.board-item-note{font-size:11px;color:var(--tx3);margin-top:4px;padding-left:26px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.board-item-note{font-size:11px;color:var(--tx3);margin-top:5px;padding-left:26px;line-height:1.6;word-break:break-word}
+.board-item-note ul{padding-left:14px;margin:3px 0}
+.board-item-note ol{padding-left:14px;margin:3px 0}
+.board-item-note li{margin:1px 0}
+.board-item-note b,.board-item-note strong{color:var(--tx);font-weight:600}
+.board-item-note i{color:var(--tx2)}
+.board-item-note code{background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px;font-size:10px;font-family:'Roboto Mono',monospace}
 .board-item-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s;padding:2px}
 .board-item:hover .board-item-del{opacity:1}
 
@@ -589,10 +612,26 @@ textarea.fi{min-height:58px;resize:vertical}
 .inline-add-cancel{padding:5px 8px;border-radius:7px;border:none;background:var(--s3);color:var(--tx2);font-size:11px;cursor:pointer}
 
 /* Item edit modal */
-.item-edit-popup{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px;z-index:300;width:260px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.item-edit-popup input,.item-edit-popup textarea{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--tx);outline:none;font-family:Roboto,sans-serif;margin-bottom:8px}
-.item-edit-popup textarea{resize:vertical;min-height:56px;font-size:12px}
-.item-edit-popup input:focus,.item-edit-popup textarea:focus{border-color:var(--ac)}
+
+/* ── Item edit popup rich text ── */
+.item-edit-popup{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:0;z-index:300;width:300px;box-shadow:0 16px 48px rgba(0,0,0,.6);overflow:hidden}
+.iep-header{padding:10px 12px 8px;border-bottom:1px solid var(--bd)}
+.iep-title-inp{width:100%;background:none;border:none;outline:none;font-size:14px;font-weight:600;color:var(--tx);font-family:Roboto,sans-serif}
+.iep-title-inp::placeholder{color:var(--tx3)}
+.iep-mini-toolbar{display:flex;gap:2px;padding:5px 8px;border-bottom:1px solid var(--bd);background:var(--s2);flex-wrap:wrap}
+.iep-tb-btn{min-width:26px;height:24px;border-radius:5px;border:none;background:none;color:var(--tx2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 5px;transition:all .15s;font-family:Roboto,sans-serif}
+.iep-tb-btn:hover{background:var(--s3);color:var(--tx)}
+.iep-tb-sep{width:1px;height:16px;background:var(--bd);margin:0 2px;align-self:center;flex-shrink:0}
+.iep-note-editor{outline:none;min-height:80px;max-height:200px;overflow-y:auto;padding:10px 12px;font-size:12px;line-height:1.6;color:var(--tx2);word-break:break-word}
+.iep-note-editor:empty::before{content:'Ghi chú ngắn...';color:var(--tx3);pointer-events:none}
+.iep-note-editor b,.iep-note-editor strong{color:var(--tx)}
+.iep-note-editor ul{padding-left:16px;margin:3px 0}
+.iep-note-editor ol{padding-left:16px;margin:3px 0}
+.iep-note-editor li{margin:2px 0}
+.iep-note-editor a{color:var(--ac)}
+.iep-note-editor code{background:var(--s3);padding:1px 4px;border-radius:3px;font-size:11px;font-family:'Roboto Mono',monospace}
+.iep-footer{display:flex;gap:6px;justify-content:flex-end;padding:8px 12px;border-top:1px solid var(--bd)}
+
 
 /* Boards empty */
 .boards-empty{text-align:center;padding:60px 20px;color:var(--tx3)}
@@ -3624,7 +3663,7 @@ function renderBoardItem(boardId, colId, item) {
         ${esc(item.name)}
       </div>
     </div>
-    ${item.note?`<div class="board-item-note">${esc(item.note)}</div>`:''}
+    ${item.note?`<div class="board-item-note">${item.note}</div>`:''}
     <button class="board-item-del" onclick="event.stopPropagation();deleteItem('${boardId}','${colId}','${item.id}')">×</button>
   </div>`;
 }
@@ -3729,7 +3768,9 @@ function confirmAddItem(boardId, colId) {
   const col = (b?.columns||[]).find(c=>c.id===colId);
   if (!col) return;
   if (!col.items) col.items = [];
-  col.items.push({id:'i_'+Date.now()+'_'+Math.random().toString(36).slice(2,5), name, note:noteEl?.value.trim()||'', done:false, sort_order:col.items.length});
+  const rawNote = noteEl?.value.trim()||'';
+  const noteHtml = rawNote ? plainToHtml(rawNote) : '';
+  col.items.push({id:'i_'+Date.now()+'_'+Math.random().toString(36).slice(2,5), name, note:noteHtml, done:false, sort_order:col.items.length});
   activeAddCol = null;
   renderBoardsView();
   saveBoardData(boardId);
@@ -3767,13 +3808,42 @@ function openItemEdit(boardId, colId, itemId, evt) {
   editItemCtx = {boardId, colId, itemId};
   const popup = document.getElementById('item-edit-popup');
   document.getElementById('iep-name').value = item.name;
-  document.getElementById('iep-note').value = item.note||'';
+  // Note is now HTML (rich text)
+  const noteEl = document.getElementById('iep-note');
+  noteEl.innerHTML = item.note||'';
   popup.style.display = 'block';
-  // Position near click
-  const x = Math.min(evt.clientX, window.innerWidth-280);
-  const y = Math.min(evt.clientY+10, window.innerHeight-200);
-  popup.style.left = x+'px'; popup.style.top = y+'px';
+  // Position near click — avoid overflow
+  const pw = 300, ph = 340;
+  let x = evt.clientX + 8;
+  let y = evt.clientY + 8;
+  if (x + pw > window.innerWidth - 8) x = evt.clientX - pw - 8;
+  if (y + ph > window.innerHeight - 8) y = window.innerHeight - ph - 8;
+  if (x < 8) x = 8;
+  popup.style.left = Math.max(8,x)+'px';
+  popup.style.top = Math.max(8,y)+'px';
   setTimeout(()=>document.getElementById('iep-name').focus(),50);
+}
+
+
+// Item edit popup toolbar commands
+
+function plainToHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .split('\n').join('<br>');
+}
+
+function iepCmd(cmd, val) {
+  document.getElementById('iep-note').focus();
+  document.execCommand(cmd, false, val||null);
+}
+function iepForeColor(color) {
+  document.getElementById('iep-note').focus();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, color);
+  document.execCommand('styleWithCSS', false, false);
 }
 
 function closeItemEdit() {
@@ -3789,7 +3859,7 @@ function saveItemEdit() {
   const item = (col?.items||[]).find(i=>i.id===itemId);
   if (!item) return;
   item.name = document.getElementById('iep-name').value.trim()||item.name;
-  item.note = document.getElementById('iep-note').value.trim();
+  item.note = document.getElementById('iep-note').innerHTML; // rich HTML
   closeItemEdit();
   renderBoardsView();
   saveBoardData(boardId);
@@ -4051,13 +4121,31 @@ window.addEventListener('DOMContentLoaded',initApp);
   </div>
 </div>
 
-<!-- ITEM EDIT POPUP (floating) -->
+<!-- ITEM EDIT POPUP (floating) — rich text note -->
 <div id="item-edit-popup" class="item-edit-popup" style="display:none">
-  <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Chỉnh sửa</div>
-  <input id="iep-name" placeholder="Tên việc cần làm...">
-  <textarea id="iep-note" placeholder="Ghi chú ngắn (tuỳ chọn)..." rows="2"></textarea>
-  <div style="display:flex;gap:6px;justify-content:flex-end">
-    <button onclick="closeItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--s3);color:var(--tx2);font-size:12px;cursor:pointer">Hủy</button>
+  <div class="iep-header">
+    <input class="iep-title-inp" id="iep-name" placeholder="Tên việc cần làm...">
+  </div>
+  <div class="iep-mini-toolbar">
+    <button class="iep-tb-btn" onclick="iepCmd('bold')" title="In đậm"><b>B</b></button>
+    <button class="iep-tb-btn" onclick="iepCmd('italic')" title="In nghiêng"><i>I</i></button>
+    <button class="iep-tb-btn" onclick="iepCmd('underline')" title="Gạch chân" style="text-decoration:underline">U</button>
+    <button class="iep-tb-btn" onclick="iepCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+    <div class="iep-tb-sep"></div>
+    <button class="iep-tb-btn" onclick="iepCmd('insertUnorderedList')" title="Danh sách">• ≡</button>
+    <button class="iep-tb-btn" onclick="iepCmd('insertOrderedList')" title="Đánh số">1≡</button>
+    <div class="iep-tb-sep"></div>
+    <button class="iep-tb-btn" onclick="iepForeColor('#4f7cff')" title="Xanh" style="color:#4f7cff;font-size:13px">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#22d3a0')" title="Xanh lá" style="color:#22d3a0;font-size:13px">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#ffb347')" title="Cam" style="color:#ffb347;font-size:13px">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#ff4f6d')" title="Đỏ" style="color:#ff4f6d;font-size:13px">A</button>
+    <button class="iep-tb-btn" onclick="iepForeColor('#e8ecf5')" title="Mặc định" style="font-size:13px">A</button>
+    <div class="iep-tb-sep"></div>
+    <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
+  </div>
+  <div class="iep-note-editor" id="iep-note" contenteditable="true" spellcheck="false"></div>
+  <div class="iep-footer">
+    <button onclick="closeItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--s2);color:var(--tx2);font-size:12px;cursor:pointer">Hủy</button>
     <button onclick="saveItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer">✓ Lưu</button>
   </div>
 </div>
