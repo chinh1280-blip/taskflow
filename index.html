@@ -2953,7 +2953,15 @@ async function delSubtask(taskId,subId){
 // ═══════════════════════════════════════
 // TASK ACTIONS
 // ═══════════════════════════════════════
-function setCurView(v){if(isDailyView)switchToTaskView();curView=v;closeSide();renderContent();}
+function setCurView(v){
+  if(isDailyView)switchToTaskView();
+  // Restore content if coming from notes/boards
+  if(isNotesView)switchFromNotesView();
+  if(isBoardsView)switchFromBoardsView();
+  curView=v;
+  document.getElementById('content').style.display='';
+  closeSide();renderContent();
+}
 function setFilter(f){curFilter=f;renderContent();}
 function setViewMode(v){
   viewMode=v;
@@ -3222,6 +3230,7 @@ function switchFromNotesView() {
   isNotesView = false;
   document.getElementById('notes-view').style.display = 'none';
   document.getElementById('nav-notes')?.classList.remove('active');
+  document.getElementById('content').style.display = '';
 }
 
 // Patch setCurView
@@ -3536,6 +3545,7 @@ function switchFromBoardsView() {
   isBoardsView = false;
   document.getElementById('boards-view').style.display = 'none';
   document.getElementById('nav-boards')?.classList.remove('active');
+  document.getElementById('content').style.display = '';
 }
 
 // Patch setCurView
