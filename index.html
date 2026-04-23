@@ -401,11 +401,13 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-card-title:empty::before{content:'Ghi chú mới';color:var(--tx3)}
 .note-card-actions{display:flex;gap:3px;opacity:0;transition:opacity .15s}
 .note-card:hover .note-card-actions{opacity:1}
+.note-card:hover{cursor:default}
 .note-act-btn{width:26px;height:26px;border-radius:7px;border:none;background:none;color:var(--tx3);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .note-act-btn:hover{background:var(--s2);color:var(--tx)}
 .note-act-btn.pin-on{color:var(--wa)}
 /* note-card-body moved to expand section */
-.note-card-preview{font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-word;pointer-events:none}
+.note-card-preview{font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-word;pointer-events:auto}
+.note-card-preview a{color:var(--ac);text-decoration:underline;cursor:pointer}
 .note-card-preview h1{font-size:16px;font-weight:700;color:var(--tx);margin:4px 0 3px}
 .note-card-preview h2{font-size:14px;font-weight:600;color:var(--tx);margin:3px 0 2px}
 .note-card-preview h3{font-size:13px;font-weight:600;color:var(--ac);margin:3px 0 2px}
@@ -651,7 +653,14 @@ textarea.fi{min-height:58px;resize:vertical}
 .iep-note-editor ul{padding-left:16px;margin:3px 0}
 .iep-note-editor ol{padding-left:16px;margin:3px 0}
 .iep-note-editor li{margin:2px 0}
-.iep-note-editor a{color:var(--ac)}
+.iep-note-editor a{color:var(--ac);text-decoration:underline}
+.iep-note-editor blockquote{border-left:3px solid var(--ac);padding:4px 10px;margin:4px 0;background:rgba(79,124,255,.08);border-radius:0 6px 6px 0;color:var(--tx2)}
+.iep-note-editor blockquote[data-color="blue"]{border-left-color:#4f7cff;background:rgba(79,124,255,.1)}
+.iep-note-editor blockquote[data-color="green"]{border-left-color:#22d3a0;background:rgba(34,211,160,.1)}
+.iep-note-editor blockquote[data-color="yellow"]{border-left-color:#fbbf24;background:rgba(251,191,36,.1)}
+.iep-note-editor blockquote[data-color="red"]{border-left-color:#ff4f6d;background:rgba(255,79,109,.1)}
+.iep-note-editor blockquote[data-color="purple"]{border-left-color:#a78bfa;background:rgba(167,139,250,.1)}
+.iep-note-editor blockquote[data-color="orange"]{border-left-color:#f97316;background:rgba(249,115,22,.1)}
 .iep-note-editor code{background:var(--s3);padding:1px 4px;border-radius:3px;font-size:11px;font-family:'Roboto Mono',monospace}
 .iep-footer{display:flex;gap:6px;justify-content:flex-end;padding:8px 12px;border-top:1px solid var(--bd)}
 
@@ -690,6 +699,15 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-card-body.resizable{resize:vertical;overflow:auto}
 .note-expand-btn{background:none;border:none;color:var(--tx3);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:5px;transition:all .15s;white-space:nowrap;flex-shrink:0}
 .note-expand-btn:hover{background:var(--s2);color:var(--ac)}
+
+/* Drag & drop boards/cols */
+.drag-col-over{outline:2px dashed var(--ac)!important;outline-offset:-2px}
+.drag-board-over{outline:2px dashed var(--ac)!important;outline-offset:-2px;border-radius:16px}
+.board-col-head{cursor:grab}
+.board-col-head:active{cursor:grabbing}
+.board-drag-handle{cursor:grab;color:var(--tx3);font-size:16px;padding:0 6px;flex-shrink:0;opacity:0;transition:opacity .15s;user-select:none}
+.board-header:hover .board-drag-handle{opacity:1}
+.board-drag-handle:active{cursor:grabbing}
 </style>
 </head>
 <body>
@@ -2477,6 +2495,123 @@ function fmtMinutes(min) {
   return Math.floor(min/60) + 'g' + (min%60 ? String(min%60).padStart(2,'0') : '');
 }
 
+
+// ════════════════════════════════════════════════
+// DRAG & DROP — Sắp xếp cột và board
+// ════════════════════════════════════════════════
+let boardDragState = null; // {type:'col'|'board', boardId?, colIdx, startX, startY}
+
+// ── Drag cột ──────────────────────────────────
+function startColDrag(e, boardId, colIdx) {
+  // Only drag from header (not resize handle)
+  if (e.target.closest('.col-resize-handle')) return;
+  e.preventDefault();
+  const b = boards.find(b=>b.id===boardId);
+  if (!b) return;
+  boardDragState = {
+    type:'col', boardId, colIdx,
+    startX: e.clientX, startY: e.clientY,
+    moved: false
+  };
+  document.addEventListener('mousemove', onBoardDragMove);
+  document.addEventListener('mouseup', onBoardDragEnd);
+}
+
+// ── Drag board ────────────────────────────────
+function startBoardDrag(e, boardIdx) {
+  // Only from the drag handle area (not buttons)
+  if (e.target.closest('button')) return;
+  e.preventDefault();
+  boardDragState = {
+    type:'board', boardIdx,
+    startX: e.clientX, startY: e.clientY,
+    moved: false
+  };
+  document.addEventListener('mousemove', onBoardDragMove);
+  document.addEventListener('mouseup', onBoardDragEnd);
+}
+
+function onBoardDragMove(e) {
+  if (!boardDragState) return;
+  const dx = Math.abs(e.clientX - boardDragState.startX);
+  const dy = Math.abs(e.clientY - boardDragState.startY);
+  if (dx > 5 || dy > 5) boardDragState.moved = true;
+  if (!boardDragState.moved) return;
+
+  if (boardDragState.type === 'col') {
+    // Find which column we're hovering over
+    const {boardId, colIdx} = boardDragState;
+    const b = boards.find(b=>b.id===boardId);
+    if (!b) return;
+    const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+    const hoveredCol = hoveredEl?.closest('.board-col');
+    if (!hoveredCol) return;
+    const colId = hoveredCol.id.replace(`bc_${boardId}_`, '');
+    const targetIdx = (b.columns||[]).findIndex(c=>c.id===colId);
+    if (targetIdx >= 0 && targetIdx !== colIdx) {
+      // Highlight target
+      document.querySelectorAll('.board-col').forEach(el => el.classList.remove('drag-col-over'));
+      hoveredCol.classList.add('drag-col-over');
+    }
+  } else {
+    // Board drag — find hovered board
+    const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+    const hoveredBoard = hoveredEl?.closest('.board-wrap');
+    if (!hoveredBoard) return;
+    const boardId = hoveredBoard.id.replace('bw_','');
+    const targetIdx = boards.findIndex(b=>b.id===boardId);
+    if (targetIdx >= 0 && targetIdx !== boardDragState.boardIdx) {
+      document.querySelectorAll('.board-wrap').forEach(el => el.classList.remove('drag-board-over'));
+      hoveredBoard.classList.add('drag-board-over');
+    }
+  }
+}
+
+function onBoardDragEnd(e) {
+  document.removeEventListener('mousemove', onBoardDragMove);
+  document.removeEventListener('mouseup', onBoardDragEnd);
+  if (!boardDragState?.moved) { boardDragState=null; return; }
+
+  if (boardDragState.type === 'col') {
+    const {boardId, colIdx} = boardDragState;
+    const b = boards.find(b=>b.id===boardId);
+    if (b) {
+      const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+      const hoveredCol = hoveredEl?.closest('.board-col');
+      if (hoveredCol) {
+        const colId = hoveredCol.id.replace(`bc_${boardId}_`,'');
+        const targetIdx = (b.columns||[]).findIndex(c=>c.id===colId);
+        if (targetIdx >= 0 && targetIdx !== colIdx) {
+          const cols = b.columns;
+          const [moved] = cols.splice(colIdx,1);
+          cols.splice(targetIdx,0,moved);
+          saveBoardData(boardId);
+        }
+      }
+    }
+    document.querySelectorAll('.board-col').forEach(el=>el.classList.remove('drag-col-over'));
+  } else {
+    const {boardIdx} = boardDragState;
+    const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+    const hoveredBoard = hoveredEl?.closest('.board-wrap');
+    if (hoveredBoard) {
+      const boardId = hoveredBoard.id.replace('bw_','');
+      const targetIdx = boards.findIndex(b=>b.id===boardId);
+      if (targetIdx >= 0 && targetIdx !== boardIdx) {
+        const [moved] = boards.splice(boardIdx,1);
+        boards.splice(targetIdx,0,moved);
+        // Save new sort_order
+        boards.forEach((b,i) => dbBoards.update(b.id,{sort_order:i}).catch(()=>{}));
+        localStorage.setItem('tf_boards',JSON.stringify(boards));
+      }
+    }
+    document.querySelectorAll('.board-wrap').forEach(el=>el.classList.remove('drag-board-over'));
+  }
+
+  boardDragState = null;
+  renderBoardsView();
+}
+
 function emptyStepsHtml(routineId) {
   return `<div style="font-size:12px;color:var(--tx3);text-align:center;padding:10px">Chưa có bước nào — <span style="color:var(--ac);cursor:pointer" onclick="editDaily('${routineId}')">Thêm bước</span></div>`;
 }
@@ -3327,11 +3462,12 @@ function renderNotesView() {
     const tags = (n.tags||[]);
     const dot = n.color || '#4f7cff';
     const upd = n.updated_at ? new Date(n.updated_at).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-    return `<div class="note-card ${n.pinned?'pinned':''}" onclick="openNoteEditor('${n.id}')">
+    return `<div class="note-card ${n.pinned?'pinned':''}">
       <div class="note-card-top">
         <div class="note-card-color" style="background:${dot}"></div>
         <div class="note-card-title">${esc(n.title||'')}</div>
         <div class="note-card-actions">
+          <button class="note-act-btn" onclick="event.stopPropagation();openNoteEditor('${n.id}')" title="Chỉnh sửa">✏️</button>
           <button class="note-act-btn ${n.pinned?'pin-on':''}" onclick="event.stopPropagation();pinNote('${n.id}')" title="${n.pinned?'Bỏ ghim':'Ghim'}">${n.pinned?'📌':'📍'}</button>
           <button class="note-act-btn" onclick="event.stopPropagation();deleteNote('${n.id}')" title="Xóa">🗑</button>
         </div>
@@ -3685,6 +3821,7 @@ function renderBoardsView() {
 
     html += `<div class="board-wrap" id="bw_${b.id}">
       <div class="board-header" onclick="toggleBoardCollapse('${b.id}')">
+        <span class="board-drag-handle" onmousedown="event.stopPropagation();startBoardDrag(event,${boards.indexOf(b)})" title="Kéo để sắp xếp">⠿</span>
         <div class="board-color-bar" style="background:${b.color||'#4f7cff'}"></div>
         <div class="board-info">
           <div class="board-name">${esc(b.name)}</div>
@@ -3723,8 +3860,9 @@ function renderBoardCols(b) {
     const savedH = col.maxHeight || 360;
     html += `<div class="board-col" id="bc_${b.id}_${col.id}" style="--col-color:${colColor};${savedW}">
       <div class="board-col-top-bar" style="background:${colColor}"></div>
-      <div class="board-col-head">
+      <div class="board-col-head" onmousedown="startColDrag(event,'${b.id}',${ci})">
         <input class="board-col-title" value="${esc(col.name)}"
+          onmousedown="event.stopPropagation()"
           onblur="renameCol('${b.id}','${col.id}',this.value)"
           onkeydown="if(event.key==='Enter')this.blur()">
         <span class="board-col-count">${doneCount}/${items.length}</span>
@@ -4004,7 +4142,7 @@ function showBqColorPicker(btnEl, editorId) {
   const popup = document.createElement('div');
   popup.id = 'bq-color-popup';
   popup.className = 'bq-color-popup';
-  const bqColors = [('blue', '#4f7cff'), ('green', '#22d3a0'), ('yellow', '#fbbf24'), ('red', '#ff4f6d'), ('purple', '#a78bfa'), ('orange', '#f97316')];
+  const bqColors = [['blue','#4f7cff'],['green','#22d3a0'],['yellow','#fbbf24'],['red','#ff4f6d'],['purple','#a78bfa'],['orange','#f97316']];
   popup.innerHTML = bqColors.map(([name,col]) =>
     `<div class="bq-cpick" style="background:${col}" onclick="insertColorBlockquote('${name}','${editorId}');document.getElementById('bq-color-popup')?.remove()" title="${name}"></div>`
   ).join('');
@@ -4393,7 +4531,10 @@ window.addEventListener('DOMContentLoaded',initApp);
     <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onclick="iepInsertLink()" title="Chèn link">🔗</button>
     <div class="iep-tb-sep"></div>
-        <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
+        <button class="iep-tb-btn" onclick="iepCmd('formatBlock','blockquote')" title="Trích dẫn thường">" "</button>
+    <button class="iep-tb-btn" onclick="showBqColorPicker(this,'iep-note')" title="Trích dẫn màu">🎨"</button>
+    <div class="iep-tb-sep"></div>
+    <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
   </div>
   <div class="iep-note-editor" id="iep-note" contenteditable="true" spellcheck="false"></div>
   <div class="iep-footer">
