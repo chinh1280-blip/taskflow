@@ -413,7 +413,13 @@ textarea.fi{min-height:58px;resize:vertical}
 .note-card-preview h3{font-size:13px;font-weight:600;color:var(--ac);margin:3px 0 2px}
 .note-card-preview ul,.note-card-preview ol{padding-left:16px;margin:3px 0}
 .note-card-preview li{margin:2px 0}
-.note-card-preview blockquote{border-left:2px solid var(--ac);padding:3px 8px;margin:4px 0;background:rgba(79,124,255,.07);border-radius:0 5px 5px 0;color:var(--tx3)}
+.note-card-preview blockquote{border-left:3px solid var(--ac);padding:4px 8px;margin:4px 0;background:rgba(79,124,255,.07);border-radius:0 5px 5px 0;color:var(--tx2)}
+.note-card-preview blockquote[data-color="blue"]{border-left-color:#4f7cff;background:rgba(79,124,255,.1)}
+.note-card-preview blockquote[data-color="green"]{border-left-color:#22d3a0;background:rgba(34,211,160,.1)}
+.note-card-preview blockquote[data-color="yellow"]{border-left-color:#fbbf24;background:rgba(251,191,36,.1)}
+.note-card-preview blockquote[data-color="red"]{border-left-color:#ff4f6d;background:rgba(255,79,109,.1)}
+.note-card-preview blockquote[data-color="purple"]{border-left-color:#a78bfa;background:rgba(167,139,250,.1)}
+.note-card-preview blockquote[data-color="orange"]{border-left-color:#f97316;background:rgba(249,115,22,.1)}
 .note-card-preview b,.note-card-preview strong{color:var(--tx);font-weight:600}
 .note-card-preview a{color:var(--ac);text-decoration:underline}
 .note-card-preview code{background:var(--s3);padding:1px 4px;border-radius:3px;font-size:11px;font-family:"Roboto Mono",monospace}
@@ -703,11 +709,39 @@ textarea.fi{min-height:58px;resize:vertical}
 /* Drag & drop boards/cols */
 .drag-col-over{outline:2px dashed var(--ac)!important;outline-offset:-2px}
 .drag-board-over{outline:2px dashed var(--ac)!important;outline-offset:-2px;border-radius:16px}
-.board-col-head{cursor:grab}
+.board-col-head{cursor:grab;-webkit-user-select:none;user-select:none;touch-action:none}
 .board-col-head:active{cursor:grabbing}
-.board-drag-handle{cursor:grab;color:var(--tx3);font-size:16px;padding:0 6px;flex-shrink:0;opacity:0;transition:opacity .15s;user-select:none}
-.board-header:hover .board-drag-handle{opacity:1}
-.board-drag-handle:active{cursor:grabbing}
+.board-drag-handle{
+  cursor:grab;color:var(--tx3);font-size:18px;padding:0 8px;flex-shrink:0;
+  opacity:0.4;transition:opacity .15s;
+  -webkit-user-select:none;user-select:none;touch-action:none;
+  line-height:1
+}
+.board-header:hover .board-drag-handle{opacity:0.8}
+.board-drag-handle:hover{opacity:1!important;color:var(--ac)}
+.board-drag-handle:active,.board-col-head:active{cursor:grabbing}
+/* Prevent selection highlight during drag */
+.board-dragging *{-webkit-user-select:none!important;user-select:none!important}
+
+/* Table editing */
+.note-content table td,.note-content table th{
+  border:1px solid var(--bd);padding:6px 10px;
+  min-width:60px;cursor:text;transition:background .15s;
+  vertical-align:top;
+}
+.note-content table td:hover,.note-content table th:hover{background:rgba(79,124,255,.06)}
+.note-content table td.selected,.note-content table th.selected{background:rgba(79,124,255,.2)!important;outline:1px solid var(--ac)}
+/* Table toolbar popup */
+.table-ctx-menu{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:6px;z-index:800;
+  min-width:160px;box-shadow:0 8px 28px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:2px}
+.table-ctx-btn{padding:6px 12px;border-radius:7px;border:none;background:none;color:var(--tx2);
+  font-size:12px;cursor:pointer;text-align:left;transition:background .15s;white-space:nowrap}
+.table-ctx-btn:hover{background:var(--s2);color:var(--tx)}
+.table-ctx-btn.danger:hover{background:rgba(255,79,109,.15);color:var(--er)}
+.table-ctx-sep{height:1px;background:var(--bd);margin:3px 0}
+.cell-color-row{display:flex;gap:4px;padding:4px 12px;flex-wrap:wrap}
+.cell-cpick{width:18px;height:18px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all .12s}
+.cell-cpick:hover{border-color:#fff;transform:scale(1.2)}
 </style>
 </head>
 <body>
@@ -2501,49 +2535,55 @@ function fmtMinutes(min) {
 // ════════════════════════════════════════════════
 let boardDragState = null; // {type:'col'|'board', boardId?, colIdx, startX, startY}
 
+// ── Helpers ────────────────────────────────
+function getEventXY(e) {
+  if (e.touches && e.touches.length > 0) return {x: e.touches[0].clientX, y: e.touches[0].clientY};
+  if (e.changedTouches && e.changedTouches.length > 0) return {x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY};
+  return {x: e.clientX, y: e.clientY};
+}
+
 // ── Drag cột ──────────────────────────────────
 function startColDrag(e, boardId, colIdx) {
-  // Only drag from header (not resize handle)
   if (e.target.closest('.col-resize-handle')) return;
   e.preventDefault();
+  const {x, y} = getEventXY(e);
   const b = boards.find(b=>b.id===boardId);
   if (!b) return;
-  boardDragState = {
-    type:'col', boardId, colIdx,
-    startX: e.clientX, startY: e.clientY,
-    moved: false
-  };
-  document.addEventListener('mousemove', onBoardDragMove);
+  boardDragState = {type:'col', boardId, colIdx, startX:x, startY:y, moved:false};
+  document.addEventListener('mousemove', onBoardDragMove, {passive:false});
   document.addEventListener('mouseup', onBoardDragEnd);
+  document.addEventListener('touchmove', onBoardDragMove, {passive:false});
+  document.addEventListener('touchend', onBoardDragEnd);
+  document.body.classList.add('board-dragging');
 }
 
 // ── Drag board ────────────────────────────────
 function startBoardDrag(e, boardIdx) {
-  // Only from the drag handle area (not buttons)
   if (e.target.closest('button')) return;
   e.preventDefault();
-  boardDragState = {
-    type:'board', boardIdx,
-    startX: e.clientX, startY: e.clientY,
-    moved: false
-  };
-  document.addEventListener('mousemove', onBoardDragMove);
+  const {x, y} = getEventXY(e);
+  boardDragState = {type:'board', boardIdx, startX:x, startY:y, moved:false};
+  document.addEventListener('mousemove', onBoardDragMove, {passive:false});
   document.addEventListener('mouseup', onBoardDragEnd);
+  document.addEventListener('touchmove', onBoardDragMove, {passive:false});
+  document.addEventListener('touchend', onBoardDragEnd);
+  document.body.classList.add('board-dragging');
 }
 
 function onBoardDragMove(e) {
   if (!boardDragState) return;
-  const dx = Math.abs(e.clientX - boardDragState.startX);
-  const dy = Math.abs(e.clientY - boardDragState.startY);
-  if (dx > 5 || dy > 5) boardDragState.moved = true;
+  e.preventDefault();
+  const {x, y} = getEventXY(e);
+  const dx = Math.abs(x - boardDragState.startX);
+  const dy = Math.abs(y - boardDragState.startY);
+  if (dx > 8 || dy > 8) boardDragState.moved = true;
   if (!boardDragState.moved) return;
 
   if (boardDragState.type === 'col') {
-    // Find which column we're hovering over
     const {boardId, colIdx} = boardDragState;
     const b = boards.find(b=>b.id===boardId);
     if (!b) return;
-    const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+    const hoveredEl = document.elementFromPoint(x, y);
     const hoveredCol = hoveredEl?.closest('.board-col');
     if (!hoveredCol) return;
     const colId = hoveredCol.id.replace(`bc_${boardId}_`, '');
@@ -2555,7 +2595,7 @@ function onBoardDragMove(e) {
     }
   } else {
     // Board drag — find hovered board
-    const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+    const hoveredEl = document.elementFromPoint(x, y);
     const hoveredBoard = hoveredEl?.closest('.board-wrap');
     if (!hoveredBoard) return;
     const boardId = hoveredBoard.id.replace('bw_','');
@@ -2570,13 +2610,17 @@ function onBoardDragMove(e) {
 function onBoardDragEnd(e) {
   document.removeEventListener('mousemove', onBoardDragMove);
   document.removeEventListener('mouseup', onBoardDragEnd);
+  document.removeEventListener('touchmove', onBoardDragMove);
+  document.removeEventListener('touchend', onBoardDragEnd);
+  document.body.classList.remove('board-dragging');
   if (!boardDragState?.moved) { boardDragState=null; return; }
 
+  const {x, y} = getEventXY(e);
   if (boardDragState.type === 'col') {
     const {boardId, colIdx} = boardDragState;
     const b = boards.find(b=>b.id===boardId);
     if (b) {
-      const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+      const hoveredEl = document.elementFromPoint(x, y);
       const hoveredCol = hoveredEl?.closest('.board-col');
       if (hoveredCol) {
         const colId = hoveredCol.id.replace(`bc_${boardId}_`,'');
@@ -2592,7 +2636,7 @@ function onBoardDragEnd(e) {
     document.querySelectorAll('.board-col').forEach(el=>el.classList.remove('drag-col-over'));
   } else {
     const {boardIdx} = boardDragState;
-    const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
+    const hoveredEl = document.elementFromPoint(x, y);
     const hoveredBoard = hoveredEl?.closest('.board-wrap');
     if (hoveredBoard) {
       const boardId = hoveredBoard.id.replace('bw_','');
@@ -3537,7 +3581,7 @@ function openNoteEditor(id) {
   ).join('');
 
   document.getElementById('note-editor-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('ne-title').focus(), 100);
+  setTimeout(() => { document.getElementById('ne-title').focus(); bindTableEvents(); }, 100);
 }
 
 function closeNoteEditor() {
@@ -3821,7 +3865,7 @@ function renderBoardsView() {
 
     html += `<div class="board-wrap" id="bw_${b.id}">
       <div class="board-header" onclick="toggleBoardCollapse('${b.id}')">
-        <span class="board-drag-handle" onmousedown="event.stopPropagation();startBoardDrag(event,${boards.indexOf(b)})" title="Kéo để sắp xếp">⠿</span>
+        <span class="board-drag-handle" onmousedown="event.stopPropagation();startBoardDrag(event,${boards.indexOf(b)})" ontouchstart="event.stopPropagation();startBoardDrag(event,${boards.indexOf(b)})" title="Kéo để sắp xếp">⠿</span>
         <div class="board-color-bar" style="background:${b.color||'#4f7cff'}"></div>
         <div class="board-info">
           <div class="board-name">${esc(b.name)}</div>
@@ -3860,7 +3904,7 @@ function renderBoardCols(b) {
     const savedH = col.maxHeight || 360;
     html += `<div class="board-col" id="bc_${b.id}_${col.id}" style="--col-color:${colColor};${savedW}">
       <div class="board-col-top-bar" style="background:${colColor}"></div>
-      <div class="board-col-head" onmousedown="startColDrag(event,'${b.id}',${ci})">
+      <div class="board-col-head" onmousedown="startColDrag(event,'${b.id}',${ci})" ontouchstart="startColDrag(event,'${b.id}',${ci})">
         <input class="board-col-title" value="${esc(col.name)}"
           onmousedown="event.stopPropagation()"
           onblur="renameCol('${b.id}','${col.id}',this.value)"
@@ -4118,41 +4162,83 @@ function openItemEdit(boardId, colId, itemId, evt) {
 
 
 // ── Colored blockquote ────────────────────────────────────────
-function insertColorBlockquote(color, editorId) {
+
+function toggleBlockquote(editorId) {
   const editor = document.getElementById(editorId||'ne-content');
   editor.focus();
+  const sel = window.getSelection();
+  if (!sel || !sel.anchorNode) return;
+  // Check if currently inside blockquote
+  let node = sel.anchorNode;
+  while (node && node !== editor) {
+    if (node.tagName === 'BLOCKQUOTE') {
+      // Currently in blockquote → exit to paragraph
+      document.execCommand('outdent');
+      document.execCommand('formatBlock', false, 'p');
+      return;
+    }
+    node = node.parentNode;
+  }
+  // Not in blockquote → wrap in blockquote
   document.execCommand('formatBlock', false, 'blockquote');
-  // Apply color via data attribute
-  setTimeout(() => {
-    const bqs = editor.querySelectorAll('blockquote');
+}
+
+function insertColorBlockquote(color, editorId) {
+  insertColorBlockquoteWithRange(color, editorId, null);
+}
+
+function insertColorBlockquoteWithRange(color, editorId, savedRange) {
+  const editor = document.getElementById(editorId||'ne-content');
+  editor.focus();
+  // Restore saved selection
+  if (savedRange) {
     const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+  document.execCommand('formatBlock', false, 'blockquote');
+  setTimeout(() => {
+    const sel = window.getSelection();
+    const bqs = editor.querySelectorAll('blockquote');
+    // Apply color to the blockquote containing cursor
+    let applied = false;
     bqs.forEach(bq => {
-      if (sel && bq.contains(sel.anchorNode)) {
+      if (sel && (bq.contains(sel.anchorNode) || bq.contains(sel.focusNode))) {
         bq.setAttribute('data-color', color);
+        applied = true;
       }
     });
-    // If no selection in bq, apply to last bq
-    if (bqs.length) bqs[bqs.length-1].setAttribute('data-color', color);
-  }, 50);
+    if (!applied && bqs.length) bqs[bqs.length-1].setAttribute('data-color', color);
+  }, 30);
 }
 
 function showBqColorPicker(btnEl, editorId) {
-  // Remove existing popup
+  // Save selection BEFORE popup steals focus
+  const sel = window.getSelection();
+  const savedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
+
   document.getElementById('bq-color-popup')?.remove();
   const popup = document.createElement('div');
   popup.id = 'bq-color-popup';
   popup.className = 'bq-color-popup';
   const bqColors = [['blue','#4f7cff'],['green','#22d3a0'],['yellow','#fbbf24'],['red','#ff4f6d'],['purple','#a78bfa'],['orange','#f97316']];
-  popup.innerHTML = bqColors.map(([name,col]) =>
-    `<div class="bq-cpick" style="background:${col}" onclick="insertColorBlockquote('${name}','${editorId}');document.getElementById('bq-color-popup')?.remove()" title="${name}"></div>`
-  ).join('');
-  // Position below button
+  popup.innerHTML = '<div style="font-size:10px;color:var(--tx3);margin-bottom:6px;width:100%">Chọn màu trích dẫn:</div>' +
+    bqColors.map(([name,col]) =>
+      `<div class="bq-cpick" style="background:${col};title="${name}"
+        onmousedown="event.preventDefault()"
+        onclick="insertColorBlockquoteWithRange('${name}','${editorId}',_savedBqRange);document.getElementById('bq-color-popup')?.remove()">
+      </div>`
+    ).join('');
+  // Store saved range globally for use in insertColorBlockquoteWithRange
+  window._savedBqRange = savedRange;
   const rect = btnEl.getBoundingClientRect();
-  popup.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px`;
+  let left = rect.left;
+  if (left + 170 > window.innerWidth) left = window.innerWidth - 175;
+  popup.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${left}px`;
   document.body.appendChild(popup);
   setTimeout(() => document.addEventListener('click', function removeBqPicker(e){
     if(!popup.contains(e.target)&&e.target!==btnEl){popup.remove();document.removeEventListener('click',removeBqPicker);}
-  }), 50);
+  }), 100);
 }
 
 function plainToHtml(text) {
@@ -4329,6 +4415,139 @@ document.addEventListener('click', e => {
   }
 });
 
+
+// ════════════════════════════════════════════════════════
+// TABLE EDITOR — add/remove rows/cols, cell color
+// ════════════════════════════════════════════════════════
+const CELL_COLORS = [
+  'transparent','rgba(79,124,255,.25)','rgba(34,211,160,.25)',
+  'rgba(251,191,36,.25)','rgba(255,79,109,.25)','rgba(167,139,250,.25)',
+  'rgba(249,115,22,.25)','rgba(255,255,255,.1)','rgba(0,0,0,.3)'
+];
+
+let selectedCells = [];
+let tableCtxTarget = null; // {table, row, col, cell}
+
+// Click on table cell — select
+function onTableCellClick(e) {
+  const cell = e.target.closest('td,th');
+  if (!cell) return;
+  const editor = e.currentTarget;
+  if (!editor.closest('#ne-content, .note-content')) return;
+  e.stopPropagation();
+  // Ctrl/Shift = multi-select
+  if (!e.ctrlKey && !e.shiftKey && !e.metaKey) {
+    editor.querySelectorAll('td.selected,th.selected').forEach(c=>c.classList.remove('selected'));
+    selectedCells = [];
+  }
+  cell.classList.toggle('selected');
+  selectedCells = Array.from(editor.querySelectorAll('td.selected,th.selected'));
+}
+
+// Right-click → context menu
+function onTableRightClick(e) {
+  const cell = e.target.closest('td,th');
+  if (!cell) return;
+  e.preventDefault();
+  const table = cell.closest('table');
+  const row = cell.parentElement;
+  const rowIdx = Array.from(table.rows).indexOf(row);
+  const colIdx = cell.cellIndex;
+  showTableCtxMenu(e.clientX, e.clientY, table, rowIdx, colIdx, cell);
+}
+
+function showTableCtxMenu(mx, my, table, rowIdx, colIdx, cell) {
+  document.getElementById('table-ctx-menu')?.remove();
+  tableCtxTarget = {table, rowIdx, colIdx, cell};
+  const menu = document.createElement('div');
+  menu.id = 'table-ctx-menu';
+  menu.className = 'table-ctx-menu';
+  menu.innerHTML = `
+    <button class="table-ctx-btn" onclick="tableAddRow(1)">＋ Thêm hàng bên dưới</button>
+    <button class="table-ctx-btn" onclick="tableAddRow(-1)">＋ Thêm hàng bên trên</button>
+    <button class="table-ctx-btn" onclick="tableAddCol(1)">＋ Thêm cột bên phải</button>
+    <button class="table-ctx-btn" onclick="tableAddCol(-1)">＋ Thêm cột bên trái</button>
+    <div class="table-ctx-sep"></div>
+    <div style="font-size:10px;color:var(--tx3);padding:3px 12px">Màu ô (bôi đen để chọn nhiều ô):</div>
+    <div class="cell-color-row">${CELL_COLORS.map(col=>
+      `<div class="cell-cpick" style="background:${col};border:1px solid rgba(255,255,255,.2)"
+        onclick="applyCellColor('${col}')"></div>`
+    ).join('')}</div>
+    <div class="table-ctx-sep"></div>
+    <button class="table-ctx-btn danger" onclick="tableDelRow()">✕ Xóa hàng này</button>
+    <button class="table-ctx-btn danger" onclick="tableDelCol()">✕ Xóa cột này</button>
+  `;
+  const pw=170, ph=280;
+  let x = Math.min(mx, window.innerWidth-pw-8);
+  let y = Math.min(my, window.innerHeight-ph-8);
+  menu.style.cssText = `position:fixed;left:${Math.max(8,x)}px;top:${Math.max(8,y)}px`;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click', function rmTableCtx(e){
+    if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',rmTableCtx);}
+  }), 50);
+}
+
+function tableAddRow(dir) {
+  if (!tableCtxTarget) return;
+  const {table, rowIdx} = tableCtxTarget;
+  const refRow = table.rows[rowIdx + (dir>0?1:0)];
+  const newRow = table.insertRow(dir>0 ? rowIdx+1 : rowIdx);
+  const cols = table.rows[0].cells.length;
+  for(let i=0;i<cols;i++){
+    const td = newRow.insertCell(i);
+    td.innerHTML = '&nbsp;';
+  }
+  document.getElementById('table-ctx-menu')?.remove();
+}
+
+function tableAddCol(dir) {
+  if (!tableCtxTarget) return;
+  const {table, colIdx} = tableCtxTarget;
+  Array.from(table.rows).forEach((row,ri) => {
+    const idx = dir>0 ? colIdx+1 : colIdx;
+    const cell = ri===0 ? document.createElement('th') : document.createElement('td');
+    cell.innerHTML = '&nbsp;';
+    row.insertBefore(cell, row.cells[idx]||null);
+  });
+  document.getElementById('table-ctx-menu')?.remove();
+}
+
+function tableDelRow() {
+  if (!tableCtxTarget) return;
+  const {table, rowIdx} = tableCtxTarget;
+  if (table.rows.length <= 1) return;
+  table.deleteRow(rowIdx);
+  document.getElementById('table-ctx-menu')?.remove();
+}
+
+function tableDelCol() {
+  if (!tableCtxTarget) return;
+  const {table, colIdx} = tableCtxTarget;
+  if (table.rows[0]?.cells.length <= 1) return;
+  Array.from(table.rows).forEach(row => {
+    if (row.cells[colIdx]) row.deleteCell(colIdx);
+  });
+  document.getElementById('table-ctx-menu')?.remove();
+}
+
+function applyCellColor(color) {
+  // Apply to selected cells, or just the right-clicked cell
+  const targets = selectedCells.length > 0 ? selectedCells : (tableCtxTarget?.cell ? [tableCtxTarget.cell] : []);
+  targets.forEach(cell => {
+    cell.style.backgroundColor = color === 'transparent' ? '' : color;
+  });
+  document.getElementById('table-ctx-menu')?.remove();
+}
+
+// Bind table events to ne-content
+function bindTableEvents() {
+  const editor = document.getElementById('ne-content');
+  if (!editor) return;
+  editor.addEventListener('click', onTableCellClick);
+  editor.addEventListener('contextmenu', onTableRightClick);
+}
+
+
 window.addEventListener('DOMContentLoaded',initApp);
 </script>
 
@@ -4448,7 +4667,7 @@ window.addEventListener('DOMContentLoaded',initApp);
       <!-- Lists -->
       <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
       <button class="tb-btn" onclick="execCmd('insertOrderedList')" title="Danh sách đánh số">1. ≡</button>
-      <button class="tb-btn" onclick="execCmd('formatBlock','blockquote')" title="Trích dẫn thường">" "</button>
+      <button class="tb-btn" onclick="toggleBlockquote('ne-content')" title="Bật/tắt trích dẫn">" "</button>
       <button class="tb-btn" onclick="showBqColorPicker(this,'ne-content')" title="Trích dẫn có màu">🎨"</button>
       <div class="tb-sep"></div>
       <!-- Indent -->
@@ -4467,6 +4686,8 @@ window.addEventListener('DOMContentLoaded',initApp);
       <button class="tb-btn" onclick="insertLink()" title="Chèn link">🔗</button>
       <div class="tb-sep"></div>
       <!-- Clear -->
+      <button class="tb-btn" onclick="execCmd('undo')" title="Quay lại (Ctrl+Z)">↩</button>
+      <button class="tb-btn" onclick="execCmd('redo')" title="Tiếp tới (Ctrl+Y)">↪</button>
       <button class="tb-btn" onclick="execCmd('removeFormat')" title="Xóa định dạng" style="font-size:10px">✕fmt</button>
     </div>
 
@@ -4531,9 +4752,11 @@ window.addEventListener('DOMContentLoaded',initApp);
     <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onclick="iepInsertLink()" title="Chèn link">🔗</button>
     <div class="iep-tb-sep"></div>
-        <button class="iep-tb-btn" onclick="iepCmd('formatBlock','blockquote')" title="Trích dẫn thường">" "</button>
+        <button class="iep-tb-btn" onclick="toggleBlockquote('iep-note')" title="Bật/tắt trích dẫn">" "</button>
     <button class="iep-tb-btn" onclick="showBqColorPicker(this,'iep-note')" title="Trích dẫn màu">🎨"</button>
     <div class="iep-tb-sep"></div>
+    <button class="iep-tb-btn" onclick="iepCmd('undo')" title="Quay lại">↩</button>
+    <button class="iep-tb-btn" onclick="iepCmd('redo')" title="Tiếp tới">↪</button>
     <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
   </div>
   <div class="iep-note-editor" id="iep-note" contenteditable="true" spellcheck="false"></div>
