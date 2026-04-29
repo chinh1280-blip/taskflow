@@ -550,12 +550,13 @@ textarea.fi{min-height:58px;resize:vertical}
 }
 /* Custom resize handle — bottom-right corner */
 .col-resize-handle{
-  position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;
-  z-index:10;border-radius:0 0 12px 0;
-  background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.18) 40%,rgba(255,255,255,.18) 55%,transparent 55%,transparent 65%,rgba(255,255,255,.1) 65%,rgba(255,255,255,.1) 80%,transparent 80%);
+  position:absolute;bottom:0;right:0;width:24px;height:24px;cursor:se-resize;
+  z-index:10;border-radius:0 0 12px 0;touch-action:none;
+  background:linear-gradient(135deg,transparent 35%,rgba(255,255,255,.22) 35%,rgba(255,255,255,.22) 50%,transparent 50%,transparent 62%,rgba(255,255,255,.14) 62%,rgba(255,255,255,.14) 77%,transparent 77%);
   opacity:0;transition:opacity .2s;
 }
 .board-col:hover .col-resize-handle{opacity:1}
+@media(hover:none){.col-resize-handle{opacity:.5;width:28px;height:28px}}
 /* Clip chỉ phần top-bar và head */
 .board-col-top-bar{border-radius:12px 12px 0 0;overflow:hidden}
 .board-col:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
@@ -742,6 +743,22 @@ textarea.fi{min-height:58px;resize:vertical}
 .cell-color-row{display:flex;gap:4px;padding:4px 12px;flex-wrap:wrap}
 .cell-cpick{width:18px;height:18px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all .12s}
 .cell-cpick:hover{border-color:#fff;transform:scale(1.2)}
+
+.save-confirm-popup{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:9999;display:flex;align-items:center;justify-content:center;
+}
+.save-confirm-box{
+  background:var(--s1);border:1px solid var(--bd);border-radius:16px;
+  padding:24px 20px;width:100%;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,.6);
+  text-align:center;
+}
+.save-confirm-title{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--tx)}
+.save-confirm-sub{font-size:13px;color:var(--tx2);margin-bottom:20px;line-height:1.5}
+.save-confirm-btns{display:flex;gap:10px;justify-content:center}
+.scb-save{padding:9px 20px;border-radius:9px;border:none;background:var(--ac);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.scb-discard{padding:9px 20px;border-radius:9px;border:1px solid rgba(255,79,109,.4);background:rgba(255,79,109,.1);color:var(--er);font-size:14px;cursor:pointer}
+.scb-cancel{padding:9px 16px;border-radius:9px;border:none;background:var(--s2);color:var(--tx2);font-size:14px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -3555,6 +3572,65 @@ function toggleNoteExpand(noteId, e) {
   }
   renderNotesView();
 }
+
+// ── Note editor close with confirm ─────────────────────────
+let _noteOrigContent = '';
+let _noteOrigTitle   = '';
+
+function openNoteEditorTracked(id) {
+  openNoteEditor(id);
+  setTimeout(() => {
+    _noteOrigContent = document.getElementById('ne-content')?.innerHTML || '';
+    _noteOrigTitle   = document.getElementById('ne-title')?.value || '';
+  }, 200);
+}
+
+function noteEditorHasChanges() {
+  const curContent = document.getElementById('ne-content')?.innerHTML || '';
+  const curTitle   = document.getElementById('ne-title')?.value || '';
+  return curContent !== _noteOrigContent || curTitle !== _noteOrigTitle;
+}
+
+function tryCloseNoteEditor() {
+  if (!noteEditorHasChanges()) { closeNoteEditor(); return; }
+  // Show confirm popup
+  const popup = document.createElement('div');
+  popup.className = 'save-confirm-popup';
+  popup.id = 'save-confirm-popup';
+  popup.innerHTML = `
+    <div class="save-confirm-box">
+      <div class="save-confirm-title">💾 Lưu thay đổi?</div>
+      <div class="save-confirm-sub">Bạn có thay đổi chưa lưu.<br>Bạn muốn lưu hay bỏ qua?</div>
+      <div class="save-confirm-btns">
+        <button class="scb-cancel" onclick="document.getElementById('save-confirm-popup')?.remove()">Tiếp tục sửa</button>
+        <button class="scb-discard" onclick="document.getElementById('save-confirm-popup')?.remove();closeNoteEditor()">Không lưu</button>
+        <button class="scb-save" onclick="document.getElementById('save-confirm-popup')?.remove();saveNote()">Lưu</button>
+      </div>
+    </div>`;
+  document.body.appendChild(popup);
+}
+
+// Patch openNoteEditor to track original content
+const _origOpenNoteEditor = openNoteEditor;
+openNoteEditor = function(id) {
+  _origOpenNoteEditor(id);
+  setTimeout(() => {
+    _noteOrigContent = document.getElementById('ne-content')?.innerHTML || '';
+    _noteOrigTitle   = document.getElementById('ne-title')?.value || '';
+  }, 300);
+};
+
+// Escape key also checks for changes
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('note-editor-overlay');
+    if (overlay?.classList.contains('open')) {
+      e.preventDefault();
+      tryCloseNoteEditor();
+    }
+  }
+});
+
 function stripHtml(html) {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
@@ -3653,6 +3729,14 @@ async function pinNote(id) {
 }
 
 // ── Toolbar commands ──────────────────────────────────────────
+
+function setFontSize(size, editorId) {
+  if (!size) return;
+  const editor = document.getElementById(editorId || 'ne-content');
+  editor.focus();
+  document.execCommand('fontSize', false, size);
+}
+
 function execCmd(cmd, val) {
   document.getElementById('ne-content').focus();
   document.execCommand(cmd, false, val||null);
@@ -3919,8 +4003,9 @@ function renderBoardCols(b) {
       </div>
       ${isAddOpen ? renderInlineAdd(b.id, col.id) : `<button class="board-add-item" onclick="openInlineAdd('${b.id}','${col.id}')">＋ Thêm</button>`}
       <div class="col-resize-handle" 
-        onmousedown="startColResize(event,'${b.id}','${col.id}')" 
-        title="Kéo để thay đổi kích thước cột"></div>
+        onmousedown="startColResize(event,'${b.id}','${col.id}')"
+        ontouchstart="startColResize(event,'${b.id}','${col.id}')"
+        title="Kéo để thay đổi kích thước"></div>
     </div>`;
   });
 
@@ -4036,24 +4121,31 @@ function startColResize(e, boardId, colId) {
   e.stopPropagation();
   const colEl = document.getElementById(`bc_${boardId}_${colId}`);
   if (!colEl) return;
-  const startX = e.clientX;
-  const startY = e.clientY;
+  const touch = e.touches?.[0];
+  const startX = touch ? touch.clientX : e.clientX;
+  const startY = touch ? touch.clientY : e.clientY;
   const startW = colEl.offsetWidth;
   const itemsEl = colEl.querySelector('.board-col-items');
-  const startMaxH = itemsEl ? (parseInt(getComputedStyle(itemsEl).maxHeight)||360) : 360;
+  const startMaxH = itemsEl ? (parseInt(itemsEl.style.maxHeight)||parseInt(getComputedStyle(itemsEl).maxHeight)||360) : 360;
 
   colResizeState = { boardId, colId, startX, startY, startW, startMaxH, colEl, itemsEl };
   document.addEventListener('mousemove', onColResizeMove);
   document.addEventListener('mouseup', onColResizeEnd);
+  document.addEventListener('touchmove', onColResizeMove, {passive:false});
+  document.addEventListener('touchend', onColResizeEnd);
   document.body.style.cursor = 'se-resize';
   document.body.style.userSelect = 'none';
 }
 
 function onColResizeMove(e) {
   if (!colResizeState) return;
+  e.preventDefault();
+  const touch = e.touches?.[0];
+  const cx = touch ? touch.clientX : e.clientX;
+  const cy = touch ? touch.clientY : e.clientY;
   const { startX, startY, startW, startMaxH, colEl, itemsEl } = colResizeState;
-  const dx = e.clientX - startX;
-  const dy = e.clientY - startY;
+  const dx = cx - startX;
+  const dy = cy - startY;
   const newW = Math.max(160, Math.min(700, startW + dx));
   const newH = Math.max(80, startMaxH + dy);
   colEl.style.width = newW + 'px';
@@ -4067,6 +4159,8 @@ function onColResizeEnd() {
   if (!colResizeState) return;
   document.removeEventListener('mousemove', onColResizeMove);
   document.removeEventListener('mouseup', onColResizeEnd);
+  document.removeEventListener('touchmove', onColResizeMove);
+  document.removeEventListener('touchend', onColResizeEnd);
   document.body.style.cursor = '';
   document.body.style.userSelect = '';
   // Save size to column data
@@ -4540,11 +4634,33 @@ function applyCellColor(color) {
 }
 
 // Bind table events to ne-content
+
+// Paste handler: preserve table formatting from external sources
+function handleNotePaste(e) {
+  // If paste contains HTML with table, let browser handle it natively
+  const html = e.clipboardData?.getData('text/html');
+  if (html && (html.includes('<table') || html.includes('<td') || html.includes('<tr'))) {
+    // Let contenteditable handle it naturally — tables are preserved
+    return;
+  }
+  // For plain text: convert to paragraphs to preserve line breaks
+  if (!html || html.trim() === '') {
+    const text = e.clipboardData?.getData('text/plain');
+    if (text) {
+      e.preventDefault();
+      const lines = text.split('\n');
+      const htmlLines = lines.map(l => l ? `<p>${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : '<p><br></p>');
+      document.execCommand('insertHTML', false, htmlLines.join(''));
+    }
+  }
+}
+
 function bindTableEvents() {
   const editor = document.getElementById('ne-content');
   if (!editor) return;
   editor.addEventListener('click', onTableCellClick);
   editor.addEventListener('contextmenu', onTableRightClick);
+  editor.addEventListener('paste', handleNotePaste);
 }
 
 
@@ -4622,7 +4738,7 @@ window.addEventListener('DOMContentLoaded',initApp);
 
 
 <!-- NOTE EDITOR MODAL -->
-<div class="note-editor-overlay" id="note-editor-overlay" onclick="if(event.target===this)closeNoteEditor()">
+<div class="note-editor-overlay" id="note-editor-overlay" onclick="if(event.target===this)tryCloseNoteEditor()">
   <div class="note-editor-sheet" onclick="event.stopPropagation()">
 
     <!-- Header: title + color + close -->
@@ -4642,6 +4758,16 @@ window.addEventListener('DOMContentLoaded',initApp);
         <option value="h2">Tiêu đề 2</option>
         <option value="h3">Tiêu đề 3</option>
         <option value="p">Đoạn văn</option>
+      </select>
+      <select class="tb-select" onchange="setFontSize(this.value,'ne-content');this.value=''" title="Cỡ chữ" style="width:70px">
+        <option value="">Cỡ</option>
+        <option value="1">Nhỏ</option>
+        <option value="2">Nhỏ+</option>
+        <option value="3">Bình</option>
+        <option value="4">Vừa</option>
+        <option value="5">Lớn</option>
+        <option value="6">Lớn+</option>
+        <option value="7">To</option>
       </select>
       <div class="tb-sep"></div>
       <!-- Format -->
@@ -4736,6 +4862,24 @@ window.addEventListener('DOMContentLoaded',initApp);
     <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onclick="iepCmd('insertUnorderedList')" title="Danh sách">• ≡</button>
     <button class="iep-tb-btn" onclick="iepCmd('insertOrderedList')" title="Đánh số">1≡</button>
+    <div class="iep-tb-sep"></div>
+    <select class="tb-select" onchange="setFontSize(this.value,'iep-note');this.value=''" title="Cỡ chữ" style="width:60px;height:24px;font-size:10px">
+      <option value="">Cỡ</option>
+      <option value="1">Nhỏ</option>
+      <option value="2">Nhỏ+</option>
+      <option value="3">Bình</option>
+      <option value="4">Vừa</option>
+      <option value="5">Lớn</option>
+      <option value="6">Lớn+</option>
+      <option value="7">To</option>
+    </select>
+    <select class="tb-select" onchange="iepCmd('formatBlock',this.value);this.value=''" title="Kiểu chữ" style="width:70px;height:24px;font-size:10px">
+      <option value="">Kiểu</option>
+      <option value="h1">T. đề 1</option>
+      <option value="h2">T. đề 2</option>
+      <option value="h3">T. đề 3</option>
+      <option value="p">Đoạn</option>
+    </select>
     <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onclick="iepForeColor('#4f7cff')" title="Xanh" style="color:#4f7cff;font-size:13px;font-weight:700">A</button>
     <button class="iep-tb-btn" onclick="iepForeColor('#7c5fff')" title="Tím" style="color:#7c5fff;font-size:13px;font-weight:700">A</button>
