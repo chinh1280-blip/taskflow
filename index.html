@@ -23,7 +23,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .app{display:flex;height:100vh;overflow:hidden;position:relative}
 .grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,124,255,.03)1px,transparent 1px),linear-gradient(90deg,rgba(79,124,255,.03)1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
 /* SIDEBAR */
-.sidebar{width:250px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow-y:auto;flex-shrink:0;z-index:50;position:relative;transition:transform .3s ease}
+.sidebar{width:250px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow:hidden;flex-shrink:0;z-index:50;position:relative;transition:transform .3s ease}
 .side-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;backdrop-filter:blur(4px)}
 @media(max-width:767px){.sidebar{position:fixed;top:0;left:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.side-overlay.open{display:block}.menu-btn{display:flex!important}}
 .logo{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid var(--bd)}
@@ -31,6 +31,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .logo-text{font-size:16px;font-weight:700;letter-spacing:-.5px;flex:1}.logo-text span{color:var(--ac)}
 .close-side{background:none;border:none;color:var(--tx3);font-size:20px;display:none}
 @media(max-width:767px){.close-side{display:block}}
+.sidebar-scroll{flex:1;overflow-y:auto;min-height:0}
 .side-section{padding:12px 10px 0}
 .side-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--tx3);text-transform:uppercase;padding:0 8px;margin-bottom:6px}
 .nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:2px;transition:all .15s;border:none;background:none;width:100%;text-align:left}
@@ -50,7 +51,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .proj-dd-item:hover{background:var(--s3);color:var(--tx)}.proj-dd-item.danger:hover{background:rgba(255,79,109,.15);color:var(--er)}
 .add-proj{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px;color:var(--tx3);border:1px dashed var(--bd);margin-top:8px;background:none;width:100%;transition:all .15s}
 .add-proj:hover{border-color:var(--ac);color:var(--ac)}
-.sidebar-footer{margin-top:auto;padding:12px}
+.sidebar-footer{flex-shrink:0;padding:12px;border-top:1px solid var(--bd);background:var(--s1);position:sticky;bottom:0}
 .sync-pill{display:flex;align-items:center;justify-content:center;gap:5px;padding:6px;border-radius:9px;margin-bottom:8px;font-size:11px;min-height:28px;transition:all .3s}
 .sync-idle{background:transparent;color:transparent}.sync-loading{background:rgba(79,124,255,.1);color:var(--ac)}.sync-ok{background:rgba(34,211,160,.1);color:var(--ok)}.sync-err{background:rgba(255,79,109,.1);color:var(--er)}
 .clock-box{background:var(--s2);border-radius:11px;padding:11px;text-align:center}
@@ -926,6 +927,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
       <div class="logo-text">Task<span>Flow</span></div>
       <button class="close-side" onclick="closeSide()">✕</button>
     </div>
+    <div class="sidebar-scroll">
     <div class="side-section">
       <div class="side-label">Menu</div>
       <div id="nav-list"></div>
@@ -957,6 +959,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
       </button>
     <div style="display:none"><!-- placeholder-->
 
+    </div><!-- /sidebar-scroll -->
     <div class="sidebar-footer">
       <div class="sync-pill sync-idle" id="sync-pill"></div>
       <div class="clock-box">
@@ -3835,27 +3838,46 @@ function showAdvColorPicker(btnEl, editorId, btnId) {
   popup.id = 'adv-color-popup';
   popup.className = 'adv-color-popup';
 
-  popup.innerHTML = `
-    <div class="adv-cp-label">Màu chữ — Preset</div>
-    <div class="adv-cp-presets" id="adv-cp-presets">
-      ${PRESET_COLORS.map(col =>
-        `<div class="adv-cp-swatch ${col===_lastUsedColor?'active':''}"
-          style="background:${col}" title="${col}"
-          onmousedown="event.preventDefault()"
-          onclick="applyAdvColor('${col}')"></div>`
-      ).join('')}
-    </div>
-    <div class="adv-cp-sep"></div>
-    <div class="adv-cp-label">Màu tuỳ chỉnh</div>
-    <div class="adv-cp-custom">
-      <input type="color" class="adv-cp-wheel" id="adv-cp-wheel" value="${_lastUsedColor.startsWith('#')?_lastUsedColor:'#4f7cff'}"
-        oninput="document.getElementById('adv-cp-hex').value=this.value">
-      <input class="adv-cp-hex" id="adv-cp-hex" placeholder="#hex hoặc rgb()" value="${_lastUsedColor}"
-        onkeydown="if(event.key==='Enter')applyAdvColor(this.value.trim())">
-      <button class="adv-cp-apply" onmousedown="event.preventDefault()"
-        onclick="applyAdvColor(document.getElementById('adv-cp-hex').value.trim())">✓</button>
-    </div>
-  `;
+  // Build popup DOM (avoid innerHTML/template literal escaping issues)
+  const presetsDiv = document.createElement('div');
+  presetsDiv.innerHTML = `<div class="adv-cp-label">Màu chữ — Preset</div>`;
+  const grid = document.createElement('div');
+  grid.className = 'adv-cp-presets';
+  PRESET_COLORS.forEach(col => {
+    const sw = document.createElement('div');
+    sw.className = 'adv-cp-swatch' + (col === _lastUsedColor ? ' active' : '');
+    sw.style.background = col;
+    sw.title = col;
+    sw.addEventListener('mousedown', e => e.preventDefault());
+    sw.addEventListener('click', () => applyAdvColor(col));
+    grid.appendChild(sw);
+  });
+  presetsDiv.appendChild(grid);
+  popup.appendChild(presetsDiv);
+
+  const sep = document.createElement('div');
+  sep.className = 'adv-cp-sep';
+  popup.appendChild(sep);
+
+  const customDiv = document.createElement('div');
+  customDiv.innerHTML = `<div class="adv-cp-label">Màu tuỳ chỉnh</div>`;
+  const row = document.createElement('div');
+  row.className = 'adv-cp-custom';
+  const wheel = document.createElement('input');
+  wheel.type = 'color'; wheel.className = 'adv-cp-wheel'; wheel.id = 'adv-cp-wheel';
+  wheel.value = _lastUsedColor.startsWith('#') ? _lastUsedColor : '#4f7cff';
+  const hexInp = document.createElement('input');
+  hexInp.className = 'adv-cp-hex'; hexInp.id = 'adv-cp-hex';
+  hexInp.placeholder = '#hex hoặc rgb()'; hexInp.value = _lastUsedColor;
+  wheel.addEventListener('input', () => { hexInp.value = wheel.value; });
+  hexInp.addEventListener('keydown', e => { if(e.key==='Enter') applyAdvColor(hexInp.value.trim()); });
+  const applyBtn = document.createElement('button');
+  applyBtn.className = 'adv-cp-apply'; applyBtn.textContent = '✓';
+  applyBtn.addEventListener('mousedown', e => e.preventDefault());
+  applyBtn.addEventListener('click', () => applyAdvColor(hexInp.value.trim()));
+  row.appendChild(wheel); row.appendChild(hexInp); row.appendChild(applyBtn);
+  customDiv.appendChild(row);
+  popup.appendChild(customDiv);
 
   // Position
   const rect = btnEl.getBoundingClientRect();
