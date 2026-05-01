@@ -3859,8 +3859,11 @@ function showAdvColorPicker(btnEl, editorId, btnId) {
     sw.className = 'adv-cp-swatch' + (col === _lastUsedColor ? ' active' : '');
     sw.style.background = col;
     sw.title = col;
-    sw.addEventListener('mousedown', e => e.preventDefault());
-    sw.addEventListener('click', () => applyAdvColor(col));
+    sw.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      applyAdvColor(col);
+    });
     grid.appendChild(sw);
   });
   presetsDiv.appendChild(grid);
@@ -3884,8 +3887,11 @@ function showAdvColorPicker(btnEl, editorId, btnId) {
   hexInp.addEventListener('keydown', e => { if(e.key==='Enter') applyAdvColor(hexInp.value.trim()); });
   const applyBtn = document.createElement('button');
   applyBtn.className = 'adv-cp-apply'; applyBtn.textContent = '✓';
-  applyBtn.addEventListener('mousedown', e => e.preventDefault());
-  applyBtn.addEventListener('click', () => applyAdvColor(hexInp.value.trim()));
+  applyBtn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    applyAdvColor(hexInp.value.trim());
+  });
   row.appendChild(wheel); row.appendChild(hexInp); row.appendChild(applyBtn);
   customDiv.appendChild(row);
   popup.appendChild(customDiv);
