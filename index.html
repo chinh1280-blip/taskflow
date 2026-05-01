@@ -3914,13 +3914,15 @@ function applyAdvColor(color) {
   // Update indicator
   const ind = document.getElementById((_advColorBtnId === 'tb-color-btn') ? 'tb-color-ind' : 'iep-color-ind');
   if (ind) ind.style.background = color;
-  // Restore selection and apply
+  // Restore selection FIRST, then focus
   const editor = document.getElementById(_advColorEditorId || 'ne-content');
-  editor.focus();
   if (_advColorSavedRange) {
+    editor.focus();
     const sel = window.getSelection();
     sel.removeAllRanges();
-    sel.addRange(_advColorSavedRange);
+    try { sel.addRange(_advColorSavedRange.cloneRange()); } catch(e) { sel.addRange(_advColorSavedRange); }
+  } else {
+    editor.focus();
   }
   document.execCommand('styleWithCSS', false, true);
   document.execCommand('foreColor', false, color);
@@ -4564,12 +4566,14 @@ function insertColorBlockquote(color, editorId) {
 
 function insertColorBlockquoteWithRange(color, editorId, savedRange) {
   const editor = document.getElementById(editorId||'ne-content');
-  editor.focus();
-  // Restore saved selection
+  // Restore selection FIRST, then focus (focus may reset selection)
   if (savedRange) {
+    editor.focus();
     const sel = window.getSelection();
     sel.removeAllRanges();
-    sel.addRange(savedRange);
+    try { sel.addRange(savedRange.cloneRange()); } catch(e) { sel.addRange(savedRange); }
+  } else {
+    editor.focus();
   }
   document.execCommand('formatBlock', false, 'blockquote');
   setTimeout(() => {
@@ -4588,31 +4592,49 @@ function insertColorBlockquoteWithRange(color, editorId, savedRange) {
 }
 
 function showBqColorPicker(btnEl, editorId) {
-  // Save selection BEFORE popup steals focus
+  // Save selection BEFORE popup
   const sel = window.getSelection();
   const savedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
+  window._savedBqRange = savedRange;
 
   document.getElementById('bq-color-popup')?.remove();
   const popup = document.createElement('div');
   popup.id = 'bq-color-popup';
   popup.className = 'bq-color-popup';
+
+  // Label
+  const lbl = document.createElement('div');
+  lbl.style.cssText = 'font-size:10px;color:var(--tx3);margin-bottom:6px;width:100%';
+  lbl.textContent = 'Chọn màu trích dẫn:';
+  popup.appendChild(lbl);
+
+  // Color swatches — use mousedown to apply BEFORE outside-click fires
   const bqColors = [['blue','#4f7cff'],['green','#22d3a0'],['yellow','#fbbf24'],['red','#ff4f6d'],['purple','#a78bfa'],['orange','#f97316']];
-  popup.innerHTML = '<div style="font-size:10px;color:var(--tx3);margin-bottom:6px;width:100%">Chọn màu trích dẫn:</div>' +
-    bqColors.map(([name,col]) =>
-      `<div class="bq-cpick" style="background:${col}" title="${name}"
-        onmousedown="event.preventDefault()"
-        onclick="insertColorBlockquoteWithRange('${name}','${editorId}',_savedBqRange);document.getElementById('bq-color-popup')?.remove()">
-      </div>`
-    ).join('');
-  // Store saved range globally for use in insertColorBlockquoteWithRange
-  window._savedBqRange = savedRange;
+  bqColors.forEach(([name, col]) => {
+    const sw = document.createElement('div');
+    sw.className = 'bq-cpick';
+    sw.style.background = col;
+    sw.title = name;
+    sw.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      popup.remove();
+      insertColorBlockquoteWithRange(name, editorId, savedRange);
+    });
+    popup.appendChild(sw);
+  });
+
   const rect = btnEl.getBoundingClientRect();
   let left = rect.left;
   if (left + 170 > window.innerWidth) left = window.innerWidth - 175;
   popup.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${left}px`;
   document.body.appendChild(popup);
+
   setTimeout(() => document.addEventListener('click', function removeBqPicker(e){
-    if(!popup.contains(e.target)&&e.target!==btnEl){popup.remove();document.removeEventListener('click',removeBqPicker);}
+    if(!popup.contains(e.target) && e.target !== btnEl){
+      popup.remove();
+      document.removeEventListener('click', removeBqPicker);
+    }
   }), 100);
 }
 
