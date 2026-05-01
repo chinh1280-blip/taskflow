@@ -759,7 +759,82 @@ textarea.fi{min-height:58px;resize:vertical}
 .scb-save{padding:9px 20px;border-radius:9px;border:none;background:var(--ac);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
 .scb-discard{padding:9px 20px;border-radius:9px;border:1px solid rgba(255,79,109,.4);background:rgba(255,79,109,.1);color:var(--er);font-size:14px;cursor:pointer}
 .scb-cancel{padding:9px 16px;border-radius:9px;border:none;background:var(--s2);color:var(--tx2);font-size:14px;cursor:pointer}
-</style>
+
+/* ═══ LIGHT THEME (Numa-inspired warm beige) ═══ */
+body.light-theme{
+  --bg:#f0ede6;--s1:#faf8f3;--s2:#f0ede4;--s3:#e5e0d6;
+  --bd:#d0c9ba;--ac:#c0392b;--ac2:#8b4513;
+  --ok:#2e7d32;--wa:#e65100;--er:#c62828;
+  --tx:#2c1a0e;--tx2:#5c4a35;--tx3:#9c8570;
+}
+body.light-theme .grid-bg{background-image:linear-gradient(rgba(100,80,50,.04)1px,transparent 1px),linear-gradient(90deg,rgba(100,80,50,.04)1px,transparent 1px)}
+body.light-theme .sidebar{background:#f5f1ea;border-right-color:#d8d0c0}
+body.light-theme .topbar{background:rgba(240,237,230,.95)}
+body.light-theme .task-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
+body.light-theme .task-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+body.light-theme .board-wrap{box-shadow:0 1px 4px rgba(0,0,0,.08)}
+body.light-theme .board-col{box-shadow:0 1px 4px rgba(0,0,0,.07)}
+body.light-theme .board-item{border-color:rgba(0,0,0,.08);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+body.light-theme .board-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.12)}
+body.light-theme .note-editor-sheet{background:var(--s1)}
+body.light-theme .note-toolbar{background:var(--s2)}
+body.light-theme .iep-mini-toolbar{background:var(--s2)}
+body.light-theme input,.light-theme select,.light-theme textarea{color:var(--tx)}
+body.light-theme ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18)}
+body.light-theme .stat-card,.light-theme .clock-box,.light-theme .pomo-banner{background:var(--s1)}
+body.light-theme .logo-icon{box-shadow:0 0 18px rgba(192,57,43,.3)}
+body.light-theme .btn-p,.light-theme .boards-add-btn:hover{background:var(--ac);box-shadow:none}
+body.light-theme .nav-item.active{background:rgba(192,57,43,.12);color:var(--ac)}
+body.light-theme .chip.active{border-color:var(--ac);color:var(--ac);background:rgba(192,57,43,.1)}
+body.light-theme .board-col-top-bar{opacity:1}
+body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* Theme toggle button */
+#theme-toggle{
+  background:none;border:1px solid var(--bd);border-radius:8px;
+  color:var(--tx2);font-size:13px;cursor:pointer;padding:5px 10px;
+  transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:5px
+}
+#theme-toggle:hover{border-color:var(--ac);color:var(--ac)}
+
+/* ── Advanced color picker popup ── */
+.adv-color-popup{
+  position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:14px;
+  padding:12px;z-index:800;width:240px;box-shadow:0 12px 40px rgba(0,0,0,.5)
+}
+.adv-cp-label{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.adv-cp-presets{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.adv-cp-swatch{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.adv-cp-swatch:hover,.adv-cp-swatch.active{border-color:#fff;transform:scale(1.2)}
+.adv-cp-custom{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.adv-cp-wheel{width:34px;height:34px;border-radius:6px;cursor:pointer;border:2px solid var(--bd);padding:1px;background:none;flex-shrink:0}
+.adv-cp-hex{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:5px 8px;font-size:12px;color:var(--tx);outline:none;font-family:'Roboto Mono',monospace}
+.adv-cp-hex:focus{border-color:var(--ac)}
+.adv-cp-apply{padding:5px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0}
+.adv-cp-sep{height:1px;background:var(--bd);margin:6px 0}
+/* Color button in toolbar */
+.tb-color-btn{
+  display:flex;align-items:center;gap:3px;padding:0 7px;height:28px;
+  border-radius:7px;border:none;background:none;cursor:pointer;
+  color:var(--tx2);font-size:14px;font-weight:700;transition:all .15s;
+  position:relative;
+}
+.tb-color-btn:hover{background:var(--s2);color:var(--tx)}
+.tb-color-indicator{
+  position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+  width:16px;height:3px;border-radius:2px;background:#e8ecf5;transition:background .2s
+}
+.iep-color-btn{
+  display:flex;align-items:center;gap:2px;padding:0 6px;height:24px;
+  border-radius:5px;border:none;background:none;cursor:pointer;
+  color:var(--tx2);font-size:12px;font-weight:700;transition:all .15s;position:relative
+}
+.iep-color-btn:hover{background:var(--s3)}
+.iep-color-indicator{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:12px;height:2px;border-radius:1px;background:#e8ecf5}
+.item-bg-popup{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:8px;z-index:500;display:flex;gap:5px;flex-wrap:wrap;width:180px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.item-bg-swatch{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid rgba(255,255,255,.1);transition:all .15s}
+.item-bg-swatch:hover{border-color:#fff;transform:scale(1.15)}
+.item-bg-swatch.no-color{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.1) 2px,transparent 0,transparent 50%) 0/8px 8px;border-color:var(--bd)}</style>
 </head>
 <body>
 
@@ -892,6 +967,7 @@ textarea.fi{min-height:58px;resize:vertical}
         <button class="side-btn" id="refresh-side-btn" onclick="manualRefresh(this)" title="Đồng bộ dữ liệu">↻ Đồng bộ</button>
         <button class="side-btn" onclick="openConfigModal()" title="Cấu hình Supabase">⚙️ Config</button>
       </div>
+      <button id="theme-toggle" onclick="toggleTheme()" style="width:100%;margin-top:8px;justify-content:center" title="Đổi giao diện">🌙 Dark</button>
       <button class="side-btn" onclick="logout()" style="width:100%;margin-top:6px;color:var(--er);border-color:rgba(255,79,109,.3)" title="Đăng xuất">🔒 Đăng xuất</button>
     </div>
   </aside>
@@ -3730,6 +3806,96 @@ async function pinNote(id) {
 
 // ── Toolbar commands ──────────────────────────────────────────
 
+
+// ════════════════════════════════════════════════════════
+// ADVANCED COLOR PICKER
+// ════════════════════════════════════════════════════════
+const PRESET_COLORS = [
+  '#e8ecf5','#4f7cff','#7c5fff','#22d3a0','#ffb347','#ff4f6d',
+  '#38bdf8','#fb7185','#a78bfa','#34d399','#fbbf24','#f97316',
+  '#ef4444','#10b981','#6366f1','#ec4899','#14b8a6','#f59e0b',
+];
+let _advColorEditorId = null;
+let _advColorSavedRange = null;
+let _advColorBtnId = null;
+let _lastUsedColor = '#e8ecf5';
+
+function showAdvColorPicker(btnEl, editorId, btnId) {
+  // Close if already open
+  const existing = document.getElementById('adv-color-popup');
+  if (existing) { existing.remove(); return; }
+
+  // Save selection
+  const sel = window.getSelection();
+  _advColorSavedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
+  _advColorEditorId = editorId;
+  _advColorBtnId = btnId;
+
+  const popup = document.createElement('div');
+  popup.id = 'adv-color-popup';
+  popup.className = 'adv-color-popup';
+
+  popup.innerHTML = `
+    <div class="adv-cp-label">Màu chữ — Preset</div>
+    <div class="adv-cp-presets" id="adv-cp-presets">
+      ${PRESET_COLORS.map(col =>
+        `<div class="adv-cp-swatch ${col===_lastUsedColor?'active':''}"
+          style="background:${col}" title="${col}"
+          onmousedown="event.preventDefault()"
+          onclick="applyAdvColor('${col}')"></div>`
+      ).join('')}
+    </div>
+    <div class="adv-cp-sep"></div>
+    <div class="adv-cp-label">Màu tuỳ chỉnh</div>
+    <div class="adv-cp-custom">
+      <input type="color" class="adv-cp-wheel" id="adv-cp-wheel" value="${_lastUsedColor.startsWith('#')?_lastUsedColor:'#4f7cff'}"
+        oninput="document.getElementById('adv-cp-hex').value=this.value">
+      <input class="adv-cp-hex" id="adv-cp-hex" placeholder="#hex hoặc rgb()" value="${_lastUsedColor}"
+        onkeydown="if(event.key==='Enter')applyAdvColor(this.value.trim())">
+      <button class="adv-cp-apply" onmousedown="event.preventDefault()"
+        onclick="applyAdvColor(document.getElementById('adv-cp-hex').value.trim())">✓</button>
+    </div>
+  `;
+
+  // Position
+  const rect = btnEl.getBoundingClientRect();
+  let x = rect.left, y = rect.bottom + 4;
+  if (x + 250 > window.innerWidth) x = window.innerWidth - 255;
+  if (y + 300 > window.innerHeight) y = rect.top - 300;
+  popup.style.left = Math.max(8,x) + 'px';
+  popup.style.top  = Math.max(8,y) + 'px';
+  document.body.appendChild(popup);
+
+  setTimeout(() => document.addEventListener('click', function removeAdv(e){
+    if (!popup.contains(e.target) && e.target !== btnEl) {
+      popup.remove(); document.removeEventListener('click', removeAdv);
+    }
+  }), 100);
+}
+
+function applyAdvColor(color) {
+  if (!color) return;
+  // Normalize
+  if (!color.startsWith('#') && !color.startsWith('rgb')) color = '#' + color.replace('#','');
+  _lastUsedColor = color;
+  // Update indicator
+  const ind = document.getElementById((_advColorBtnId === 'tb-color-btn') ? 'tb-color-ind' : 'iep-color-ind');
+  if (ind) ind.style.background = color;
+  // Restore selection and apply
+  const editor = document.getElementById(_advColorEditorId || 'ne-content');
+  editor.focus();
+  if (_advColorSavedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(_advColorSavedRange);
+  }
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, color);
+  document.execCommand('styleWithCSS', false, false);
+  // Close popup
+  document.getElementById('adv-color-popup')?.remove();
+}
+
 function setFontSize(size, editorId) {
   if (!size) return;
   const editor = document.getElementById(editorId || 'ne-content');
@@ -4016,7 +4182,8 @@ function renderBoardCols(b) {
 }
 
 function renderBoardItem(boardId, colId, item) {
-  return `<div class="board-item ${item.done?'done':''}" id="bi_${item.id}">
+  const bgStyle = item.bgColor && item.bgColor !== 'none' ? `background:${item.bgColor};` : '';
+  return `<div class="board-item ${item.done?'done':''}" id="bi_${item.id}" style="${bgStyle}">
     <div class="board-item-row">
       <div class="board-item-cb ${item.done?'on':''}"
         onclick="event.stopPropagation();toggleItem('${boardId}','${colId}','${item.id}')">
@@ -4028,6 +4195,7 @@ function renderBoardItem(boardId, colId, item) {
       </div>
     </div>
     ${item.note?`<div class="board-item-note">${item.note}</div>`:''}
+    <button class="board-item-del" onclick="event.stopPropagation();showItemBgPicker(event,'${boardId}','${colId}','${item.id}')" title="Màu nền" style="font-size:11px;margin-right:2px">🎨</button>
     <button class="board-item-del" onclick="event.stopPropagation();deleteItem('${boardId}','${colId}','${item.id}')">×</button>
   </div>`;
 }
@@ -4175,6 +4343,51 @@ function onColResizeEnd() {
   colResizeState = null;
 }
 
+
+function showItemBgPicker(e, boardId, colId, itemId) {
+  e.stopPropagation();
+  document.getElementById('item-bg-popup')?.remove();
+  const ITEM_COLORS = [
+    {val:'none',label:'Xóa màu'},
+    {val:'rgba(79,124,255,.25)',label:'Xanh'},
+    {val:'rgba(34,211,160,.25)',label:'Xanh lá'},
+    {val:'rgba(251,191,36,.25)',label:'Vàng'},
+    {val:'rgba(255,79,109,.25)',label:'Đỏ'},
+    {val:'rgba(167,139,250,.25)',label:'Tím'},
+    {val:'rgba(249,115,22,.25)',label:'Cam'},
+    {val:'rgba(244,114,182,.25)',label:'Hồng'},
+    {val:'rgba(20,184,166,.25)',label:'Teal'},
+    {val:'rgba(255,255,255,.1)',label:'Trắng mờ'},
+  ];
+  const popup = document.createElement('div');
+  popup.id = 'item-bg-popup';
+  popup.className = 'item-bg-popup';
+  popup.innerHTML = '<div style="font-size:9px;color:var(--tx3);width:100%;margin-bottom:3px">Màu nền item:</div>' +
+    ITEM_COLORS.map(({val,label}) =>
+      `<div class="item-bg-swatch ${val==='none'?'no-color':''}" style="${val!=='none'?'background:'+val:''}"
+        title="${label}" onmousedown="event.preventDefault()"
+        onclick="setItemBgColor('${boardId}','${colId}','${itemId}','${val}')"></div>`
+    ).join('');
+  const x = Math.min(e.clientX, window.innerWidth-190);
+  const y = Math.min(e.clientY+4, window.innerHeight-130);
+  popup.style.cssText = `left:${x}px;top:${y}px`;
+  document.body.appendChild(popup);
+  setTimeout(()=>document.addEventListener('click',function rmPop(ev){
+    if(!popup.contains(ev.target)){popup.remove();document.removeEventListener('click',rmPop);}
+  }),50);
+}
+
+function setItemBgColor(boardId, colId, itemId, color) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  const item = (col?.items||[]).find(i=>i.id===itemId);
+  if (!item) return;
+  item.bgColor = color === 'none' ? '' : color;
+  document.getElementById('item-bg-popup')?.remove();
+  renderBoardsView();
+  saveBoardData(boardId);
+}
+
 function openInlineAdd(boardId, colId) {
   activeAddCol = {boardId, colId};
   renderBoardsView();
@@ -4318,7 +4531,7 @@ function showBqColorPicker(btnEl, editorId) {
   const bqColors = [['blue','#4f7cff'],['green','#22d3a0'],['yellow','#fbbf24'],['red','#ff4f6d'],['purple','#a78bfa'],['orange','#f97316']];
   popup.innerHTML = '<div style="font-size:10px;color:var(--tx3);margin-bottom:6px;width:100%">Chọn màu trích dẫn:</div>' +
     bqColors.map(([name,col]) =>
-      `<div class="bq-cpick" style="background:${col};title="${name}"
+      `<div class="bq-cpick" style="background:${col}" title="${name}"
         onmousedown="event.preventDefault()"
         onclick="insertColorBlockquoteWithRange('${name}','${editorId}',_savedBqRange);document.getElementById('bq-color-popup')?.remove()">
       </div>`
@@ -4664,7 +4877,23 @@ function bindTableEvents() {
 }
 
 
-window.addEventListener('DOMContentLoaded',initApp);
+
+// ── Theme toggle ─────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-theme');
+  localStorage.setItem('tf_theme', isLight ? 'light' : 'dark');
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.innerHTML = isLight ? '🌙 Dark' : '☀️ Light';
+}
+function applyTheme() {
+  const saved = localStorage.getItem('tf_theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.innerHTML = '🌙 Dark';
+  }
+}
+window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
 </script>
 
 <!-- DAILY ROUTINE MODAL -->
@@ -4776,19 +5005,12 @@ window.addEventListener('DOMContentLoaded',initApp);
       <button class="tb-btn" onclick="execCmd('underline')" title="Gạch chân (Ctrl+U)" style="text-decoration:underline">U</button>
       <button class="tb-btn" onclick="execCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
       <div class="tb-sep"></div>
-      <!-- Color -->
-      <button class="tb-btn" onclick="execForeColor('#4f7cff')" title="Xanh dương" style="color:#4f7cff;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#7c5fff')" title="Tím" style="color:#7c5fff;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#22d3a0')" title="Xanh lá neon" style="color:#22d3a0;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#ffb347')" title="Cam" style="color:#ffb347;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#ff4f6d')" title="Đỏ hồng" style="color:#ff4f6d;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#e8ecf5')" title="Mặc định" style="color:#e8ecf5;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#38bdf8')" title="Sky blue" style="color:#38bdf8;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#fb7185')" title="Hồng" style="color:#fb7185;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#a78bfa')" title="Tím nhạt" style="color:#a78bfa;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#34d399')" title="Mint" style="color:#34d399;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#fbbf24')" title="Vàng" style="color:#fbbf24;font-size:15px;font-weight:700">A</button>
-      <button class="tb-btn" onclick="execForeColor('#f97316')" title="Cam đậm" style="color:#f97316;font-size:15px;font-weight:700">A</button>
+      <!-- Color — single button + popup -->
+      <button class="tb-color-btn" id="tb-color-btn" onclick="showAdvColorPicker(this,'ne-content','tb-color-btn')" title="Màu chữ">
+        <span style="font-size:14px;font-weight:800">A</span>
+        <span style="font-size:11px">🖌</span>
+        <span class="tb-color-indicator" id="tb-color-ind"></span>
+      </button>
       <div class="tb-sep"></div>
       <!-- Lists -->
       <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
@@ -4881,19 +5103,11 @@ window.addEventListener('DOMContentLoaded',initApp);
       <option value="p">Đoạn</option>
     </select>
     <div class="iep-tb-sep"></div>
-    <button class="iep-tb-btn" onclick="iepForeColor('#4f7cff')" title="Xanh" style="color:#4f7cff;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#7c5fff')" title="Tím" style="color:#7c5fff;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#22d3a0')" title="Xanh lá" style="color:#22d3a0;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#ffb347')" title="Cam" style="color:#ffb347;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#ff4f6d')" title="Đỏ" style="color:#ff4f6d;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#e8ecf5')" title="Trắng" style="color:#e8ecf5;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#38bdf8')" title="Sky" style="color:#38bdf8;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#fb7185')" title="Hồng" style="color:#fb7185;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#a78bfa')" title="Lavender" style="color:#a78bfa;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#34d399')" title="Mint" style="color:#34d399;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#fbbf24')" title="Vàng" style="color:#fbbf24;font-size:13px;font-weight:700">A</button>
-    <button class="iep-tb-btn" onclick="iepForeColor('#f97316')" title="Cam đậm" style="color:#f97316;font-size:13px;font-weight:700">A</button>
-    <div class="iep-tb-sep"></div>
+    <button class="iep-color-btn" onclick="showAdvColorPicker(this,'iep-note','iep-color-btn')" title="Màu chữ">
+      <span style="font-size:12px;font-weight:800">A</span><span style="font-size:10px">🖌</span>
+      <span class="iep-color-indicator" id="iep-color-ind"></span>
+    </button>
+        <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onclick="iepInsertLink()" title="Chèn link">🔗</button>
     <div class="iep-tb-sep"></div>
         <button class="iep-tb-btn" onclick="toggleBlockquote('iep-note')" title="Bật/tắt trích dẫn">" "</button>
