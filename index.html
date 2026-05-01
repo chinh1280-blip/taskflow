@@ -608,7 +608,12 @@ textarea.fi{min-height:58px;resize:vertical}
 .board-item-note code{background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px;font-size:10px;font-family:'Roboto Mono',monospace}
 .board-item-note a{color:var(--ac);text-decoration:underline;cursor:pointer}
 .board-item-note a:hover{color:var(--ac2)}
-.board-item-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s;padding:2px}
+.board-item-del{position:absolute;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;opacity:0;transition:all .15s;padding:3px;border-radius:4px}
+.board-item-del:hover{background:var(--s3);color:var(--tx)}
+.board-item-del-x{top:4px;right:4px}
+.board-item-del.board-item-del-x:hover{background:rgba(255,79,109,.2);color:var(--er)}
+/* Color button: top-right but offset from X */
+.board-item-del:not(.board-item-del-x){top:4px;right:24px}
 .board-item:hover .board-item-del{opacity:1}
 
 /* Add item */
@@ -3828,8 +3833,14 @@ function showAdvColorPicker(btnEl, editorId, btnId) {
   const existing = document.getElementById('adv-color-popup');
   if (existing) { existing.remove(); return; }
 
-  // Save selection
-  const sel = window.getSelection();
+  // Save selection — also try from editor if window selection is empty
+  let sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    // Try to get last saved range from editor
+    const ed = document.getElementById(editorId);
+    if (ed) ed.focus();
+    sel = window.getSelection();
+  }
   _advColorSavedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
   _advColorEditorId = editorId;
   _advColorBtnId = btnId;
@@ -4217,8 +4228,9 @@ function renderBoardItem(boardId, colId, item) {
       </div>
     </div>
     ${item.note?`<div class="board-item-note">${item.note}</div>`:''}
-    <button class="board-item-del" onclick="event.stopPropagation();showItemBgPicker(event,'${boardId}','${colId}','${item.id}')" title="Màu nền" style="font-size:11px;margin-right:2px">🎨</button>
-    <button class="board-item-del" onclick="event.stopPropagation();deleteItem('${boardId}','${colId}','${item.id}')">×</button>
+    <button class="board-item-del" onclick="event.stopPropagation();showItemBgPicker(event,'${boardId}','${colId}','${item.id}')" title="Màu nền" style="font-size:11px">🎨</button>
+    <div style="width:6px;flex-shrink:0;display:inline-block"></div>
+    <button class="board-item-del board-item-del-x" onclick="event.stopPropagation();confirmDeleteItem('${boardId}','${colId}','${item.id}')" title="Xóa">×</button>
   </div>`;
 }
 
@@ -4459,6 +4471,40 @@ function deleteItem(boardId, colId, itemId) {
   col.items = (col.items||[]).filter(i=>i.id!==itemId);
   renderBoardsView();
   saveBoardData(boardId);
+}
+
+function confirmDeleteItem(boardId, colId, itemId) {
+  const b = boards.find(b=>b.id===boardId);
+  const col = (b?.columns||[]).find(c=>c.id===colId);
+  const item = (col?.items||[]).find(i=>i.id===itemId);
+  if (!item) return;
+  // Show mini confirm popup near the × button
+  document.getElementById('del-item-confirm')?.remove();
+  const popup = document.createElement('div');
+  popup.id = 'del-item-confirm';
+  popup.style.cssText = 'position:fixed;background:var(--s1);border:1px solid rgba(255,79,109,.4);border-radius:10px;padding:10px 12px;z-index:600;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:180px';
+  popup.innerHTML = `
+    <div style="font-size:12px;color:var(--tx);margin-bottom:8px;font-weight:600">🗑 Xóa ghi chú này?</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.name)}</div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="document.getElementById('del-item-confirm')?.remove()" style="padding:4px 10px;border-radius:6px;border:none;background:var(--s2);color:var(--tx2);font-size:11px;cursor:pointer">Hủy</button>
+      <button onclick="document.getElementById('del-item-confirm')?.remove();deleteItem('${boardId}','${colId}','${itemId}')" style="padding:4px 10px;border-radius:6px;border:none;background:rgba(255,79,109,.8);color:#fff;font-size:11px;font-weight:600;cursor:pointer">Xóa</button>
+    </div>`;
+  // Position near cursor / item
+  const el = document.getElementById('bi_'+itemId);
+  if (el) {
+    const r = el.getBoundingClientRect();
+    let x = r.right - 190, y = r.bottom + 4;
+    if (y + 100 > window.innerHeight) y = r.top - 104;
+    popup.style.left = Math.max(8,x) + 'px';
+    popup.style.top  = Math.max(8,y) + 'px';
+  } else {
+    popup.style.cssText += ';left:50%;top:50%;transform:translate(-50%,-50%)';
+  }
+  document.body.appendChild(popup);
+  setTimeout(()=>document.addEventListener('click', function rmDel(e){
+    if(!popup.contains(e.target)){popup.remove();document.removeEventListener('click',rmDel);}
+  }), 50);
 }
 
 // ── Item edit popup ───────────────────────────────────────────
@@ -5022,43 +5068,43 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
       </select>
       <div class="tb-sep"></div>
       <!-- Format -->
-      <button class="tb-btn" onclick="execCmd('bold')" title="In đậm (Ctrl+B)"><b>B</b></button>
-      <button class="tb-btn" onclick="execCmd('italic')" title="In nghiêng (Ctrl+I)"><i>I</i></button>
-      <button class="tb-btn" onclick="execCmd('underline')" title="Gạch chân (Ctrl+U)" style="text-decoration:underline">U</button>
-      <button class="tb-btn" onclick="execCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('bold')" title="In đậm (Ctrl+B)"><b>B</b></button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('italic')" title="In nghiêng (Ctrl+I)"><i>I</i></button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('underline')" title="Gạch chân (Ctrl+U)" style="text-decoration:underline">U</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
       <div class="tb-sep"></div>
       <!-- Color — single button + popup -->
-      <button class="tb-color-btn" id="tb-color-btn" onclick="showAdvColorPicker(this,'ne-content','tb-color-btn')" title="Màu chữ">
+      <button class="tb-color-btn" id="tb-color-btn" onmousedown="event.preventDefault()" onclick="showAdvColorPicker(this,'ne-content','tb-color-btn')" title="Màu chữ">
         <span style="font-size:14px;font-weight:800">A</span>
         <span style="font-size:11px">🖌</span>
         <span class="tb-color-indicator" id="tb-color-ind"></span>
       </button>
       <div class="tb-sep"></div>
       <!-- Lists -->
-      <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
-      <button class="tb-btn" onclick="execCmd('insertOrderedList')" title="Danh sách đánh số">1. ≡</button>
-      <button class="tb-btn" onclick="toggleBlockquote('ne-content')" title="Bật/tắt trích dẫn">" "</button>
-      <button class="tb-btn" onclick="showBqColorPicker(this,'ne-content')" title="Trích dẫn có màu">🎨"</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('insertOrderedList')" title="Danh sách đánh số">1. ≡</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="toggleBlockquote('ne-content')" title="Bật/tắt trích dẫn">" "</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="showBqColorPicker(this,'ne-content')" title="Trích dẫn có màu">🎨"</button>
       <div class="tb-sep"></div>
       <!-- Indent -->
-      <button class="tb-btn" onclick="execCmd('indent')" title="Thụt vào">→</button>
-      <button class="tb-btn" onclick="execCmd('outdent')" title="Thụt ra">←</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('indent')" title="Thụt vào">→</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('outdent')" title="Thụt ra">←</button>
       <div class="tb-sep"></div>
       <!-- Align -->
-      <button class="tb-btn" onclick="execCmd('justifyLeft')" title="Căn trái">⬅</button>
-      <button class="tb-btn" onclick="execCmd('justifyCenter')" title="Căn giữa">↔</button>
-      <button class="tb-btn" onclick="execCmd('justifyRight')" title="Căn phải">➡</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('justifyLeft')" title="Căn trái">⬅</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('justifyCenter')" title="Căn giữa">↔</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('justifyRight')" title="Căn phải">➡</button>
       <div class="tb-sep"></div>
       <!-- Insert -->
-      <button class="tb-btn" onclick="insertHR()" title="Đường kẻ ngang">─</button>
-      <button class="tb-btn" onclick="insertLink()" title="Chèn link">🔗</button>
-      <button class="tb-btn" onclick="insertTable()" title="Chèn bảng">⊞</button>
-      <button class="tb-btn" onclick="insertLink()" title="Chèn link">🔗</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="insertHR()" title="Đường kẻ ngang">─</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="insertLink()" title="Chèn link">🔗</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="insertTable()" title="Chèn bảng">⊞</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="insertLink()" title="Chèn link">🔗</button>
       <div class="tb-sep"></div>
       <!-- Clear -->
-      <button class="tb-btn" onclick="execCmd('undo')" title="Quay lại (Ctrl+Z)">↩</button>
-      <button class="tb-btn" onclick="execCmd('redo')" title="Tiếp tới (Ctrl+Y)">↪</button>
-      <button class="tb-btn" onclick="execCmd('removeFormat')" title="Xóa định dạng" style="font-size:10px">✕fmt</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('undo')" title="Quay lại (Ctrl+Z)">↩</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('redo')" title="Tiếp tới (Ctrl+Y)">↪</button>
+      <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('removeFormat')" title="Xóa định dạng" style="font-size:10px">✕fmt</button>
     </div>
 
     <!-- Editor body -->
@@ -5099,13 +5145,13 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
     <input class="iep-title-inp" id="iep-name" placeholder="Tên việc cần làm...">
   </div>
   <div class="iep-mini-toolbar">
-    <button class="iep-tb-btn" onclick="iepCmd('bold')" title="In đậm"><b>B</b></button>
-    <button class="iep-tb-btn" onclick="iepCmd('italic')" title="In nghiêng"><i>I</i></button>
-    <button class="iep-tb-btn" onclick="iepCmd('underline')" title="Gạch chân" style="text-decoration:underline">U</button>
-    <button class="iep-tb-btn" onclick="iepCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('bold')" title="In đậm"><b>B</b></button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('italic')" title="In nghiêng"><i>I</i></button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('underline')" title="Gạch chân" style="text-decoration:underline">U</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
     <div class="iep-tb-sep"></div>
-    <button class="iep-tb-btn" onclick="iepCmd('insertUnorderedList')" title="Danh sách">• ≡</button>
-    <button class="iep-tb-btn" onclick="iepCmd('insertOrderedList')" title="Đánh số">1≡</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('insertUnorderedList')" title="Danh sách">• ≡</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('insertOrderedList')" title="Đánh số">1≡</button>
     <div class="iep-tb-sep"></div>
     <select class="tb-select" onchange="setFontSize(this.value,'iep-note');this.value=''" title="Cỡ chữ" style="width:60px;height:24px;font-size:10px">
       <option value="">Cỡ</option>
@@ -5125,19 +5171,19 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
       <option value="p">Đoạn</option>
     </select>
     <div class="iep-tb-sep"></div>
-    <button class="iep-color-btn" onclick="showAdvColorPicker(this,'iep-note','iep-color-btn')" title="Màu chữ">
+    <button class="iep-color-btn" onmousedown="event.preventDefault()" onclick="showAdvColorPicker(this,'iep-note','iep-color-btn')" title="Màu chữ">
       <span style="font-size:12px;font-weight:800">A</span><span style="font-size:10px">🖌</span>
       <span class="iep-color-indicator" id="iep-color-ind"></span>
     </button>
         <div class="iep-tb-sep"></div>
-    <button class="iep-tb-btn" onclick="iepInsertLink()" title="Chèn link">🔗</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepInsertLink()" title="Chèn link">🔗</button>
     <div class="iep-tb-sep"></div>
-        <button class="iep-tb-btn" onclick="toggleBlockquote('iep-note')" title="Bật/tắt trích dẫn">" "</button>
-    <button class="iep-tb-btn" onclick="showBqColorPicker(this,'iep-note')" title="Trích dẫn màu">🎨"</button>
+        <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="toggleBlockquote('iep-note')" title="Bật/tắt trích dẫn">" "</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="showBqColorPicker(this,'iep-note')" title="Trích dẫn màu">🎨"</button>
     <div class="iep-tb-sep"></div>
-    <button class="iep-tb-btn" onclick="iepCmd('undo')" title="Quay lại">↩</button>
-    <button class="iep-tb-btn" onclick="iepCmd('redo')" title="Tiếp tới">↪</button>
-    <button class="iep-tb-btn" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('undo')" title="Quay lại">↩</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('redo')" title="Tiếp tới">↪</button>
+    <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
   </div>
   <div class="iep-note-editor" id="iep-note" contenteditable="true" spellcheck="false"></div>
   <div class="iep-footer">
