@@ -863,6 +863,20 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 }
 .note-card:hover .note-drag-handle{opacity:.6}
 .note-drag-handle:hover{opacity:1!important;color:var(--ac)}
+
+/* Format painter */
+.tb-btn.format-painter-active{
+  background:rgba(255,179,71,.2)!important;
+  color:var(--wa)!important;
+  border:1px solid rgba(255,179,71,.5);
+  animation:painterPulse 1s ease-in-out infinite
+}
+.iep-tb-btn.format-painter-active{
+  background:rgba(255,179,71,.2)!important;
+  color:var(--wa)!important;
+  border:1px solid rgba(255,179,71,.4)
+}
+@keyframes painterPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,179,71,.4)}50%{box-shadow:0 0 0 4px rgba(255,179,71,0)}}
 </style>
 </head>
 <body>
@@ -4047,6 +4061,134 @@ function applyAdvColor(color) {
   document.getElementById('adv-color-popup')?.remove();
 }
 
+
+// ════════════════════════════════════════════════════════
+// FORMAT PAINTER — copy/paste định dạng như Word
+// ════════════════════════════════════════════════════════
+let _fmtPainterActive = false;  // đang ở chế độ paste format?
+let _fmtPainterStyles = null;   // định dạng đã copy
+let _fmtPainterEditorId = null;
+let _fmtPainterBtnId = null;
+
+function captureFormat(editorId) {
+  // Lấy định dạng từ vị trí cursor hoặc selection
+  const editor = document.getElementById(editorId);
+  if (!editor) return null;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  // Get computed styles at the selection start
+  let node = range.startContainer;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+  const computed = window.getComputedStyle(node);
+  return {
+    fontWeight:     computed.fontWeight,
+    fontStyle:      computed.fontStyle,
+    textDecoration: computed.textDecorationLine || computed.textDecoration,
+    color:          computed.color,
+    backgroundColor: computed.backgroundColor,
+    fontSize:       computed.fontSize,
+    fontFamily:     computed.fontFamily,
+  };
+}
+
+function applyFormat(styles, editorId) {
+  if (!styles) return;
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  // Apply each style via execCommand
+  document.execCommand('styleWithCSS', false, true);
+
+  // Bold
+  const isBold = styles.fontWeight === 'bold' || parseInt(styles.fontWeight) >= 700;
+  if (isBold !== document.queryCommandState('bold')) document.execCommand('bold', false, null);
+
+  // Italic
+  const isItalic = styles.fontStyle === 'italic';
+  if (isItalic !== document.queryCommandState('italic')) document.execCommand('italic', false, null);
+
+  // Underline / strikethrough
+  const deco = styles.textDecoration || '';
+  if (deco.includes('underline') && !document.queryCommandState('underline'))
+    document.execCommand('underline', false, null);
+  if (deco.includes('line-through') && !document.queryCommandState('strikeThrough'))
+    document.execCommand('strikeThrough', false, null);
+
+  // Color
+  if (styles.color && styles.color !== 'rgba(0, 0, 0, 0)' && styles.color !== 'rgb(232, 236, 245)') {
+    document.execCommand('foreColor', false, styles.color);
+  }
+
+  // Background color
+  if (styles.backgroundColor && styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && styles.backgroundColor !== 'transparent') {
+    document.execCommand('hiliteColor', false, styles.backgroundColor);
+  }
+
+  // Font size (execCommand fontSize uses 1-7)
+  const sizePx = parseFloat(styles.fontSize);
+  if (sizePx) {
+    let sizeVal = '3';
+    if (sizePx <= 10) sizeVal = '1';
+    else if (sizePx <= 12) sizeVal = '2';
+    else if (sizePx <= 14) sizeVal = '3';
+    else if (sizePx <= 18) sizeVal = '4';
+    else if (sizePx <= 24) sizeVal = '5';
+    else if (sizePx <= 32) sizeVal = '6';
+    else sizeVal = '7';
+    document.execCommand('fontSize', false, sizeVal);
+  }
+
+  document.execCommand('styleWithCSS', false, false);
+}
+
+function toggleFormatPainter(editorId, btnId) {
+  const btn = document.getElementById(btnId);
+  if (_fmtPainterActive && _fmtPainterEditorId === editorId) {
+    // Cancel format painter mode
+    _fmtPainterActive = false;
+    _fmtPainterStyles = null;
+    if (btn) btn.classList.remove('format-painter-active');
+    const editor = document.getElementById(editorId);
+    if (editor) editor.style.cursor = '';
+    document.removeEventListener('mouseup', _fmtPainterHandler);
+    return;
+  }
+  // Enter format painter mode: capture current selection format
+  _fmtPainterStyles = captureFormat(editorId);
+  if (!_fmtPainterStyles) {
+    showNotif('nw','⚠️ Chưa chọn chữ','Bôi đen chữ có định dạng muốn copy trước!');
+    return;
+  }
+  _fmtPainterActive = true;
+  _fmtPainterEditorId = editorId;
+  _fmtPainterBtnId = btnId;
+  if (btn) btn.classList.add('format-painter-active');
+  // Change cursor to crosshair to signal active mode
+  const editor = document.getElementById(editorId);
+  if (editor) editor.style.cursor = 'crosshair';
+  showNotif('ni','🖌 Đã copy định dạng','Bôi đen chữ cần áp dụng định dạng.');
+  // Listen for next mouseup (user finishes selecting)
+  _fmtPainterHandler = function() {
+    if (!_fmtPainterActive) return;
+    // Small delay to ensure selection is complete
+    setTimeout(() => {
+      applyFormat(_fmtPainterStyles, _fmtPainterEditorId);
+      // Deactivate after one use (like Word default)
+      _fmtPainterActive = false;
+      _fmtPainterStyles = null;
+      const b = document.getElementById(_fmtPainterBtnId);
+      if (b) b.classList.remove('format-painter-active');
+      const ed = document.getElementById(_fmtPainterEditorId);
+      if (ed) ed.style.cursor = '';
+      document.removeEventListener('mouseup', _fmtPainterHandler);
+      showNotif('ns','✅ Đã áp dụng','Định dạng đã được copy.');
+    }, 50);
+  };
+  document.addEventListener('mouseup', _fmtPainterHandler);
+}
+let _fmtPainterHandler = null;
+
 function setFontSize(size, editorId) {
   if (!size) return;
   const editor = document.getElementById(editorId || 'ne-content');
@@ -4076,9 +4218,18 @@ function insertHR() {
 function insertLink() {
   const sel = window.getSelection();
   const hasText = sel && sel.toString().trim().length > 0;
-  const url = prompt('Nhập URL (ví dụ: https://google.com):');
+  const url = prompt('Nhập URL hoặc đường dẫn (ví dụ: https://... hoặc \\\\server\\share):');
   if (!url) return;
-  const fullUrl = url.startsWith('http')||url.startsWith('file')||url.startsWith('mailto') ? url : 'https://'+url;
+  let fullUrl;
+  if (isLocalPath(url)) {
+    // Local path: keep as-is for detection, normalize slashes
+    fullUrl = url.replace(/\\/g, '/');
+    if (!fullUrl.startsWith('/') && !fullUrl.startsWith('file:')) fullUrl = '//' + fullUrl.replace(/^[\/\\]+/,'');
+  } else if (url.startsWith('http')||url.startsWith('file')||url.startsWith('mailto')) {
+    fullUrl = url;
+  } else {
+    fullUrl = 'https://'+url;
+  }
   document.getElementById('ne-content').focus();
   if (hasText) {
     document.execCommand('createLink', false, fullUrl);
@@ -4769,9 +4920,17 @@ function plainToHtml(text) {
 function iepInsertLink() {
   const sel = window.getSelection();
   const hasText = sel && sel.toString().trim().length > 0;
-  const url = prompt('Nhập URL:');
+  const url = prompt('Nhập URL hoặc đường dẫn (\\\\server\\share):');
   if (!url) return;
-  const fullUrl = url.startsWith('http')||url.startsWith('file') ? url : 'https://'+url;
+  let fullUrl;
+  if (isLocalPath(url)) {
+    fullUrl = url.replace(/\\/g, '/');
+    if (!fullUrl.startsWith('/') && !fullUrl.startsWith('file:')) fullUrl = '//' + fullUrl.replace(/^[\/\\]+/,'');
+  } else if (url.startsWith('http')||url.startsWith('file')) {
+    fullUrl = url;
+  } else {
+    fullUrl = 'https://'+url;
+  }
   document.getElementById('iep-note').focus();
   if (hasText) {
     document.execCommand('createLink', false, fullUrl);
@@ -5365,6 +5524,7 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
       <!-- Clear -->
       <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('undo')" title="Quay lại (Ctrl+Z)">↩</button>
       <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('redo')" title="Tiếp tới (Ctrl+Y)">↪</button>
+      <button class="tb-btn" id="tb-fmt-painter" onmousedown="event.preventDefault()" onclick="toggleFormatPainter('ne-content','tb-fmt-painter')" title="Copy định dạng — bôi đen chữ nguồn → nhấn 🖌 → bôi đen chữ đích">🖌</button>
       <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('removeFormat')" title="Xóa định dạng" style="font-size:10px">✕fmt</button>
     </div>
 
@@ -5444,6 +5604,7 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
     <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('undo')" title="Quay lại">↩</button>
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('redo')" title="Tiếp tới">↪</button>
+    <button class="iep-tb-btn" id="iep-fmt-painter" onmousedown="event.preventDefault()" onclick="toggleFormatPainter('iep-note','iep-fmt-painter')" title="Copy định dạng">🖌</button>
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('removeFormat')" title="Xóa định dạng" style="font-size:9px">✕fmt</button>
   </div>
   <div class="iep-note-editor" id="iep-note" contenteditable="true" spellcheck="false"></div>
