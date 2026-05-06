@@ -840,7 +840,30 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .item-bg-popup{position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:8px;z-index:500;display:flex;gap:5px;flex-wrap:wrap;width:180px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .item-bg-swatch{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid rgba(255,255,255,.1);transition:all .15s}
 .item-bg-swatch:hover{border-color:#fff;transform:scale(1.15)}
-.item-bg-swatch.no-color{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.1) 2px,transparent 0,transparent 50%) 0/8px 8px;border-color:var(--bd)}</style>
+.item-bg-swatch.no-color{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.1) 2px,transparent 0,transparent 50%) 0/8px 8px;border-color:var(--bd)}
+/* Local path links in notes/boards */
+.local-path-link{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 8px;border-radius:5px;
+  background:rgba(255,179,71,.12);border:1px solid rgba(255,179,71,.3);
+  color:var(--wa);font-size:12px;cursor:pointer;text-decoration:none;
+  transition:all .15s;font-family:'Roboto Mono',monospace;font-size:11px
+}
+.local-path-link:hover{background:rgba(255,179,71,.22);border-color:var(--wa)}
+.local-path-copied{color:var(--ok)!important;border-color:var(--ok)!important;background:rgba(34,211,160,.12)!important}
+
+/* Note card drag & drop */
+.note-card{transition:all .2s ease;cursor:default}
+.note-card.dragging{opacity:.4;transform:scale(.97);box-shadow:none}
+.note-card.drag-over{outline:2px dashed var(--ac);outline-offset:2px;background:rgba(79,124,255,.06)}
+.note-drag-handle{
+  cursor:grab;color:var(--tx3);font-size:16px;padding:2px 5px;
+  opacity:0;transition:opacity .15s;-webkit-user-select:none;user-select:none;
+  touch-action:none;line-height:1;flex-shrink:0
+}
+.note-card:hover .note-drag-handle{opacity:.6}
+.note-drag-handle:hover{opacity:1!important;color:var(--ac)}
+</style>
 </head>
 <body>
 
@@ -3519,7 +3542,7 @@ let notePinned = false;
 const NOTE_COLORS = ['#4f7cff','#7c5fff','#22d3a0','#ffb347','#ff4f6d','#e8ecf5'];
 
 const dbNotes = {
-  getAll: () => sbFetch('notes?order=pinned.desc,updated_at.desc'),
+  getAll: () => sbFetch('notes?order=pinned.desc,sort_order.asc,updated_at.desc'),
   insert: n => sbFetch('notes', {method:'POST', body:JSON.stringify(n)}),
   update: (id,d) => sbFetch(`notes?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
   delete: id => sbFetch(`notes?id=eq.${id}`, {method:'DELETE', prefer:''}),
@@ -3607,8 +3630,15 @@ function renderNotesView() {
     const tags = (n.tags||[]);
     const dot = n.color || '#4f7cff';
     const upd = n.updated_at ? new Date(n.updated_at).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-    return `<div class="note-card ${n.pinned?'pinned':''}">
+    return `<div class="note-card ${n.pinned?'pinned':''}" id="nc_${n.id}"
+      ondragover="onNoteDragOver(event,'${n.id}')"
+      ondrop="onNoteDrop(event,'${n.id}')"
+      ondragend="onNoteDragEnd()">
       <div class="note-card-top">
+        <span class="note-drag-handle"
+          onmousedown="startNoteDrag(event,'${n.id}')"
+          ontouchstart="startNoteDrag(event,'${n.id}')"
+          title="Kéo để sắp xếp">⠿</span>
         <div class="note-card-color" style="background:${dot}"></div>
         <div class="note-card-title">${esc(n.title||'')}</div>
         <div class="note-card-actions">
@@ -3715,6 +3745,82 @@ document.addEventListener('keydown', e => {
   }
 });
 
+
+// ════════════════════════════════════════════════════════
+// NOTE DRAG & DROP — sắp xếp ghi chú
+// ════════════════════════════════════════════════════════
+let noteDragId   = null;
+let noteDragState = null;
+
+function startNoteDrag(e, noteId) {
+  e.stopPropagation();
+  const {x, y} = getEventXY(e);
+  noteDragId = noteId;
+  noteDragState = {startX:x, startY:y, moved:false};
+  const card = document.getElementById('nc_'+noteId);
+  if (card) card.setAttribute('draggable','true');
+  document.addEventListener('mousemove', onNoteDragMove);
+  document.addEventListener('mouseup',   onNoteDragEndMouse);
+  document.addEventListener('touchmove', onNoteDragMove, {passive:false});
+  document.addEventListener('touchend',  onNoteDragEndTouch);
+  document.body.style.userSelect = 'none';
+}
+
+function onNoteDragMove(e) {
+  if (!noteDragState) return;
+  e.preventDefault?.();
+  const {x,y} = getEventXY(e);
+  const dx = Math.abs(x - noteDragState.startX);
+  const dy = Math.abs(y - noteDragState.startY);
+  if (dx > 6 || dy > 6) noteDragState.moved = true;
+  if (!noteDragState.moved) return;
+  const card = document.getElementById('nc_'+noteDragId);
+  if (card) card.classList.add('dragging');
+  // Highlight hovered card
+  document.querySelectorAll('.note-card').forEach(el => el.classList.remove('drag-over'));
+  const {x:cx, y:cy} = getEventXY(e);
+  const el = document.elementFromPoint(cx, cy);
+  const hovered = el?.closest('.note-card');
+  if (hovered && hovered.id !== 'nc_'+noteDragId) hovered.classList.add('drag-over');
+}
+
+function finishNoteDrop(e) {
+  document.removeEventListener('mousemove', onNoteDragMove);
+  document.removeEventListener('mouseup',   onNoteDragEndMouse);
+  document.removeEventListener('touchmove', onNoteDragMove);
+  document.removeEventListener('touchend',  onNoteDragEndTouch);
+  document.body.style.userSelect = '';
+  document.querySelectorAll('.note-card').forEach(el => {
+    el.classList.remove('dragging','drag-over');
+    el.removeAttribute('draggable');
+  });
+  if (!noteDragState?.moved) { noteDragId=null; noteDragState=null; return; }
+  // Find drop target
+  const {x,y} = getEventXY(e);
+  const el = document.elementFromPoint(x, y);
+  const target = el?.closest('.note-card');
+  if (target && target.id !== 'nc_'+noteDragId) {
+    const targetId = target.id.replace('nc_','');
+    const fromIdx = notes.findIndex(n=>n.id===noteDragId);
+    const toIdx   = notes.findIndex(n=>n.id===targetId);
+    if (fromIdx>=0 && toIdx>=0 && fromIdx!==toIdx) {
+      const [moved] = notes.splice(fromIdx,1);
+      notes.splice(toIdx,0,moved);
+      // Save order to Supabase
+      notes.forEach((n,i) => dbNotes.update(n.id,{sort_order:i,updated_at:new Date().toISOString()}).catch(()=>{}));
+      localStorage.setItem('tf_notes',JSON.stringify(notes));
+      renderNotesView();
+    }
+  }
+  noteDragId=null; noteDragState=null;
+}
+
+function onNoteDragEndMouse(e) { finishNoteDrop(e); }
+function onNoteDragEndTouch(e) { finishNoteDrop(e); }
+function onNoteDragOver(e, noteId) { e.preventDefault(); }
+function onNoteDrop(e, noteId)     { e.preventDefault(); }
+function onNoteDragEnd()           { }
+
 function stripHtml(html) {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
@@ -3741,7 +3847,11 @@ function openNoteEditor(id) {
   ).join('');
 
   document.getElementById('note-editor-overlay').classList.add('open');
-  setTimeout(() => { document.getElementById('ne-title').focus(); bindTableEvents(); }, 100);
+  setTimeout(() => {
+    document.getElementById('ne-title').focus();
+    bindTableEvents();
+    processLocalLinks(document.getElementById('ne-content'));
+  }, 100);
 }
 
 function closeNoteEditor() {
@@ -4177,6 +4287,9 @@ function renderBoardsView() {
   });
 
   el.innerHTML = html;
+  setTimeout(() => {
+    document.querySelectorAll('.board-item-note').forEach(processLocalLinks);
+  }, 50);
 }
 
 function renderBoardCols(b) {
@@ -4537,7 +4650,7 @@ function openItemEdit(boardId, colId, itemId, evt) {
   if (x < 8) x = 8;
   popup.style.left = Math.max(8,x)+'px';
   popup.style.top = Math.max(8,y)+'px';
-  setTimeout(()=>document.getElementById('iep-name').focus(),50);
+  setTimeout(()=>{document.getElementById('iep-name').focus();bindIepPaste();processLocalLinks(document.getElementById('iep-note'));},50);
 }
 
 
@@ -4796,25 +4909,30 @@ async function deleteBoard(id) {
 }
 
 
-// Make links inside contenteditable open on Ctrl+click (editor mode)
-// In card preview, links are always clickable
+// Link click handler
 document.addEventListener('click', e => {
   const a = e.target.closest('a');
   if (!a) return;
+  const href = a.getAttribute('href') || '';
   const inEditor = a.closest('#ne-content') || a.closest('#iep-note');
+
+  if (isLocalPath(href)) {
+    // Local path: always copy to clipboard
+    e.preventDefault();
+    copyLocalPath(href, a);
+    return;
+  }
+
   if (inEditor) {
-    // In editor: need Ctrl/Cmd+click to open
+    // In contenteditable: Ctrl/Cmd+click to open web links
     if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      window.open(a.href, '_blank', 'noopener');
-    }
-  } else {
-    // In card preview or board item: always open
-    const href = a.getAttribute('href');
-    if (href && !a.closest('[contenteditable]')) {
       e.preventDefault();
       window.open(href, '_blank', 'noopener');
     }
+  } else if (href && !a.closest('[contenteditable]')) {
+    // In card preview or board item: always open web links
+    e.preventDefault();
+    window.open(href, '_blank', 'noopener');
   }
 });
 
@@ -4946,22 +5064,82 @@ function applyCellColor(color) {
 
 // Paste handler: preserve table formatting from external sources
 function handleNotePaste(e) {
-  // If paste contains HTML with table, let browser handle it natively
   const html = e.clipboardData?.getData('text/html');
-  if (html && (html.includes('<table') || html.includes('<td') || html.includes('<tr'))) {
-    // Let contenteditable handle it naturally — tables are preserved
+  const text = e.clipboardData?.getData('text/plain');
+
+  if (html && html.trim()) {
+    e.preventDefault();
+    // Clean up Word/Excel HTML: remove Office namespace junk but keep formatting
+    let cleaned = cleanPastedHtml(html);
+    document.execCommand('insertHTML', false, cleaned);
+    // Process local links in newly pasted content
+    setTimeout(() => processLocalLinks(e.target.closest('[contenteditable]')), 50);
     return;
   }
-  // For plain text: convert to paragraphs to preserve line breaks
-  if (!html || html.trim() === '') {
-    const text = e.clipboardData?.getData('text/plain');
-    if (text) {
-      e.preventDefault();
-      const lines = text.split('\n');
-      const htmlLines = lines.map(l => l ? `<p>${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : '<p><br></p>');
-      document.execCommand('insertHTML', false, htmlLines.join(''));
-    }
+  // Plain text fallback: preserve line breaks
+  if (text) {
+    e.preventDefault();
+    const lines = text.split('\n');
+    const htmlLines = lines.map(l => l
+      ? `<p>${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`
+      : '<p><br></p>');
+    document.execCommand('insertHTML', false, htmlLines.join(''));
   }
+}
+
+function cleanPastedHtml(html) {
+  // Parse and clean
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+
+  // Remove Word/Excel specific tags and attributes
+  const removeEls = tmp.querySelectorAll('style,script,meta,link,[class^="Mso"],[class^="xl"],[id^="Mso"]');
+  removeEls.forEach(el => el.remove());
+
+  // Clean up attributes: keep only safe ones
+  const KEEP_ATTRS = ['href','src','style','colspan','rowspan','width','height','align','bgcolor','color','border'];
+  tmp.querySelectorAll('*').forEach(el => {
+    const attrs = Array.from(el.attributes);
+    attrs.forEach(attr => {
+      if (!KEEP_ATTRS.includes(attr.name) && !attr.name.startsWith('data-')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+    // Clean style: keep only useful properties
+    if (el.style && el.style.cssText) {
+      const keepStyles = ['font-weight','font-style','text-decoration','color','background-color',
+        'font-size','text-align','border','padding','margin','width'];
+      const styleObj = {};
+      keepStyles.forEach(prop => {
+        const val = el.style.getPropertyValue(prop);
+        if (val && val !== 'initial' && val !== 'normal' && val !== 'none' && val !== 'auto') {
+          styleObj[prop] = val;
+        }
+      });
+      el.style.cssText = Object.entries(styleObj).map(([k,v])=>`${k}:${v}`).join(';');
+    }
+    // Convert bgcolor attr to style
+    if (el.getAttribute('bgcolor')) {
+      el.style.backgroundColor = el.getAttribute('bgcolor');
+      el.removeAttribute('bgcolor');
+    }
+  });
+
+  // Convert Excel table styles
+  tmp.querySelectorAll('table').forEach(tbl => {
+    tbl.style.borderCollapse = 'collapse';
+    tbl.style.width = 'auto';
+    tbl.removeAttribute('width');
+  });
+  tmp.querySelectorAll('td,th').forEach(cell => {
+    if (!cell.style.border) cell.style.border = '1px solid var(--bd)';
+    if (!cell.style.padding) cell.style.padding = '6px 10px';
+  });
+
+  // Remove empty spans/divs
+  tmp.querySelectorAll('span:empty, div:empty').forEach(el => el.remove());
+
+  return tmp.innerHTML;
 }
 
 function bindTableEvents() {
@@ -4970,6 +5148,17 @@ function bindTableEvents() {
   editor.addEventListener('click', onTableCellClick);
   editor.addEventListener('contextmenu', onTableRightClick);
   editor.addEventListener('paste', handleNotePaste);
+}
+
+function bindIepPaste() {
+  const iep = document.getElementById('iep-note');
+  if (!iep || iep._pasteBound) return;
+  iep.addEventListener('paste', handleNotePaste);
+  iep.addEventListener('contextmenu', e => {
+    const cell = e.target.closest('td,th');
+    if (cell) onTableRightClick(e);
+  });
+  iep._pasteBound = true;
 }
 
 
@@ -4989,6 +5178,50 @@ function applyTheme() {
     if (btn) btn.innerHTML = '🌙 Dark';
   }
 }
+
+// ── Local path detection & copy ──────────────────────────
+function processLocalLinks(container) {
+  if (!container) return;
+  // Find all <a> tags with local paths
+  container.querySelectorAll('a[href]').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    if (isLocalPath(href)) {
+      a.classList.add('local-path-link');
+      a.removeAttribute('target');
+      a.title = '📋 Click để copy đường dẫn';
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        copyLocalPath(href, a);
+      });
+    } else {
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener');
+    }
+  });
+  // Also detect raw text that looks like paths (C:\... or /home/...)
+  // We'll handle this at paste/save time
+}
+
+function copyLocalPath(path, el) {
+  let clean = path.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '');
+  clean = clean.split('/').join('\\');
+  navigator.clipboard.writeText(clean).then(() => {
+    if (el) {
+      const orig = el.innerHTML;
+      el.innerHTML = '✓ Đã copy!';
+      el.classList.add('local-path-copied');
+      setTimeout(() => { el.innerHTML = orig; el.classList.remove('local-path-copied'); }, 2000);
+    }
+    showNotif('ns', '📋 Đã copy', 'Paste vào File Explorer (Win+E) để mở.');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = clean; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showNotif('ns', '📋 Đã copy', 'Paste vào File Explorer để mở.');
+  });
+}
+
 window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
 </script>
 
