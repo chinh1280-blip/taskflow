@@ -27,7 +27,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .side-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;backdrop-filter:blur(4px)}
 @media(max-width:767px){.sidebar{position:fixed;top:0;left:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.side-overlay.open{display:block}.menu-btn{display:flex!important}}
 .logo{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid var(--bd)}
-.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 18px rgba(79,124,255,.3);flex-shrink:0}
+/* logo-icon moved */
 .logo-text{font-size:16px;font-weight:700;letter-spacing:-.5px;flex:1}.logo-text span{color:var(--ac)}
 .close-side{background:none;border:none;color:var(--tx3);font-size:20px;display:none}
 @media(max-width:767px){.close-side{display:block}}
@@ -877,6 +877,24 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   border:1px solid rgba(255,179,71,.4)
 }
 @keyframes painterPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,179,71,.4)}50%{box-shadow:0 0 0 4px rgba(255,179,71,0)}}
+
+/* Dart icon spin */
+.dart-spin{animation:dartSpin 2s linear infinite}
+.dart-no-spin{animation:none!important}
+@keyframes dartSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 18px rgba(79,124,255,.3);flex-shrink:0}
+.logo-icon:hover{transform:scale(1.1)}
+
+#topbar-view-row{justify-content:flex-end;gap:8px}
+.topbar-view-btn{padding:7px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+.topbar-view-btn:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,124,255,.08)}
+.topbar-view-btn.primary{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border-color:transparent}
+.topbar-view-btn.primary:hover{opacity:.9}
+
+/* Font sizes from execCommand - ensure they render correctly */
+.note-content font,.iep-note-editor font{display:inline}
+.note-content [style*="font-size"],.iep-note-editor [style*="font-size"]{display:inline}
+.note-card-preview [style*="font-size"]{display:inline}
 </style>
 </head>
 <body>
@@ -942,8 +960,8 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 </div>
 
 <div id="loading" class="loading">
-  <span class="spin" id="loading-icon">⚡</span>
-  <div style="font-size:14px;color:var(--tx2);font-weight:500" id="loading-title">Đang kết nối Supabase...</div>
+  <span class="spin" id="loading-icon" class="dart-spin">🎯</span>
+  <div style="font-size:14px;color:var(--tx2);font-weight:500" id="loading-title">Đang liên kết tới workspace T.C.C...</div>
   <div style="font-size:12px;color:var(--tx3);text-align:center;max-width:280px;line-height:1.6" id="loading-sub">Khởi tạo...</div>
   <div id="loading-error" style="display:none;margin-top:8px;background:rgba(255,79,109,.1);border:1px solid rgba(255,79,109,.3);border-radius:10px;padding:12px 16px;max-width:300px;text-align:center">
     <div style="font-size:12px;color:var(--er);margin-bottom:10px" id="loading-err-msg"></div>
@@ -965,7 +983,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   <div class="side-overlay" id="sideOverlay" onclick="closeSide()"></div>
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <div class="logo-icon">⚡</div>
+      <div class="logo-icon" id="logo-dart">⚡</div>
       <div class="logo-text">Task<span>Flow</span></div>
       <button class="close-side" onclick="closeSide()">✕</button>
     </div>
@@ -1021,7 +1039,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
     <header class="topbar">
       <button class="menu-btn" onclick="openSide()">☰</button>
       <div class="page-title" id="page-title">Tất cả nhiệm vụ</div>
-      <div class="topbar-row2">
+      <div class="topbar-row2" id="topbar-task-row">
         <div class="search-box">
           <span style="color:var(--tx3);font-size:13px">🔍</span>
           <input id="search" placeholder="Tìm kiếm..." oninput="renderContent()">
@@ -1033,6 +1051,10 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
         </div>
         <button class="refresh-topbar" id="refresh-top-btn" onclick="manualRefresh(this)" title="Đồng bộ ngay">↻</button>
         <button class="btn-add" onclick="openTaskModal()">＋ Task</button>
+      </div>
+      <div class="topbar-row2" id="topbar-view-row" style="display:none">
+        <button class="refresh-topbar" onclick="manualRefresh(this)" title="Đồng bộ ngay">↻</button>
+        <div id="topbar-view-actions"></div>
       </div>
     </header>
     <div class="content" id="content"></div>
@@ -1553,7 +1575,7 @@ function setLoadingProgress(pct, sub, hint){
     if(bar)bar.style.width=pct+'%';
     if(subEl)subEl.textContent=sub||'';
     if(hintEl)hintEl.textContent=hint||'';
-    if(title&&pct<100)title.textContent='Đang kết nối Supabase...';
+    if(title&&pct<100)title.textContent='Đang liên kết tới workspace T.C.C...';
   }catch(e){}
 }
 
@@ -1564,7 +1586,7 @@ function showLoadingError(msg){
     const errMsg=document.getElementById('loading-err-msg');
     const errBox=document.getElementById('loading-error');
     const prog=document.getElementById('loading-progress');
-    if(icon){icon.style.animation='none';icon.textContent='⚠️';}
+    if(icon){icon.style.animation='none';icon.innerHTML='<span style="font-size:40px">⚠️</span>';}
     if(title){title.textContent='Không thể kết nối';title.style.color='var(--er)';}
     if(errMsg)errMsg.textContent=msg;
     if(errBox)errBox.style.display='block';
@@ -1582,7 +1604,7 @@ function retryConnect(){
     const prog=document.getElementById('loading-progress');
     const bar=document.getElementById('loading-bar');
     if(icon){icon.style.animation='';icon.textContent='⚡';}
-    if(title){title.textContent='Đang kết nối Supabase...';title.style.color='';}
+    if(title){title.textContent='Đang liên kết tới workspace T.C.C...';title.style.color='';}
     if(errBox)errBox.style.display='none';
     if(prog)prog.style.display='block';
     if(bar)bar.style.width='0%';
@@ -1659,12 +1681,14 @@ async function manualRefresh(btn){
   if(btn){btn.classList.add('spin');btn.disabled=true;}
   setSyncUI('loading');
   try{
-    // Load tất cả data song song
-    const[p,t,dr,dl]=await Promise.all([
+    // Load tất cả data song song — bao gồm notes và boards
+    const[p,t,dr,dl,nb,bb]=await Promise.all([
       db.getProjects(),
       db.getTasks(),
       dbDaily.getRoutines(),
       dbDaily.getLogs(),
+      dbNotes.getAll(),
+      dbBoards.getAll(),
     ]);
     projects=p||[];tasks=t||[];
 
@@ -1705,8 +1729,22 @@ async function manualRefresh(btn){
       renderDrawer(openDrawerTaskId);
     }
 
+    // Cập nhật notes
+    if (nb) {
+      notes = nb;
+      localStorage.setItem('tf_notes', JSON.stringify(notes));
+      updateNotesBadge();
+    }
+    // Cập nhật boards
+    if (bb) {
+      boards = bb.map(b => ({...b, columns: tryParseJSON(b.data, [])}));
+      localStorage.setItem('tf_boards', JSON.stringify(boards));
+      updateBoardsBadge();
+    }
     // Render đúng view đang hiện
     if(isDailyView) renderDailyView();
+    else if(isNotesView) renderNotesView();
+    else if(isBoardsView) renderBoardsView();
     else renderContent();
 
     updateDailyBadge();
@@ -2952,6 +2990,12 @@ function switchToDailyView() {
   document.getElementById('page-title').textContent = '🔄 Daily Routines';
   renderDailyView();
   closeSide();
+  // Switch topbar
+  document.getElementById('topbar-task-row').style.display = 'none';
+  document.getElementById('topbar-view-row').style.display = '';
+  document.getElementById('page-title').textContent = '🔄 Daily Routines';
+  document.getElementById('topbar-view-actions').innerHTML = `<button class="topbar-view-btn primary" onclick="openDailyModal()">＋ Tạo routine</button>`;
+
 }
 
 function switchToTaskView() {
@@ -2959,6 +3003,8 @@ function switchToTaskView() {
   document.getElementById('content').style.display = '';
   document.getElementById('daily-view').style.display = 'none';
   document.getElementById('nav-daily')?.classList.remove('active');
+  document.getElementById('topbar-task-row').style.display = '';
+  document.getElementById('topbar-view-row').style.display = 'none';
 }
 
 // setCurView is patched inside switchToTaskView — see below
@@ -3591,6 +3637,12 @@ function switchToNotesView() {
   if (!notes.length) loadNotes();
   else renderNotesView();
   closeSide();
+  // Switch topbar
+  document.getElementById('topbar-task-row').style.display = 'none';
+  document.getElementById('topbar-view-row').style.display = '';
+  document.getElementById('page-title').textContent = '📝 Kế hoạch & Ý tưởng';
+  document.getElementById('topbar-view-actions').innerHTML = `<button class="topbar-view-btn primary" onclick="openNoteEditor()">＋ Ghi chú mới</button>`;
+
 }
 
 function switchFromNotesView() {
@@ -3598,6 +3650,8 @@ function switchFromNotesView() {
   document.getElementById('notes-view').style.display = 'none';
   document.getElementById('nav-notes')?.classList.remove('active');
   document.getElementById('content').style.display = '';
+  document.getElementById('topbar-task-row').style.display = '';
+  document.getElementById('topbar-view-row').style.display = 'none';
 }
 
 // Patch setCurView
@@ -4193,7 +4247,41 @@ function setFontSize(size, editorId) {
   if (!size) return;
   const editor = document.getElementById(editorId || 'ne-content');
   editor.focus();
+  // Map size 1-7 to actual px values
+  const sizeMap = {'1':'10px','2':'12px','3':'14px','4':'18px','5':'24px','6':'32px','7':'48px'};
+  const px = sizeMap[size] || '14px';
+  // Use styleWithCSS to get span with font-size style instead of <font> tag
+  document.execCommand('styleWithCSS', false, true);
   document.execCommand('fontSize', false, size);
+  document.execCommand('styleWithCSS', false, false);
+  // Convert any <font size="..."> tags to proper span with style
+  setTimeout(() => {
+    editor.querySelectorAll('font[size]').forEach(font => {
+      const sz = sizeMap[font.getAttribute('size')] || px;
+      font.style.fontSize = sz;
+      font.removeAttribute('size');
+    });
+  }, 10);
+}
+
+// Also add px-based font size option
+function setFontSizePx(px, editorId) {
+  if (!px) return;
+  const editor = document.getElementById(editorId || 'ne-content');
+  editor.focus();
+  document.execCommand('styleWithCSS', false, true);
+  // Insert a span with explicit font-size
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && !sel.isCollapsed) {
+    document.execCommand('fontSize', false, '4'); // temp
+    // Replace with actual px
+    setTimeout(() => {
+      editor.querySelectorAll('font[size="4"]').forEach(f => {
+        f.style.fontSize = px;
+        f.removeAttribute('size');
+      });
+    }, 10);
+  }
 }
 
 function execCmd(cmd, val) {
@@ -4353,6 +4441,12 @@ function switchToBoardsView() {
   if (!boards.length) loadBoards();
   else renderBoardsView();
   closeSide();
+  // Switch topbar
+  document.getElementById('topbar-task-row').style.display = 'none';
+  document.getElementById('topbar-view-row').style.display = '';
+  document.getElementById('page-title').textContent = '🗂 Kế hoạch & Mục tiêu';
+  document.getElementById('topbar-view-actions').innerHTML = `<button class="topbar-view-btn primary" onclick="openBoardModal()">＋ Tạo Board</button>`;
+
 }
 
 function switchFromBoardsView() {
@@ -4360,6 +4454,8 @@ function switchFromBoardsView() {
   document.getElementById('boards-view').style.display = 'none';
   document.getElementById('nav-boards')?.classList.remove('active');
   document.getElementById('content').style.display = '';
+  document.getElementById('topbar-task-row').style.display = '';
+  document.getElementById('topbar-view-row').style.display = 'none';
 }
 
 // Patch setCurView
@@ -5362,26 +5458,74 @@ function processLocalLinks(container) {
 }
 
 function copyLocalPath(path, el) {
+  // Normalize path for Windows
   let clean = path.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '');
-  clean = clean.split('/').join('\\');
-  navigator.clipboard.writeText(clean).then(() => {
-    if (el) {
-      const orig = el.innerHTML;
-      el.innerHTML = '✓ Đã copy!';
-      el.classList.add('local-path-copied');
-      setTimeout(() => { el.innerHTML = orig; el.classList.remove('local-path-copied'); }, 2000);
-    }
-    showNotif('ns', '📋 Đã copy', 'Paste vào File Explorer (Win+E) để mở.');
-  }).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = clean; ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    showNotif('ns', '📋 Đã copy', 'Paste vào File Explorer để mở.');
+  // Convert forward slashes back to backslashes for UNC paths
+  if (clean.startsWith('//')) clean = '\\\\' + clean.slice(2).split('/').join('\\');
+  else clean = clean.split('/').join('\\');
+  // Remove leading \\ if not UNC
+  if (!clean.startsWith('\\\\') && clean.startsWith('\\\\')) clean = clean.slice(1);
+
+  // Show copy popup near element
+  document.getElementById('local-path-popup')?.remove();
+  const popup = document.createElement('div');
+  popup.id = 'local-path-popup';
+  popup.style.cssText = 'position:fixed;background:var(--s1);border:1px solid rgba(255,179,71,.4);border-radius:12px;padding:12px 14px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:340px;font-size:12px';
+  popup.innerHTML = `
+    <div style="font-weight:700;color:var(--wa);margin-bottom:6px">📁 Đường dẫn máy tính</div>
+    <div style="font-family:'Roboto Mono',monospace;font-size:11px;color:var(--tx2);background:var(--s2);padding:6px 8px;border-radius:6px;margin-bottom:10px;word-break:break-all;user-select:all">${clean}</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Browser không thể mở thẳng file/folder. Copy đường dẫn → mở File Explorer (Win+E) → dán vào thanh địa chỉ.</div>
+    <div style="display:flex;gap:7px">
+      <button id="lpp-copy" style="flex:1;padding:6px;border-radius:7px;border:none;background:rgba(255,179,71,.2);color:var(--wa);font-size:12px;font-weight:600;cursor:pointer">📋 Copy đường dẫn</button>
+      <button onclick="document.getElementById('local-path-popup')?.remove()" style="padding:6px 10px;border-radius:7px;border:none;background:var(--s2);color:var(--tx2);font-size:12px;cursor:pointer">✕</button>
+    </div>`;
+  // Position
+  if (el) {
+    const r = el.getBoundingClientRect();
+    let x = r.left, y = r.bottom + 6;
+    if (x + 350 > window.innerWidth) x = window.innerWidth - 355;
+    if (y + 150 > window.innerHeight) y = r.top - 156;
+    popup.style.left = Math.max(8,x) + 'px';
+    popup.style.top  = Math.max(8,y) + 'px';
+  } else {
+    popup.style.cssText += ';left:50%;top:50%;transform:translate(-50%,-50%)';
+  }
+  document.body.appendChild(popup);
+  // Copy button
+  popup.querySelector('#lpp-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(clean).then(() => {
+      popup.querySelector('#lpp-copy').textContent = '✓ Đã copy!';
+      setTimeout(() => document.getElementById('local-path-popup')?.remove(), 1500);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = clean; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      popup.querySelector('#lpp-copy').textContent = '✓ Đã copy!';
+      setTimeout(() => document.getElementById('local-path-popup')?.remove(), 1500);
+    });
   });
+  setTimeout(()=>document.addEventListener('click',function rmPop(ev){
+    if(!popup.contains(ev.target)&&ev.target!==el){popup.remove();document.removeEventListener('click',rmPop);}
+  }),100);
 }
 
-window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
+
+function toggleDartSpin() {
+  const dart = document.getElementById('logo-dart');
+  if (!dart) return;
+  const spinning = dart.classList.toggle('dart-spin');
+  dart.classList.toggle('dart-no-spin', !spinning);
+  localStorage.setItem('tf_dart_spin', spinning ? '1' : '0');
+}
+function applyDartSpin() {
+  const saved = localStorage.getItem('tf_dart_spin');
+  if (saved === '0') {
+    document.getElementById('logo-dart')?.classList.remove('dart-spin');
+    document.getElementById('logo-dart')?.classList.add('dart-no-spin');
+  }
+}
+window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeout(applyDartSpin,500);});
 </script>
 
 <!-- DAILY ROUTINE MODAL -->
@@ -5476,15 +5620,15 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
         <option value="h3">Tiêu đề 3</option>
         <option value="p">Đoạn văn</option>
       </select>
-      <select class="tb-select" onchange="setFontSize(this.value,'ne-content');this.value=''" title="Cỡ chữ" style="width:70px">
-        <option value="">Cỡ</option>
-        <option value="1">Nhỏ</option>
-        <option value="2">Nhỏ+</option>
-        <option value="3">Bình</option>
-        <option value="4">Vừa</option>
-        <option value="5">Lớn</option>
-        <option value="6">Lớn+</option>
-        <option value="7">To</option>
+      <select class="tb-select" onchange="setFontSize(this.value,'ne-content');this.value=''" title="Cỡ chữ" style="width:76px">
+        <option value="">Cỡ chữ</option>
+        <option value="1">10px</option>
+        <option value="2">12px</option>
+        <option value="3">14px</option>
+        <option value="4">18px</option>
+        <option value="5">24px</option>
+        <option value="6">32px</option>
+        <option value="7">48px</option>
       </select>
       <div class="tb-sep"></div>
       <!-- Format -->
@@ -5574,15 +5718,15 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();});
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('insertUnorderedList')" title="Danh sách">• ≡</button>
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('insertOrderedList')" title="Đánh số">1≡</button>
     <div class="iep-tb-sep"></div>
-    <select class="tb-select" onchange="setFontSize(this.value,'iep-note');this.value=''" title="Cỡ chữ" style="width:60px;height:24px;font-size:10px">
+    <select class="tb-select" onchange="setFontSize(this.value,'iep-note');this.value=''" title="Cỡ chữ" style="width:70px;height:24px;font-size:10px">
       <option value="">Cỡ</option>
-      <option value="1">Nhỏ</option>
-      <option value="2">Nhỏ+</option>
-      <option value="3">Bình</option>
-      <option value="4">Vừa</option>
-      <option value="5">Lớn</option>
-      <option value="6">Lớn+</option>
-      <option value="7">To</option>
+      <option value="1">10px</option>
+      <option value="2">12px</option>
+      <option value="3">14px</option>
+      <option value="4">18px</option>
+      <option value="5">24px</option>
+      <option value="6">32px</option>
+      <option value="7">48px</option>
     </select>
     <select class="tb-select" onchange="iepCmd('formatBlock',this.value);this.value=''" title="Kiểu chữ" style="width:70px;height:24px;font-size:10px">
       <option value="">Kiểu</option>
