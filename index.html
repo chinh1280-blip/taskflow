@@ -895,6 +895,22 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .note-content font,.iep-note-editor font{display:inline}
 .note-content [style*="font-size"],.iep-note-editor [style*="font-size"]{display:inline}
 .note-card-preview [style*="font-size"]{display:inline}
+
+.logo-icon.spinning{animation:logoSpin 2s linear infinite}
+@keyframes logoSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+.view-search-bar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--s2);border:1px solid var(--bd);border-radius:10px;
+  padding:7px 12px;flex:1;max-width:360px;
+}
+.view-search-bar input{
+  background:none;border:none;outline:none;color:var(--tx);font-size:13px;
+  width:100%;font-family:Roboto,sans-serif;
+}
+.view-search-bar input::placeholder{color:var(--tx3)}
+.view-search-icon{color:var(--tx3);font-size:13px;flex-shrink:0}
+#topbar-view-row{align-items:center;flex-wrap:wrap;gap:8px}
 </style>
 </head>
 <body>
@@ -983,7 +999,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   <div class="side-overlay" id="sideOverlay" onclick="closeSide()"></div>
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <div class="logo-icon" id="logo-dart">⚡</div>
+      <div class="logo-icon" id="logo-dart" onclick="toggleLogoSpin()" title="Click để bật/tắt xoay" style="cursor:pointer">⚡</div>
       <div class="logo-text">Task<span>Flow</span></div>
       <button class="close-side" onclick="closeSide()">✕</button>
     </div>
@@ -1007,14 +1023,14 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
     <div class="side-section">
       <div class="side-label">Ghi chú</div>
       <button class="nav-item" id="nav-notes" onclick="switchToNotesView()" style="width:100%;text-align:left">
-        <span class="ni">📝</span><span class="nlabel">Kế hoạch & Ý tưởng</span>
+        <span class="ni">📝</span><span class="nlabel">Strategy Room</span>
         <span id="notes-nav-badge" style="font-size:10px;color:var(--tx3);margin-left:auto"></span>
       </button>
     </div>
     <div class="side-section">
       <div class="side-label">Boards</div>
       <button class="nav-item" id="nav-boards" onclick="switchToBoardsView()" style="width:100%;text-align:left">
-        <span class="ni">🗂</span><span class="nlabel">Kế hoạch & Mục tiêu</span>
+        <span class="ni">🗂</span><span class="nlabel">Mission Board</span>
         <span id="boards-nav-badge" style="font-size:10px;color:var(--tx3);margin-left:auto"></span>
       </button>
     <div style="display:none"><!-- placeholder-->
@@ -2038,6 +2054,18 @@ async function openDrawer(taskId){
 
 
 // ── Link type detection ──────────────────
+function isLocalPathRaw(url) {
+  // Check raw user-typed paths (before any URL encoding)
+  if (!url) return false;
+  const u = url.trim();
+  if (/^[a-zA-Z]:[\\\/]/.test(u)) return true;   // C:\ or C:/
+  if (u.startsWith('\\\\')) return true;          // \\server
+  if (/^\/\/\d{1,3}\.\d/.test(u)) return true;      // //192.168...
+  if (/^\/\/[a-zA-Z]/.test(u)) return true;          // //servername
+  if (u.startsWith('file://')) return true;
+  return false;
+}
+
 function isLocalPath(url){
   if(!url)return false;
   // Windows paths: C:\ D:\ \\server
@@ -2047,6 +2075,7 @@ function isLocalPath(url){
   if(/^\/(?!\/)/.test(url))return true;
   // Explicit file:// 
   if(url.startsWith('file://'))return true;
+  if(url.startsWith('local://'))return true;   // our custom prefix
   return false;
 }
 
@@ -3591,7 +3620,7 @@ document.addEventListener('keydown',e=>{
 
 
 // ══════════════════════════════════════════════════════════════
-//  NOTES — Kế hoạch & Ý tưởng
+//  NOTES — Strategy Room
 // ══════════════════════════════════════════════════════════════
 let notes = [];
 let editNoteId = null;
@@ -3633,15 +3662,20 @@ function switchToNotesView() {
   document.getElementById('notes-view').style.display = 'flex';
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-notes')?.classList.add('active');
-  document.getElementById('page-title').textContent = '📝 Kế hoạch & Ý tưởng';
+  document.getElementById('page-title').textContent = '📝 Strategy Room';
   if (!notes.length) loadNotes();
   else renderNotesView();
   closeSide();
   // Switch topbar
   document.getElementById('topbar-task-row').style.display = 'none';
   document.getElementById('topbar-view-row').style.display = '';
-  document.getElementById('page-title').textContent = '📝 Kế hoạch & Ý tưởng';
-  document.getElementById('topbar-view-actions').innerHTML = `<button class="topbar-view-btn primary" onclick="openNoteEditor()">＋ Ghi chú mới</button>`;
+  document.getElementById('page-title').textContent = '📝 Strategy Room';
+  document.getElementById('topbar-view-actions').innerHTML = `
+  <div class="view-search-bar">
+    <span class="view-search-icon">🔍</span>
+    <input id="notes-search" placeholder="Tìm ghi chú..." oninput="filterNotesView(this.value)">
+  </div>
+  <button class="topbar-view-btn primary" onclick="openNoteEditor()">＋ Add Tactical Note</button>`;
 
 }
 
@@ -3679,10 +3713,10 @@ function renderNotesView() {
     el.innerHTML = `
       <div class="notes-topbar">
         <div class="notes-title-block">
-          <div class="notes-page-title">📝 Kế hoạch & Ý tưởng</div>
+          <div class="notes-page-title">📝 Strategy Room</div>
           <div class="notes-subtitle">Lưu lại ý tưởng, kế hoạch, flow trước khi quên</div>
         </div>
-        <button class="notes-add-btn" onclick="openNoteEditor()">＋ Ghi chú mới</button>
+        <button class="notes-add-btn" onclick="openNoteEditor()">＋ Add Tactical Note</button>
       </div>
       <div class="notes-empty">
         <div style="font-size:44px;margin-bottom:14px;opacity:.4">💡</div>
@@ -3732,11 +3766,11 @@ function renderNotesView() {
     <div class="notes-topbar">
       <div class="notes-title-block">
         <div>
-          <div class="notes-page-title">📝 Kế hoạch & Ý tưởng</div>
+          <div class="notes-page-title">📝 Strategy Room</div>
           <div class="notes-subtitle">${notes.length} ghi chú</div>
         </div>
       </div>
-      <button class="notes-add-btn" onclick="openNoteEditor()">＋ Ghi chú mới</button>
+      <button class="notes-add-btn" onclick="openNoteEditor()">＋ Add Tactical Note</button>
     </div>
     ${pinned.length ? `<div style="font-size:11px;font-weight:700;color:var(--wa);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📌 Đã ghim</div><div class="notes-grid">${renderCards(pinned)}</div>` : ''}
     ${rest.length ? `<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:${pinned.length?'14px':'0'} 0 6px">Tất cả</div><div class="notes-grid">${renderCards(rest)}</div>` : ''}`;
@@ -3888,6 +3922,28 @@ function onNoteDragEndTouch(e) { finishNoteDrop(e); }
 function onNoteDragOver(e, noteId) { e.preventDefault(); }
 function onNoteDrop(e, noteId)     { e.preventDefault(); }
 function onNoteDragEnd()           { }
+
+
+// ── Search/filter for notes and boards ───────────────────
+function filterNotesView(q) {
+  q = (q||'').toLowerCase().trim();
+  document.querySelectorAll('.note-card').forEach(card => {
+    const title = (card.querySelector('.note-card-title')?.textContent||'').toLowerCase();
+    const body  = (card.querySelector('.note-card-preview')?.textContent||'').toLowerCase();
+    const show  = !q || title.includes(q) || body.includes(q);
+    card.style.display = show ? '' : 'none';
+  });
+}
+
+function filterBoardsView(q) {
+  q = (q||'').toLowerCase().trim();
+  document.querySelectorAll('.board-wrap').forEach(board => {
+    const name = (board.querySelector('.board-name')?.textContent||'').toLowerCase();
+    const desc = (board.querySelector('.board-desc')?.textContent||'').toLowerCase();
+    const show = !q || name.includes(q) || desc.includes(q);
+    board.style.display = show ? '' : 'none';
+  });
+}
 
 function stripHtml(html) {
   const tmp = document.createElement('div');
@@ -4306,17 +4362,18 @@ function insertHR() {
 function insertLink() {
   const sel = window.getSelection();
   const hasText = sel && sel.toString().trim().length > 0;
-  const url = prompt('Nhập URL hoặc đường dẫn (ví dụ: https://... hoặc \\\\server\\share):');
+  const url = prompt('Nhập URL hoặc đường dẫn máy tính/server:');
   if (!url) return;
-  let fullUrl;
-  if (isLocalPath(url)) {
-    // Local path: keep as-is for detection, normalize slashes
-    fullUrl = url.replace(/\\/g, '/');
-    if (!fullUrl.startsWith('/') && !fullUrl.startsWith('file:')) fullUrl = '//' + fullUrl.replace(/^[\/\\]+/,'');
-  } else if (url.startsWith('http')||url.startsWith('file')||url.startsWith('mailto')) {
-    fullUrl = url;
+  const trimmed = url.trim();
+  let fullUrl, isLocal = false;
+  if (isLocalPathRaw(trimmed)) {
+    // Store local paths with local:// prefix to prevent browser navigation
+    isLocal = true;
+    fullUrl = 'local://' + trimmed.replace(/\\/g, '/');
+  } else if (trimmed.startsWith('http')||trimmed.startsWith('mailto')) {
+    fullUrl = trimmed;
   } else {
-    fullUrl = 'https://'+url;
+    fullUrl = 'https://' + trimmed;
   }
   document.getElementById('ne-content').focus();
   if (hasText) {
@@ -4367,7 +4424,7 @@ setInterval(() => {
 
 
 // ══════════════════════════════════════════════════════════════
-//  BOARDS — Kế hoạch & Mục tiêu
+//  BOARDS — Mission Board
 // ══════════════════════════════════════════════════════════════
 // Data structure:
 // board = { id, name, desc, color, collapsed, sort_order, created_at, updated_at }
@@ -4437,15 +4494,20 @@ function switchToBoardsView() {
   document.getElementById('boards-view').style.display = 'flex';
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('nav-boards')?.classList.add('active');
-  document.getElementById('page-title').textContent = '🗂 Kế hoạch & Mục tiêu';
+  document.getElementById('page-title').textContent = '🗂 Mission Board';
   if (!boards.length) loadBoards();
   else renderBoardsView();
   closeSide();
   // Switch topbar
   document.getElementById('topbar-task-row').style.display = 'none';
   document.getElementById('topbar-view-row').style.display = '';
-  document.getElementById('page-title').textContent = '🗂 Kế hoạch & Mục tiêu';
-  document.getElementById('topbar-view-actions').innerHTML = `<button class="topbar-view-btn primary" onclick="openBoardModal()">＋ Tạo Board</button>`;
+  document.getElementById('page-title').textContent = '🗂 Mission Board';
+  document.getElementById('topbar-view-actions').innerHTML = `
+  <div class="view-search-bar">
+    <span class="view-search-icon">🔍</span>
+    <input id="boards-search" placeholder="Tìm board..." oninput="filterBoardsView(this.value)">
+  </div>
+  <button class="topbar-view-btn primary" onclick="openBoardModal()">＋ Tạo Board</button>`;
 
 }
 
@@ -4483,7 +4545,7 @@ function renderBoardsView() {
   if (!boards.length) {
     el.innerHTML = `
       <div class="boards-topbar">
-        <div><div class="boards-page-title">🗂 Kế hoạch & Mục tiêu</div>
+        <div><div class="boards-page-title">🗂 Mission Board</div>
         <div class="boards-subtitle">Tổ chức kế hoạch theo từng bước rõ ràng</div></div>
         <button class="boards-add-btn" onclick="openBoardModal()">＋ Tạo Board</button>
       </div>
@@ -4498,7 +4560,7 @@ function renderBoardsView() {
 
   let html = `
     <div class="boards-topbar">
-      <div><div class="boards-page-title">🗂 Kế hoạch & Mục tiêu</div>
+      <div><div class="boards-page-title">🗂 Mission Board</div>
       <div class="boards-subtitle">${boards.length} board</div></div>
       <button class="boards-add-btn" onclick="openBoardModal()">＋ Tạo Board</button>
     </div>`;
@@ -5016,16 +5078,17 @@ function plainToHtml(text) {
 function iepInsertLink() {
   const sel = window.getSelection();
   const hasText = sel && sel.toString().trim().length > 0;
-  const url = prompt('Nhập URL hoặc đường dẫn (\\\\server\\share):');
+  const url = prompt('Nhập URL hoặc đường dẫn máy tính/server:');
   if (!url) return;
-  let fullUrl;
-  if (isLocalPath(url)) {
-    fullUrl = url.replace(/\\/g, '/');
-    if (!fullUrl.startsWith('/') && !fullUrl.startsWith('file:')) fullUrl = '//' + fullUrl.replace(/^[\/\\]+/,'');
-  } else if (url.startsWith('http')||url.startsWith('file')) {
-    fullUrl = url;
+  const trimmed = url.trim();
+  let fullUrl, isLocal = false;
+  if (isLocalPathRaw(trimmed)) {
+    isLocal = true;
+    fullUrl = 'local://' + trimmed.replace(/\\/g, '/');
+  } else if (trimmed.startsWith('http')||trimmed.startsWith('mailto')) {
+    fullUrl = trimmed;
   } else {
-    fullUrl = 'https://'+url;
+    fullUrl = 'https://' + trimmed;
   }
   document.getElementById('iep-note').focus();
   if (hasText) {
@@ -5171,9 +5234,10 @@ document.addEventListener('click', e => {
   const href = a.getAttribute('href') || '';
   const inEditor = a.closest('#ne-content') || a.closest('#iep-note');
 
-  if (isLocalPath(href)) {
-    // Local path: always copy to clipboard
+  if (href.startsWith('local://') || isLocalPath(href)) {
+    // Local path: always show copy popup, never open in browser
     e.preventDefault();
+    e.stopPropagation();
     copyLocalPath(href, a);
     return;
   }
@@ -5525,7 +5589,19 @@ function applyDartSpin() {
     document.getElementById('logo-dart')?.classList.add('dart-no-spin');
   }
 }
-window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeout(applyDartSpin,500);});
+
+function toggleLogoSpin() {
+  const el = document.getElementById('logo-dart');
+  if (!el) return;
+  const on = el.classList.toggle('spinning');
+  localStorage.setItem('tf_logo_spin', on ? '1' : '0');
+}
+function applyLogoSpin() {
+  const saved = localStorage.getItem('tf_logo_spin');
+  if (saved === '1') document.getElementById('logo-dart')?.classList.add('spinning');
+}
+
+window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeout(applyLogoSpin,400);});
 </script>
 
 <!-- DAILY ROUTINE MODAL -->
