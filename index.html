@@ -4023,9 +4023,14 @@ function toggleNotePin() {
 
 async function saveNote() {
   const title   = document.getElementById('ne-title').value.trim();
-  // Ensure all links open in new tab
+  // Fix link attributes before save
   document.querySelectorAll('#ne-content a').forEach(a=>{
-    a.setAttribute('target','_blank'); a.setAttribute('rel','noopener');
+    const h = a.getAttribute('href')||'';
+    if (h.startsWith('local://') || isLocalPath(h)) {
+      a.removeAttribute('target'); a.removeAttribute('rel');
+    } else {
+      a.setAttribute('target','_blank'); a.setAttribute('rel','noopener');
+    }
   });
   const content = document.getElementById('ne-content').innerHTML;
   const tagsRaw = document.getElementById('ne-tags').value;
@@ -5121,10 +5126,19 @@ function iepInsertLink() {
     document.execCommand('insertHTML', false,
       `<a href="${fullUrl}" target="_blank" rel="noopener">${label}</a>`);
   }
-  document.querySelectorAll('#iep-note a').forEach(a => {
-    a.setAttribute('target','_blank');
-    a.setAttribute('rel','noopener');
-  });
+  setTimeout(() => {
+    document.querySelectorAll('#iep-note a').forEach(a => {
+      const h = a.getAttribute('href')||'';
+      if (h.startsWith('local://') || isLocalPath(h)) {
+        a.removeAttribute('target');
+        a.removeAttribute('rel');
+      } else {
+        a.setAttribute('target','_blank');
+        a.setAttribute('rel','noopener');
+      }
+    });
+    processLocalLinks(document.getElementById('iep-note'));
+  }, 30);
 }
 
 function iepCmd(cmd, val) {
@@ -5545,13 +5559,18 @@ function processLocalLinks(container) {
 }
 
 function copyLocalPath(path, el) {
-  // Normalize path for Windows
-  let clean = path.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '');
-  // Convert forward slashes back to backslashes for UNC paths
-  if (clean.startsWith('//')) clean = '\\\\' + clean.slice(2).split('/').join('\\');
-  else clean = clean.split('/').join('\\');
-  // Remove leading \\ if not UNC
-  if (!clean.startsWith('\\\\') && clean.startsWith('\\\\')) clean = clean.slice(1);
+  // Strip ALL prefixes: local://, file:///, file://
+  let clean = path
+    .replace(/^local:\/\//, '')
+    .replace(/^file:\/\/\//, '')
+    .replace(/^file:\/\//, '');
+  // Convert forward slashes → backslashes
+  clean = clean.split('/').join('\\');
+  // Ensure UNC paths start with \\
+  if (/^\d{1,3}\.\d/.test(clean) || /^[a-zA-Z][a-zA-Z0-9\-]*\\/.test(clean)) {
+    // IP or hostname without leading \\ → add \\
+    if (!clean.startsWith('\\')) clean = '\\\\' + clean;
+  }
 
   // Show copy popup near element
   document.getElementById('local-path-popup')?.remove();
