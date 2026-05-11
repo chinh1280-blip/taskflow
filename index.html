@@ -3814,7 +3814,11 @@ function togglePom(){pom.running=!pom.running;renderContent();}
 function stopPom(){clearInterval(pom.interval);pom={running:false,taskId:null,sec:25*60,interval:null};renderContent();}
 
 // ─── DEADLINE ──────────────────────────
-function checkDeadlines(){const now=Date.now(),h1=now+3600000,h24=now+86400000;tasks.forEach(t=>{if(t.status==='done'||!t.deadline)return;const dl=new Date(t.deadline).getTime();if(dl<now&&!dlChecked[t.id+'_ov']){dlChecked[t.id+'_ov']=1;showNotif('nd','🔥 Quá hạn!',`"${t.name}" đã quá hạn.`);}if(dl>now&&dl<=h1&&!dlChecked[t.id+'_1h']){dlChecked[t.id+'_1h']=1;showNotif('nw','⚡ Còn 1 giờ!',`"${t.name}" deadline <1h.`);}if(dl>now&&dl<=h24&&!dlChecked[t.id+'_24h']){dlChecked[t.id+'_24h']=1;showNotif('nw','⚠️ 24h nữa',`"${t.name}" deadline hôm nay.`);}});}
+function checkDeadlines(){
+  // Toast thông báo deadline đã bị tắt — thay bằng overdue popup tổng hợp
+  // Chỉ cập nhật badge
+  updateDailyBadge();
+}
 
 // ─── NOTIFS ────────────────────────────
 let nid=0;
@@ -5958,10 +5962,7 @@ function showOverduePopup() {
     t.status !== 'done' && t.deadline && new Date(t.deadline).getTime() < now
   ).sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
   if (!overdue.length) return;
-  // Check if dismissed today
-  const lastDismissed = localStorage.getItem('tf_overdue_dismissed');
-  const today = new Date().toDateString();
-  if (lastDismissed === today) return;
+  // Luôn hiện mỗi lần mở app (người dùng tự tắt)
   const list = document.getElementById('overdue-popup-list');
   const cnt  = document.getElementById('overdue-count');
   if (!list) return;
@@ -5980,53 +5981,67 @@ function showOverduePopup() {
 
 function closeOverduePopup() {
   document.getElementById('overdue-popup-overlay').style.display = 'none';
-  localStorage.setItem('tf_overdue_dismissed', new Date().toDateString());
+  // Không lưu trạng thái — lần sau vẫn hiện lại
 }
 
 function checkStartupReminders() {
   const now = Date.now();
-  const today = new Date(); today.setHours(23,59,59,999);
+  const in3days = now + 3 * 86400000;
   const all = reminders || [];
-  const urgent = all.filter(r => !r.done && new Date(r.remind_at).getTime() <= today.getTime());
-  console.log('[Reminder] total:', all.length, 'urgent today:', urgent.length);
-  if (!urgent.length) {
-    // No reminders today → show overdue popup
-    setTimeout(showOverduePopup, 500);
-    return;
-  }
-  // Always show all urgent reminders (ignore dismissed for now)
-  const toShow = urgent;
-  console.log('[Reminder] showing:', toShow.length);
+
+  // Phân loại: quá hạn, hôm nay, sắp tới (3 ngày)
+  const overdue  = all.filter(r => !r.done && new Date(r.remind_at).getTime() < now);
+  const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+  const todayArr = all.filter(r => !r.done && new Date(r.remind_at).getTime() >= now && new Date(r.remind_at).getTime() <= todayEnd.getTime());
+  const upcoming = all.filter(r => !r.done && new Date(r.remind_at).getTime() > todayEnd.getTime() && new Date(r.remind_at).getTime() <= in3days);
+
+  const toShow = [...overdue, ...todayArr, ...upcoming];
+  if (!toShow.length) { setTimeout(showOverduePopup, 500); return; }
+
   const list = document.getElementById('reminder-popup-list');
   if (!list) return;
+
+  function fmtTime(t) {
+    const ms = t.getTime();
+    const diffMs = ms - now;
+    const diffMin = Math.round(diffMs / 60000);
+    const diffH = Math.round(diffMs / 3600000);
+    const timeStr = t.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+    const dateStr = t.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'});
+    if (ms < now) {
+      // Quá hạn
+      const ago = Math.round((now - ms) / 60000);
+      if (ago < 60) return {label:`⚠️ Quá hạn ${ago} phút`, cls:'overdue-time', badge:'overdue'};
+      if (ago < 1440) return {label:`⚠️ Quá hạn ${Math.round(ago/60)}h`, cls:'overdue-time', badge:'overdue'};
+      return {label:`⚠️ Quá hạn từ ${dateStr} ${timeStr}`, cls:'overdue-time', badge:'overdue'};
+    } else if (ms <= todayEnd.getTime()) {
+      if (diffMin < 60) return {label:`⏰ ${timeStr} (còn ${diffMin} phút)`, cls:'today-time', badge:'today'};
+      return {label:`⏰ ${timeStr} hôm nay`, cls:'today-time', badge:'today'};
+    } else {
+      return {label:`📅 ${dateStr} ${timeStr}`, cls:'', badge:'upcoming'};
+    }
+  }
+
   list.innerHTML = toShow.map(r => {
     const t = new Date(r.remind_at);
-    const isOv = t.getTime() < now;
-    const fmt = t.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}) + ' ' +
-                t.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="reminder-popup-item ${isOv?'overdue':'today'}" id="rpp_${r.id}">
-      <div class="reminder-popup-name">${esc(r.name)}</div>
-      <div class="reminder-popup-time ${isOv?'overdue-time':'today-time'}">${isOv?'⚠️ ':'⏰ '}${fmt}</div>
+    const {label, cls, badge} = fmtTime(t);
+    return `<div class="reminder-popup-item ${badge}" id="rpp_${r.id}">
+      <div class="reminder-popup-info">
+        <div class="reminder-popup-name">${esc(r.name)}</div>
+        <div class="reminder-popup-time ${cls}">${label}</div>
+      </div>
       <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Bỏ qua">✕</button>
     </div>`;
   }).join('');
-  const overlay = document.getElementById('reminder-popup-overlay');
-  if (overlay) {
-    overlay.style.display = 'flex';
-    console.log('[Reminder] popup shown');
-  } else {
-    console.error('[Reminder] overlay element not found!');
-  }
-  // Show overdue popup 3s later
+
+  document.getElementById('reminder-popup-overlay').style.display = 'flex';
   setTimeout(showOverduePopup, 3000);
 }
 
 function dismissOneReminder(id) {
+  // Chỉ xóa khỏi popup hiện tại, không lưu dismissed
   const el = document.getElementById('rpp_'+id);
   if (el) el.remove();
-  const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
-  dismissed.push(id);
-  localStorage.setItem('tf_reminder_dismissed', JSON.stringify(dismissed));
   const list = document.getElementById('reminder-popup-list');
   if (list && !list.children.length) {
     document.getElementById('reminder-popup-overlay').style.display = 'none';
@@ -6034,9 +6049,7 @@ function dismissOneReminder(id) {
 }
 
 function dismissAllReminders() {
-  const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
-  reminders.forEach(r => { if (!dismissed.includes(r.id)) dismissed.push(r.id); });
-  localStorage.setItem('tf_reminder_dismissed', JSON.stringify(dismissed));
+  // Đóng popup, mở lại lần sau vẫn hiện
   document.getElementById('reminder-popup-overlay').style.display = 'none';
 }
 
@@ -6172,7 +6185,7 @@ async function deleteReminder(id) {
 // ════════════════════════════════════════════════════════
 // WEB PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════════════
-const VAPID_PUBLIC_KEY = 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
+const VAPID_PUBLIC_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
 let swRegistration = null;
 let pushSubscription = null;
 
@@ -6215,7 +6228,7 @@ async function enablePushNotifications() {
     return;
   }
   try {
-    if (VAPID_PUBLIC_KEY === 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk') {
+    if (VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
       // No VAPID key — use local notification only
       showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
       localStorage.setItem('tf_push_enabled','local');
@@ -6541,12 +6554,14 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   <div class="overdue-popup-box">
     <div class="overdue-popup-header">
       <div class="overdue-popup-title">🔥 Nhiệm vụ quá hạn</div>
-      <span style="font-size:11px;color:var(--tx3)" id="overdue-count"></span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--tx3)" id="overdue-count"></span>
+        <button onclick="closeOverduePopup()" style="background:none;border:none;color:var(--tx3);font-size:20px;cursor:pointer;line-height:1;padding:2px;border-radius:5px" title="Đóng">✕</button>
+      </div>
     </div>
     <div class="overdue-popup-list" id="overdue-popup-list"></div>
     <div class="overdue-popup-footer">
-      <button class="overdue-close-all" onclick="closeOverduePopup()">✕ Tắt popup</button>
-      <button class="overdue-go-btn" onclick="closeOverduePopup();setCurView('ov')">Xem quá hạn →</button>
+      <button class="overdue-go-btn" style="flex:2" onclick="closeOverduePopup();setCurView('ov')">📋 Xem tất cả quá hạn →</button>
     </div>
   </div>
 </div>
