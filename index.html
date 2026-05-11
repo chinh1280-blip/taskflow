@@ -1146,6 +1146,17 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   flex:1;padding:8px;border-radius:9px;border:none;
   background:var(--s2);color:var(--tx2);font-size:13px;cursor:pointer
 }
+
+/* Daily reminder */
+.daily-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);cursor:pointer;flex-shrink:0}
+.daily-toggle input[type=checkbox]{width:14px;height:14px;accent-color:var(--ac);cursor:pointer}
+.reminder-daily-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(79,124,255,.18);color:var(--ac);vertical-align:middle;margin-left:4px}
+/* Popup tabs */
+.reminder-popup-tabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.rp-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;color:var(--tx3);border:none;background:none;border-bottom:2px solid transparent;transition:all .2s}
+.rp-tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.ri-time-only{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--tx);outline:none;flex-shrink:0}
+.ri-time-only:focus{border-color:var(--ac)}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -6029,6 +6040,11 @@ function closeOverduePopup() {
 
 
 // ── Smart time label for reminders ───────────────────────
+function toLocalISOString(date) {
+  const d = new Date(date);
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 function reminderTimeLabel(remindAt) {
   const now = Date.now();
   const t = new Date(remindAt).getTime();
@@ -6085,6 +6101,24 @@ function checkStartupReminders() {
     </div>`;
   }).join('');
 
+  // Daily tab
+  const dailyList = document.getElementById('reminder-popup-daily');
+  if (dailyList) {
+    const dailyItems = (reminders||[]).filter(r => r.is_daily && !r.done);
+    if (dailyItems.length) {
+      dailyList.innerHTML = dailyItems.map(r => {
+        const ea = getDailyRemindAt ? getDailyRemindAt(r) : r.remind_at;
+        const {fmt, status, cls, badge} = reminderTimeLabel(ea);
+        return `<div class="reminder-popup-item ${badge}">
+          <div class="reminder-popup-name">${esc(r.name)} <span class="reminder-daily-badge">Daily</span></div>
+          <div class="reminder-popup-meta">Due: ${fmt} | <span class="rstatus ${cls}">${status}</span></div>
+        </div>`;
+      }).join('');
+    } else {
+      dailyList.innerHTML = '<div style="text-align:center;color:var(--tx3);padding:16px;font-size:13px">Không có nhắc nhở hằng ngày</div>';
+    }
+    dailyList.style.display = 'none';
+  }
   document.getElementById('reminder-popup-overlay').style.display = 'flex';
   setTimeout(showOverduePopup, 3000);
 }
@@ -6161,8 +6195,11 @@ function renderRemindersView() {
       <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">＋ Thêm nhắc nhở</div>
       <div class="reminder-inputs">
         <input class="reminder-name-inp" id="ri-name" placeholder="Việc cần nhắc..." onkeydown="if(event.key==='Enter')addReminder()">
-        <input class="reminder-time-inp" id="ri-time" type="datetime-local">
-        <button class="reminder-add-btn" onclick="addReminder()">Thêm</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="reminder-time-inp" id="ri-time" type="datetime-local">
+          <label class="daily-toggle"><input type="checkbox" id="ri-daily" onchange="toggleDailyMode()"> Hằng ngày</label>
+        </div>
+        <button class="reminder-add-btn" id="ri-add-btn" onclick="addReminder()">Thêm</button>
       </div>
     </div>
     ${pending.length ? `
@@ -6182,12 +6219,13 @@ function renderRemindersView() {
 }
 
 function renderReminderItem(r, now, todayEnd) {
-  const {fmt, status, cls, badge} = reminderTimeLabel(r.remind_at);
+  const effectiveAt = (typeof getDailyRemindAt === 'function') ? getDailyRemindAt(r) : r.remind_at;
+  const {fmt, status, cls, badge} = reminderTimeLabel(effectiveAt);
   const rowCls = r.done ? 'done-item' : badge;
   return `<div class="reminder-item ${rowCls}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
     <div class="reminder-info">
-      <div class="reminder-name ${r.done?'done-text':''}">${esc(r.name)}</div>
+      <div class="reminder-name ${r.done?'done-text':''}">${esc(r.name)}${r.is_daily?'<span class="reminder-daily-badge">Daily</span>':''}</div>
       <div class="reminder-time">
         <span class="rdue">Due: ${fmt}</span>
         <span class="rsep">|</span>
@@ -6214,7 +6252,7 @@ function openReminderEdit(id) {
   const nameEl = document.getElementById('ri-name');
   const timeEl = document.getElementById('ri-time');
   if (nameEl) nameEl.value = r.name;
-  if (timeEl) timeEl.value = new Date(r.remind_at).toISOString().slice(0,16);
+  if (timeEl) timeEl.value = toLocalISOString(r.remind_at);
   // Change button text
   const btn = document.querySelector('.reminder-add-btn');
   if (btn) { btn.textContent = '💾 Cập nhật'; btn.onclick = saveReminderEdit; }
@@ -6237,6 +6275,8 @@ async function saveReminderEdit() {
   const btn = document.querySelector('.reminder-add-btn');
   if (btn) { btn.textContent = 'Thêm'; btn.onclick = addReminder; }
   document.getElementById('ri-name').value = '';
+  const dailyCb = document.getElementById('ri-daily');
+  if (dailyCb && dailyCb.checked) { dailyCb.checked = false; toggleDailyMode(); }
   localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
   updateRemindersBadge();
   renderRemindersView();
@@ -6246,12 +6286,73 @@ async function saveReminderEdit() {
   showNotif('ns','✅ Đã cập nhật','Reminder đã được sửa.');
 }
 
+
+function toLocalISOStringAlias(d){ return toLocalISOString(d); }
+
+function toggleDailyMode() {
+  const isDaily = document.getElementById('ri-daily')?.checked;
+  const inp = document.getElementById('ri-time');
+  if (!inp) return;
+  if (isDaily) {
+    const cur = inp.value ? new Date(inp.value) : new Date();
+    const pad = n => String(n).padStart(2,'0');
+    inp.type = 'time';
+    inp.value = pad(cur.getHours()) + ':' + pad(cur.getMinutes());
+    inp.className = 'ri-time-only';
+  } else {
+    inp.type = 'datetime-local';
+    inp.className = 'reminder-time-inp';
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const [hh,mm] = (inp.value||'00:00').split(':');
+    now.setHours(parseInt(hh)||0,parseInt(mm)||0,0,0);
+    inp.value = toLocalISOString(now);
+  }
+}
+
+function getReminderTime() {
+  const isDaily = document.getElementById('ri-daily')?.checked;
+  const inp = document.getElementById('ri-time');
+  if (!inp) return null;
+  if (isDaily) {
+    const [hh,mm] = (inp.value||'00:00').split(':');
+    const d = new Date(); d.setHours(parseInt(hh)||0,parseInt(mm)||0,0,0);
+    return d.toISOString();
+  }
+  return inp.value ? new Date(inp.value).toISOString() : null;
+}
+
+function getDailyRemindAt(r) {
+  if (!r.is_daily) return r.remind_at;
+  const stored = new Date(r.remind_at);
+  const today = new Date();
+  today.setHours(stored.getHours(), stored.getMinutes(), 0, 0);
+  return today.toISOString();
+}
+
+function switchReminderTab(tab) {
+  const nl = document.getElementById('reminder-popup-list');
+  const dl = document.getElementById('reminder-popup-daily');
+  const tn = document.getElementById('rp-tab-normal');
+  const td = document.getElementById('rp-tab-daily');
+  if (tab === 'daily') {
+    if(nl)nl.style.display='none'; if(dl)dl.style.display='flex';
+    tn?.classList.remove('active'); td?.classList.add('active');
+  } else {
+    if(nl)nl.style.display='flex'; if(dl)dl.style.display='none';
+    tn?.classList.add('active'); td?.classList.remove('active');
+  }
+}
+
 async function addReminder() {
   const name = document.getElementById('ri-name')?.value.trim();
   const time = document.getElementById('ri-time')?.value;
   if (!name) { showNotif('nw','⚠️','Nhập tên việc cần nhắc.'); return; }
   if (!time) { showNotif('nw','⚠️','Chọn thời gian nhắc.'); return; }
-  const rec = { id:'rem_'+Date.now(), name, remind_at:new Date(time).toISOString(), done:false, created_at:new Date().toISOString() };
+  const isDaily = document.getElementById('ri-daily')?.checked || false;
+  const remind_at2 = (typeof getReminderTime === 'function') ? getReminderTime() : new Date(time).toISOString();
+  if (!remind_at2) { showNotif('nw','⚠️','Chọn thời gian nhắc.'); return; }
+  const rec = { id:'rem_'+Date.now(), name, remind_at:remind_at2, is_daily:isDaily, done:false, created_at:new Date().toISOString() };
   reminders.push(rec);
   reminders.sort((a,b)=>new Date(a.remind_at)-new Date(b.remind_at));
   localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
@@ -6284,7 +6385,7 @@ async function deleteReminder(id) {
 // ════════════════════════════════════════════════════════
 // WEB PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════════════
-const VAPID_PUBLIC_KEY = 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
+const VAPID_PUBLIC_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
 let swRegistration = null;
 let pushSubscription = null;
 
@@ -6327,7 +6428,7 @@ async function enablePushNotifications() {
     return;
   }
   try {
-    if (VAPID_PUBLIC_KEY === 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk') {
+    if (VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
       // No VAPID key — use local notification only
       showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
       localStorage.setItem('tf_push_enabled','local');
@@ -6670,11 +6771,14 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   <div class="reminder-popup-box">
     <div class="reminder-popup-header">
       <div class="reminder-popup-title">🔔 Nhắc nhở hôm nay</div>
-      <div style="display:flex;gap:7px;align-items:center">
-        <button class="reminder-popup-close-all" onclick="dismissAllReminders()">✕ Tắt tất cả</button>
-      </div>
+      <button class="reminder-popup-close-all" onclick="dismissAllReminders()">✕ Tắt tất cả</button>
+    </div>
+    <div class="reminder-popup-tabs">
+      <button class="rp-tab active" id="rp-tab-normal" onclick="switchReminderTab('normal')">📋 Nhắc nhở</button>
+      <button class="rp-tab" id="rp-tab-daily" onclick="switchReminderTab('daily')">🔁 Hằng ngày</button>
     </div>
     <div class="reminder-popup-list" id="reminder-popup-list"></div>
+    <div class="reminder-popup-list" id="reminder-popup-daily" style="display:none"></div>
     <div class="reminder-popup-footer">
       <button class="reminder-popup-go" onclick="document.getElementById('reminder-popup-overlay').style.display='none';switchToRemindersView()">Xem tất cả reminders →</button>
     </div>
