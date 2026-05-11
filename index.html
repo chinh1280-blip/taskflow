@@ -6172,7 +6172,7 @@ async function deleteReminder(id) {
 // ════════════════════════════════════════════════════════
 // WEB PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════════════
-const VAPID_PUBLIC_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
+const VAPID_PUBLIC_KEY = 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
 let swRegistration = null;
 let pushSubscription = null;
 
@@ -6215,7 +6215,7 @@ async function enablePushNotifications() {
     return;
   }
   try {
-    if (VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
+    if (VAPID_PUBLIC_KEY === 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk') {
       // No VAPID key — use local notification only
       showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
       localStorage.setItem('tf_push_enabled','local');
