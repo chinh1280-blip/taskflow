@@ -1066,6 +1066,45 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .item-edit-popup.expanded .iep-note-editor{max-height:55vh}
 .iep-expand-btn{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:3px;transition:color .15s}
 .iep-expand-btn:hover{color:var(--ac)}
+
+/* Overdue project popup */
+.overdue-popup-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  z-index:1900;display:flex;align-items:center;justify-content:center;padding:20px
+}
+.overdue-popup-box{
+  background:var(--s1);border:1px solid rgba(255,79,109,.3);border-radius:18px;
+  width:100%;max-width:400px;max-height:75vh;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden
+}
+.overdue-popup-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid rgba(255,79,109,.2);flex-shrink:0;
+  background:rgba(255,79,109,.06)
+}
+.overdue-popup-title{font-size:15px;font-weight:700;color:var(--er)}
+.overdue-popup-list{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.overdue-task-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 11px;border-radius:9px;
+  background:var(--s2);border:1px solid rgba(255,79,109,.2)
+}
+.overdue-task-name{flex:1;font-size:13px;color:var(--tx);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.overdue-task-time{font-size:11px;color:var(--er);flex-shrink:0;white-space:nowrap}
+.overdue-popup-footer{
+  padding:10px 16px;border-top:1px solid var(--bd);
+  display:flex;gap:8px;flex-shrink:0
+}
+.overdue-close-all{
+  flex:1;padding:8px;border-radius:9px;border:none;
+  background:rgba(255,79,109,.15);color:var(--er);
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .2s
+}
+.overdue-close-all:hover{background:rgba(255,79,109,.25)}
+.overdue-go-btn{
+  flex:1;padding:8px;border-radius:9px;border:none;
+  background:var(--s2);color:var(--tx2);font-size:13px;cursor:pointer
+}
 </style>
 </head>
 <body>
@@ -5891,6 +5930,39 @@ function updateRemindersBadge() {
 }
 
 // ── Startup popup ──────────────────────────────────────
+
+// ── Overdue project tasks popup ──────────────────────
+function showOverduePopup() {
+  const now = Date.now();
+  const overdue = tasks.filter(t =>
+    t.status !== 'done' && t.deadline && new Date(t.deadline).getTime() < now
+  ).sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+  if (!overdue.length) return;
+  // Check if dismissed today
+  const lastDismissed = localStorage.getItem('tf_overdue_dismissed');
+  const today = new Date().toDateString();
+  if (lastDismissed === today) return;
+  const list = document.getElementById('overdue-popup-list');
+  const cnt  = document.getElementById('overdue-count');
+  if (!list) return;
+  cnt.textContent = overdue.length + ' nhiệm vụ';
+  list.innerHTML = overdue.slice(0,15).map(t => {
+    const dl = new Date(t.deadline);
+    const fmt = dl.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    const proj = projects.find(p=>p.id===t.project_id);
+    return `<div class="overdue-task-item">
+      <div class="overdue-task-name" title="${esc(t.name)}">${esc(t.name)}</div>
+      <div class="overdue-task-time">📅 ${fmt}</div>
+    </div>`;
+  }).join('') + (overdue.length>15 ? `<div style="text-align:center;font-size:11px;color:var(--tx3);padding:6px">...và ${overdue.length-15} nhiệm vụ khác</div>` : '');
+  document.getElementById('overdue-popup-overlay').style.display = 'flex';
+}
+
+function closeOverduePopup() {
+  document.getElementById('overdue-popup-overlay').style.display = 'none';
+  localStorage.setItem('tf_overdue_dismissed', new Date().toDateString());
+}
+
 function checkStartupReminders() {
   const now = Date.now();
   const today = new Date(); today.setHours(23,59,59,999);
@@ -5898,7 +5970,11 @@ function checkStartupReminders() {
   if (!urgent.length) return;
   const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
   const toShow = urgent.filter(r => !dismissed.includes(r.id));
-  if (!toShow.length) return;
+  if (!toShow.length) {
+    // No reminders to show — go straight to overdue popup
+    setTimeout(showOverduePopup, 1500);
+    return;
+  }
   const list = document.getElementById('reminder-popup-list');
   if (!list) return;
   list.innerHTML = toShow.map(r => {
@@ -5913,6 +5989,8 @@ function checkStartupReminders() {
     </div>`;
   }).join('');
   document.getElementById('reminder-popup-overlay').style.display = 'flex';
+  // Show overdue project popup 3 seconds AFTER reminder popup
+  setTimeout(showOverduePopup, 3000);
 }
 
 function dismissOneReminder(id) {
@@ -6418,6 +6496,22 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   <div class="iep-footer">
     <button onclick="closeItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--s2);color:var(--tx2);font-size:12px;cursor:pointer">Hủy</button>
     <button onclick="saveItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer">✓ Lưu</button>
+  </div>
+</div>
+
+
+<!-- OVERDUE PROJECT TASKS POPUP -->
+<div id="overdue-popup-overlay" class="overdue-popup-overlay" style="display:none" onclick="if(event.target===this)closeOverduePopup()">
+  <div class="overdue-popup-box">
+    <div class="overdue-popup-header">
+      <div class="overdue-popup-title">🔥 Nhiệm vụ quá hạn</div>
+      <span style="font-size:11px;color:var(--tx3)" id="overdue-count"></span>
+    </div>
+    <div class="overdue-popup-list" id="overdue-popup-list"></div>
+    <div class="overdue-popup-footer">
+      <button class="overdue-close-all" onclick="closeOverduePopup()">✕ Tắt popup</button>
+      <button class="overdue-go-btn" onclick="closeOverduePopup();setCurView('ov')">Xem quá hạn →</button>
+    </div>
   </div>
 </div>
 
