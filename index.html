@@ -1106,6 +1106,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   background:var(--s2);color:var(--tx2);font-size:13px;cursor:pointer
 }
 </style>
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
 <body>
 
@@ -5912,10 +5913,21 @@ const dbReminders = {
 };
 
 async function loadReminders() {
+  // Load từ localStorage ngay để hiện popup nhanh
   try {
-    reminders = await dbReminders.getAll() || [];
+    const cached = JSON.parse(localStorage.getItem(REMINDERS_KEY)||'[]');
+    if (cached.length) {
+      reminders = cached;
+      updateRemindersBadge();
+      if (isRemindersView) renderRemindersView();
+    }
+  } catch {}
+  // Sau đó fetch Supabase để cập nhật
+  try {
+    const fresh = await dbReminders.getAll();
+    if (fresh) reminders = fresh;
   } catch {
-    try { reminders = JSON.parse(localStorage.getItem(REMINDERS_KEY)||'[]'); } catch {}
+    // Giữ localStorage data
   }
   localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
   updateRemindersBadge();
@@ -5967,11 +5979,15 @@ function checkStartupReminders() {
   const now = Date.now();
   const today = new Date(); today.setHours(23,59,59,999);
   const urgent = reminders.filter(r => !r.done && new Date(r.remind_at).getTime() <= today.getTime());
-  if (!urgent.length) return;
+  console.log('[Reminder] total:', reminders.length, 'urgent:', urgent.length);
+  if (!urgent.length) {
+    setTimeout(showOverduePopup, 1500);
+    return;
+  }
   const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
   const toShow = urgent.filter(r => !dismissed.includes(r.id));
+  console.log('[Reminder] toShow:', toShow.length, 'dismissed:', dismissed.length);
   if (!toShow.length) {
-    // No reminders to show — go straight to overdue popup
     setTimeout(showOverduePopup, 1500);
     return;
   }
@@ -6155,7 +6171,9 @@ async function registerServiceWorker() {
     return false;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./sw.js', {scope:'./'});
+    // Try to find sw.js relative to current path
+    const swPath = location.pathname.replace(/\/[^/]*$/, '/') + 'sw.js';
+    swRegistration = await navigator.serviceWorker.register(swPath, {scope: location.pathname.replace(/\/[^/]*$/, '/')});
     console.log('SW registered:', swRegistration.scope);
     // Start reminder check every minute
     setInterval(sendRemindersToSW, 60000);
@@ -6168,10 +6186,16 @@ async function registerServiceWorker() {
 
 // Request push permission and subscribe
 async function enablePushNotifications() {
+  // iOS Safari: must be called from a user gesture (button click) ✓
+  if (!('Notification' in window)) {
+    showNotif('nd','❌ Không hỗ trợ','Trình duyệt không hỗ trợ thông báo. iOS cần Add to Home Screen trước.');
+    return;
+  }
   if (!swRegistration) {
-    showNotif('nw','⚠️ Chưa sẵn sàng','Đang khởi động service worker...');
     await registerServiceWorker();
-    if (!swRegistration) { showNotif('nd','❌ Lỗi','Trình duyệt không hỗ trợ.'); return; }
+    // Wait for SW to be ready
+    if (swRegistration) await swRegistration.ready.catch(()=>{});
+    if (!swRegistration) { showNotif('nd','❌ Lỗi','Không thể đăng ký Service Worker.'); return; }
   }
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') {
