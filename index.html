@@ -940,6 +940,132 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 }
 .view-search-bar input::placeholder{color:var(--tx3)}
 .view-search-icon{color:var(--tx3);font-size:12px;flex-shrink:0}
+
+/* ═══ REMINDERS ═══ */
+.reminders-view{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.reminder-empty{text-align:center;padding:40px 20px;color:var(--tx3)}
+
+/* Reminder card */
+.reminder-list{display:flex;flex-direction:column;gap:8px}
+.reminder-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s1);border:1px solid var(--bd);border-radius:11px;
+  padding:10px 14px;transition:all .15s;
+}
+.reminder-item.overdue{border-color:rgba(255,79,109,.35);background:rgba(255,79,109,.04)}
+.reminder-item.today{border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.04)}
+.reminder-item.done-item{opacity:.45}
+.reminder-cb{
+  width:20px;height:20px;border-radius:6px;border:2px solid var(--bd);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;font-size:11px;font-weight:700;color:#fff;transition:all .15s
+}
+.reminder-cb.checked{background:var(--ok);border-color:var(--ok)}
+.reminder-info{flex:1;min-width:0}
+.reminder-name{font-size:13px;color:var(--tx);font-weight:500;word-break:break-word}
+.reminder-name.done-text{text-decoration:line-through;color:var(--tx3)}
+.reminder-time{font-size:11px;color:var(--tx3);margin-top:2px}
+.reminder-time.overdue-time{color:var(--er);font-weight:600}
+.reminder-time.today-time{color:var(--wa);font-weight:600}
+.reminder-del{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer;
+  padding:3px;border-radius:5px;opacity:0;transition:opacity .15s}
+.reminder-item:hover .reminder-del{opacity:1}
+.reminder-del:hover{background:rgba(255,79,109,.15);color:var(--er)}
+
+/* Add reminder form */
+.reminder-add-form{
+  display:flex;flex-direction:column;gap:8px;
+  background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:12px;
+}
+.reminder-inputs{display:flex;gap:8px;flex-wrap:wrap}
+.reminder-name-inp{
+  flex:1;min-width:160px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;
+  padding:8px 11px;font-size:13px;color:var(--tx);outline:none;font-family:Roboto,sans-serif
+}
+.reminder-name-inp:focus{border-color:var(--ac)}
+.reminder-time-inp{
+  background:var(--s2);border:1px solid var(--bd);border-radius:8px;
+  padding:7px 10px;font-size:12px;color:var(--tx);outline:none;
+  font-family:Roboto,sans-serif;cursor:pointer;flex-shrink:0
+}
+.reminder-time-inp:focus{border-color:var(--ac)}
+.reminder-add-btn{
+  padding:8px 16px;border-radius:8px;border:none;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));
+  color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0
+}
+
+/* Startup popup */
+.reminder-popup-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px
+}
+.reminder-popup-box{
+  background:var(--s1);border:1px solid var(--bd);border-radius:18px;
+  padding:0;width:100%;max-width:420px;max-height:80vh;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden
+}
+.reminder-popup-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px;border-bottom:1px solid var(--bd);flex-shrink:0
+}
+.reminder-popup-title{font-size:16px;font-weight:700;color:var(--tx)}
+.reminder-popup-close-all{
+  padding:6px 12px;border-radius:8px;border:none;background:var(--s2);
+  color:var(--tx2);font-size:12px;cursor:pointer;transition:all .15s
+}
+.reminder-popup-close-all:hover{background:rgba(255,79,109,.15);color:var(--er)}
+.reminder-popup-list{flex:1;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:8px}
+.reminder-popup-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px
+}
+.reminder-popup-item.overdue{border-color:rgba(255,79,109,.4)}
+.reminder-popup-item.today{border-color:rgba(251,191,36,.4)}
+.reminder-popup-name{flex:1;font-size:13px;color:var(--tx);font-weight:500}
+.reminder-popup-time{font-size:11px;color:var(--tx3);flex-shrink:0}
+.reminder-popup-time.overdue-time{color:var(--er);font-weight:600}
+.reminder-popup-time.today-time{color:var(--wa);font-weight:600}
+.reminder-popup-dismiss{
+  background:none;border:none;color:var(--tx3);font-size:16px;cursor:pointer;
+  padding:2px;line-height:1;flex-shrink:0
+}
+.reminder-popup-dismiss:hover{color:var(--tx)}
+.reminder-popup-footer{padding:12px 18px;border-top:1px solid var(--bd);flex-shrink:0}
+.reminder-popup-go{
+  width:100%;padding:9px;border-radius:9px;border:none;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));
+  color:#fff;font-size:13px;font-weight:600;cursor:pointer
+}
+
+/* Highlight button */
+.tb-highlight-btn{
+  display:flex;align-items:center;gap:2px;padding:0 7px;height:28px;
+  border-radius:7px;border:none;background:none;cursor:pointer;
+  color:var(--tx2);font-size:13px;font-weight:700;transition:all .15s;position:relative
+}
+.tb-highlight-btn:hover{background:var(--s2)}
+.highlight-ind{
+  position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+  width:16px;height:3px;border-radius:2px;background:#fbbf24;transition:background .2s
+}
+.iep-highlight-btn{
+  display:flex;align-items:center;gap:2px;padding:0 6px;height:24px;
+  border-radius:5px;border:none;background:none;cursor:pointer;
+  color:var(--tx2);font-size:12px;transition:all .15s;position:relative
+}
+.iep-highlight-btn:hover{background:var(--s3)}
+
+/* IEP expanded mode */
+.item-edit-popup.expanded{
+  position:fixed;left:50%!important;top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:min(680px,96vw)!important;max-height:90vh;
+  display:flex;flex-direction:column;
+}
+.item-edit-popup.expanded .iep-note-editor{max-height:55vh}
+.iep-expand-btn{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:3px;transition:color .15s}
+.iep-expand-btn:hover{color:var(--ac)}
 </style>
 </head>
 <body>
@@ -1062,6 +1188,13 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
         <span class="ni">🗂</span><span class="nlabel">Mission Board</span>
         <span id="boards-nav-badge" style="font-size:10px;color:var(--tx3);margin-left:auto"></span>
       </button>
+    </div>
+    <div class="side-section">
+      <div class="side-label">Nhắc nhở</div>
+      <button class="nav-item" id="nav-reminders" onclick="switchToRemindersView()" style="width:100%;text-align:left">
+        <span class="ni">🔔</span><span class="nlabel">Reminders</span>
+        <span id="reminders-nav-badge" style="font-size:10px;color:var(--er);margin-left:auto;font-weight:700"></span>
+      </button>
     <div style="display:none"><!-- placeholder-->
 
     </div><!-- /sidebar-scroll -->
@@ -1076,6 +1209,10 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
         <button class="side-btn" onclick="openConfigModal()" title="Cấu hình Supabase">⚙️ Config</button>
       </div>
       <button id="theme-toggle" onclick="toggleTheme()" style="width:100%;margin-top:8px;justify-content:center" title="Đổi giao diện">🌙 Dark</button>
+      <button id="push-toggle-btn" onclick="isPushEnabled()?disablePushNotifications():enablePushNotifications()"
+        style="width:100%;margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:12px;cursor:pointer;transition:all .2s">
+        🔕 Thông báo: TẮT
+      </button>
       <button class="side-btn" onclick="logout()" style="width:100%;margin-top:6px;color:var(--er);border-color:rgba(255,79,109,.3)" title="Đăng xuất">🔒 Đăng xuất</button>
     </div>
   </aside>
@@ -1106,6 +1243,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
     <div id="daily-view" class="daily-view" style="display:none"></div>
     <div id="notes-view" class="notes-view" style="display:none"></div>
     <div id="boards-view" class="boards-view" style="display:none"></div>
+    <div id="reminders-view" class="reminders-view" style="display:none"></div>
   </main>
 </div>
 
@@ -4228,8 +4366,7 @@ function captureFormat(editorId) {
     textDecoration: computed.textDecorationLine || computed.textDecoration,
     color:          computed.color,
     backgroundColor: computed.backgroundColor,
-    fontSize:       computed.fontSize,
-    fontFamily:     computed.fontFamily,
+    fontSize:       computed.fontSize,   // included — user chose "tất cả"
   };
 }
 
@@ -4266,18 +4403,20 @@ function applyFormat(styles, editorId) {
     document.execCommand('hiliteColor', false, styles.backgroundColor);
   }
 
-  // Font size (execCommand fontSize uses 1-7)
+  // Font size
   const sizePx = parseFloat(styles.fontSize);
   if (sizePx) {
-    let sizeVal = '3';
-    if (sizePx <= 10) sizeVal = '1';
-    else if (sizePx <= 12) sizeVal = '2';
-    else if (sizePx <= 14) sizeVal = '3';
-    else if (sizePx <= 18) sizeVal = '4';
-    else if (sizePx <= 24) sizeVal = '5';
-    else if (sizePx <= 32) sizeVal = '6';
-    else sizeVal = '7';
-    document.execCommand('fontSize', false, sizeVal);
+    let sv='3';
+    if(sizePx<=10)sv='1'; else if(sizePx<=12)sv='2'; else if(sizePx<=14)sv='3';
+    else if(sizePx<=18)sv='4'; else if(sizePx<=24)sv='5'; else if(sizePx<=32)sv='6'; else sv='7';
+    document.execCommand('styleWithCSS',false,true);
+    document.execCommand('fontSize',false,sv);
+    // Convert <font> to span
+    setTimeout(()=>{
+      const ed=document.getElementById(editorId);
+      const sizeMap={'1':'10px','2':'12px','3':'14px','4':'18px','5':'24px','6':'32px','7':'48px'};
+      ed?.querySelectorAll('font[size]').forEach(f=>{f.style.fontSize=sizeMap[f.getAttribute('size')]||'14px';f.removeAttribute('size');});
+    },10);
   }
 
   document.execCommand('styleWithCSS', false, false);
@@ -4329,6 +4468,72 @@ function toggleFormatPainter(editorId, btnId) {
   document.addEventListener('mouseup', _fmtPainterHandler);
 }
 let _fmtPainterHandler = null;
+
+
+// ── Highlight picker ──────────────────────────────────
+const HIGHLIGHT_COLORS = [
+  {val:'#fbbf2466',label:'Vàng'}, {val:'#22d3a066',label:'Xanh lá'},
+  {val:'#4f7cff55',label:'Xanh'},  {val:'#ff4f6d55',label:'Đỏ'},
+  {val:'#a78bfa66',label:'Tím'},   {val:'#f9731666',label:'Cam'},
+  {val:'transparent',label:'Xóa'},
+];
+let _hlSavedRange=null, _hlEditorId=null, _hlIndId=null;
+
+function showHighlightPicker(btnEl, editorId, indId) {
+  const existing = document.getElementById('hl-picker-popup');
+  if (existing) { existing.remove(); return; }
+  const sel = window.getSelection();
+  _hlSavedRange = (sel&&sel.rangeCount>0)?sel.getRangeAt(0).cloneRange():null;
+  _hlEditorId = editorId; _hlIndId = indId;
+  const popup = document.createElement('div');
+  popup.id = 'hl-picker-popup';
+  popup.style.cssText = 'position:fixed;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:8px;z-index:800;display:flex;gap:5px;flex-wrap:wrap;width:190px;box-shadow:0 8px 24px rgba(0,0,0,.5)';
+  const lbl = document.createElement('div');
+  lbl.style.cssText = 'font-size:9px;color:var(--tx3);width:100%;margin-bottom:3px;text-transform:uppercase;letter-spacing:.8px';
+  lbl.textContent = 'Highlight màu:';
+  popup.appendChild(lbl);
+  HIGHLIGHT_COLORS.forEach(({val,label}) => {
+    const sw = document.createElement('div');
+    sw.title = label;
+    sw.style.cssText = `width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid rgba(255,255,255,.2);transition:all .15s;background:${val==='transparent'?'repeating-linear-gradient(-45deg,rgba(255,255,255,.1)0,rgba(255,255,255,.1)2px,transparent 0,transparent 50%)0/8px 8px':val}`;
+    sw.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      applyHighlight(val);
+      popup.remove();
+    });
+    popup.appendChild(sw);
+  });
+  const rect = btnEl.getBoundingClientRect();
+  let x = rect.left, y = rect.bottom+4;
+  if (x+200>window.innerWidth) x=window.innerWidth-205;
+  popup.style.left=Math.max(8,x)+'px'; popup.style.top=Math.max(8,y)+'px';
+  document.body.appendChild(popup);
+  setTimeout(()=>document.addEventListener('click',function rmHl(e){
+    if(!popup.contains(e.target)&&e.target!==btnEl){popup.remove();document.removeEventListener('click',rmHl);}
+  }),100);
+}
+
+function applyHighlight(color) {
+  const editor = document.getElementById(_hlEditorId||'ne-content');
+  if (!editor) return;
+  editor.focus();
+  if (_hlSavedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    try { sel.addRange(_hlSavedRange.cloneRange()); } catch(e) { sel.addRange(_hlSavedRange); }
+  }
+  document.execCommand('styleWithCSS', false, true);
+  if (color==='transparent') {
+    document.execCommand('hiliteColor', false, 'transparent');
+    document.execCommand('removeFormat'); // fallback
+  } else {
+    document.execCommand('hiliteColor', false, color);
+  }
+  document.execCommand('styleWithCSS', false, false);
+  // Update indicator
+  const ind = document.getElementById(_hlIndId);
+  if (ind) ind.style.background = color==='transparent'?'#fbbf24':color;
+}
 
 function setFontSize(size, editorId) {
   if (!size) return;
@@ -5152,6 +5357,15 @@ function iepForeColor(color) {
   document.execCommand('styleWithCSS', false, false);
 }
 
+
+function toggleIepExpand() {
+  const popup = document.getElementById('item-edit-popup');
+  const btn = document.getElementById('iep-expand-btn');
+  if (!popup) return;
+  const isExpanded = popup.classList.toggle('expanded');
+  if (btn) btn.textContent = isExpanded ? '⊠' : '⛶';
+  if (btn) btn.title = isExpanded ? 'Thu nhỏ' : 'Mở rộng';
+}
 function closeItemEdit() {
   document.getElementById('item-edit-popup').style.display='none';
   editItemCtx = null;
@@ -5643,6 +5857,332 @@ function applyLogoSpin() {
   if (saved === '1') document.getElementById('logo-bolt')?.classList.add('spinning');
 }
 
+
+// ════════════════════════════════════════════════════════
+// REMINDERS
+// ════════════════════════════════════════════════════════
+let reminders = [];
+let isRemindersView = false;
+const REMINDERS_KEY = 'tf_reminders';
+
+const dbReminders = {
+  getAll: () => sbFetch('reminders?order=remind_at.asc'),
+  insert: r => sbFetch('reminders', {method:'POST', body:JSON.stringify(r)}),
+  update: (id,d) => sbFetch(`reminders?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(d)}),
+  delete: id => sbFetch(`reminders?id=eq.${id}`, {method:'DELETE', prefer:''}),
+};
+
+async function loadReminders() {
+  try {
+    reminders = await dbReminders.getAll() || [];
+  } catch {
+    try { reminders = JSON.parse(localStorage.getItem(REMINDERS_KEY)||'[]'); } catch {}
+  }
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  if (isRemindersView) renderRemindersView();
+}
+
+function updateRemindersBadge() {
+  const now = Date.now();
+  const urgent = reminders.filter(r => !r.done && new Date(r.remind_at).getTime() <= now + 86400000);
+  const el = document.getElementById('reminders-nav-badge');
+  if (el) el.textContent = urgent.length ? urgent.length + '!' : '';
+}
+
+// ── Startup popup ──────────────────────────────────────
+function checkStartupReminders() {
+  const now = Date.now();
+  const today = new Date(); today.setHours(23,59,59,999);
+  const urgent = reminders.filter(r => !r.done && new Date(r.remind_at).getTime() <= today.getTime());
+  if (!urgent.length) return;
+  const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
+  const toShow = urgent.filter(r => !dismissed.includes(r.id));
+  if (!toShow.length) return;
+  const list = document.getElementById('reminder-popup-list');
+  if (!list) return;
+  list.innerHTML = toShow.map(r => {
+    const t = new Date(r.remind_at);
+    const isOv = t.getTime() < now;
+    const fmt = t.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}) + ' ' +
+                t.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="reminder-popup-item ${isOv?'overdue':'today'}" id="rpp_${r.id}">
+      <div class="reminder-popup-name">${esc(r.name)}</div>
+      <div class="reminder-popup-time ${isOv?'overdue-time':'today-time'}">${isOv?'⚠️ ':'⏰ '}${fmt}</div>
+      <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Bỏ qua">✕</button>
+    </div>`;
+  }).join('');
+  document.getElementById('reminder-popup-overlay').style.display = 'flex';
+}
+
+function dismissOneReminder(id) {
+  const el = document.getElementById('rpp_'+id);
+  if (el) el.remove();
+  const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
+  dismissed.push(id);
+  localStorage.setItem('tf_reminder_dismissed', JSON.stringify(dismissed));
+  const list = document.getElementById('reminder-popup-list');
+  if (list && !list.children.length) {
+    document.getElementById('reminder-popup-overlay').style.display = 'none';
+  }
+}
+
+function dismissAllReminders() {
+  const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
+  reminders.forEach(r => { if (!dismissed.includes(r.id)) dismissed.push(r.id); });
+  localStorage.setItem('tf_reminder_dismissed', JSON.stringify(dismissed));
+  document.getElementById('reminder-popup-overlay').style.display = 'none';
+}
+
+// ── View ───────────────────────────────────────────────
+function switchToRemindersView() {
+  isRemindersView = true;
+  if (isDailyView) switchToTaskView();
+  if (isNotesView) switchFromNotesView();
+  if (isBoardsView) switchFromBoardsView();
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('daily-view').style.display = 'none';
+  document.getElementById('notes-view').style.display = 'none';
+  document.getElementById('boards-view').style.display = 'none';
+  document.getElementById('reminders-view').style.display = 'flex';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-reminders')?.classList.add('active');
+  // Topbar
+  document.getElementById('topbar-task-row').style.display = 'none';
+  document.getElementById('topbar-view-row').style.display = '';
+  document.getElementById('page-title').textContent = '🔔 Reminders';
+  document.getElementById('topbar-view-actions').innerHTML = '';
+  if (!reminders.length) loadReminders();
+  else renderRemindersView();
+  closeSide();
+}
+
+function switchFromRemindersView() {
+  isRemindersView = false;
+  document.getElementById('reminders-view').style.display = 'none';
+  document.getElementById('nav-reminders')?.classList.remove('active');
+  document.getElementById('content').style.display = '';
+  document.getElementById('topbar-task-row').style.display = '';
+  document.getElementById('topbar-view-row').style.display = 'none';
+}
+
+// Patch setCurView/switchToDaily/Notes/Boards
+const _scvRem = setCurView;
+setCurView = v => { if(isRemindersView) switchFromRemindersView(); _scvRem(v); };
+const _stdRem = switchToDailyView;
+switchToDailyView = () => { if(isRemindersView) switchFromRemindersView(); _stdRem(); };
+const _stnRem = switchToNotesView;
+switchToNotesView = () => { if(isRemindersView) switchFromRemindersView(); _stnRem(); };
+const _stbRem = switchToBoardsView;
+switchToBoardsView = () => { if(isRemindersView) switchFromRemindersView(); _stbRem(); };
+
+// ── Render ─────────────────────────────────────────────
+function renderRemindersView() {
+  const el = document.getElementById('reminders-view');
+  if (!el) return;
+  const now = Date.now();
+  const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+  const sorted = [...reminders].sort((a,b)=>new Date(a.remind_at)-new Date(b.remind_at));
+  const pending = sorted.filter(r=>!r.done);
+  const done    = sorted.filter(r=> r.done);
+
+  el.innerHTML = `
+    <div class="reminder-add-form">
+      <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">＋ Thêm nhắc nhở</div>
+      <div class="reminder-inputs">
+        <input class="reminder-name-inp" id="ri-name" placeholder="Việc cần nhắc..." onkeydown="if(event.key==='Enter')addReminder()">
+        <input class="reminder-time-inp" id="ri-time" type="datetime-local">
+        <button class="reminder-add-btn" onclick="addReminder()">Thêm</button>
+      </div>
+    </div>
+    ${pending.length ? `
+    <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">Đang chờ (${pending.length})</div>
+    <div class="reminder-list">${pending.map(r=>renderReminderItem(r,now,todayEnd)).join('')}</div>` : ''}
+    ${done.length ? `
+    <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-top:8px">Đã xong (${done.length})</div>
+    <div class="reminder-list">${done.map(r=>renderReminderItem(r,now,todayEnd)).join('')}</div>` : ''}
+    ${!reminders.length ? '<div class="reminder-empty"><div style="font-size:36px;margin-bottom:12px">🔔</div><div style="font-size:15px;font-weight:600;color:var(--tx2)">Chưa có nhắc nhở nào</div></div>' : ''}
+  `;
+  // Set default time = 1 hour from now
+  const inp = document.getElementById('ri-time');
+  if (inp && !inp.value) {
+    const d = new Date(Date.now()+3600000);
+    inp.value = d.toISOString().slice(0,16);
+  }
+}
+
+function renderReminderItem(r, now, todayEnd) {
+  const t = new Date(r.remind_at);
+  const isOv = !r.done && t.getTime() < now;
+  const isToday = !r.done && !isOv && t.getTime() <= todayEnd.getTime();
+  const fmt = t.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+              t.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  return `<div class="reminder-item ${isOv?'overdue':isToday?'today':''} ${r.done?'done-item':''}">
+    <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
+    <div class="reminder-info">
+      <div class="reminder-name ${r.done?'done-text':''}">${esc(r.name)}</div>
+      <div class="reminder-time ${isOv?'overdue-time':isToday?'today-time':''}">${isOv?'⚠️ Quá hạn: ':isToday?'⏰ Hôm nay: ':'📅 '}${fmt}</div>
+    </div>
+    <button class="reminder-del" onclick="deleteReminder('${r.id}')">🗑</button>
+  </div>`;
+}
+
+// ── CRUD ───────────────────────────────────────────────
+async function addReminder() {
+  const name = document.getElementById('ri-name')?.value.trim();
+  const time = document.getElementById('ri-time')?.value;
+  if (!name) { showNotif('nw','⚠️','Nhập tên việc cần nhắc.'); return; }
+  if (!time) { showNotif('nw','⚠️','Chọn thời gian nhắc.'); return; }
+  const rec = { id:'rem_'+Date.now(), name, remind_at:new Date(time).toISOString(), done:false, created_at:new Date().toISOString() };
+  reminders.push(rec);
+  reminders.sort((a,b)=>new Date(a.remind_at)-new Date(b.remind_at));
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  renderRemindersView();
+  scheduleLocalNotifications();
+  try { await dbReminders.insert(rec); } catch(e) { console.warn('reminder insert:',e); }
+}
+
+async function toggleReminder(id) {
+  const r = reminders.find(r=>r.id===id);
+  if (!r) return;
+  r.done = !r.done;
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  renderRemindersView();
+  try { await dbReminders.update(id,{done:r.done}); } catch{}
+}
+
+async function deleteReminder(id) {
+  reminders = reminders.filter(r=>r.id!==id);
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  renderRemindersView();
+  try { await dbReminders.delete(id); } catch{}
+}
+
+
+
+// ════════════════════════════════════════════════════════
+// WEB PUSH NOTIFICATIONS
+// ════════════════════════════════════════════════════════
+const VAPID_PUBLIC_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
+let swRegistration = null;
+let pushSubscription = null;
+
+// Register Service Worker
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    console.log('Service Worker not supported');
+    return false;
+  }
+  try {
+    swRegistration = await navigator.serviceWorker.register('./sw.js', {scope:'./'});
+    console.log('SW registered:', swRegistration.scope);
+    // Start reminder check every minute
+    setInterval(sendRemindersToSW, 60000);
+    return true;
+  } catch(e) {
+    console.warn('SW registration failed:', e);
+    return false;
+  }
+}
+
+// Request push permission and subscribe
+async function enablePushNotifications() {
+  if (!swRegistration) {
+    showNotif('nw','⚠️ Chưa sẵn sàng','Đang khởi động service worker...');
+    await registerServiceWorker();
+    if (!swRegistration) { showNotif('nd','❌ Lỗi','Trình duyệt không hỗ trợ.'); return; }
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    showNotif('nd','❌ Bị từ chối','Vui lòng cho phép thông báo trong Settings của trình duyệt.');
+    return;
+  }
+  try {
+    if (VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
+      // No VAPID key — use local notification only
+      showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
+      localStorage.setItem('tf_push_enabled','local');
+      updatePushBtn();
+      return;
+    }
+    const sub = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    pushSubscription = sub;
+    localStorage.setItem('tf_push_enabled','push');
+    localStorage.setItem('tf_push_sub', JSON.stringify(sub));
+    showNotif('ns','✅ Đã bật thông báo!','Bạn sẽ nhận nhắc nhở ngay cả khi đóng app (iOS cần Add to Home Screen).');
+    updatePushBtn();
+  } catch(e) {
+    console.warn('Push subscribe error:', e);
+    showNotif('nd','❌ Lỗi đăng ký',e.message);
+  }
+}
+
+async function disablePushNotifications() {
+  if (pushSubscription) {
+    await pushSubscription.unsubscribe().catch(()=>{});
+    pushSubscription = null;
+  }
+  localStorage.removeItem('tf_push_enabled');
+  localStorage.removeItem('tf_push_sub');
+  updatePushBtn();
+  showNotif('ns','🔕 Đã tắt','Thông báo đã tắt.');
+}
+
+function updatePushBtn() {
+  const btn = document.getElementById('push-toggle-btn');
+  if (!btn) return;
+  const enabled = localStorage.getItem('tf_push_enabled');
+  btn.textContent = enabled ? '🔔 Thông báo: BẬT' : '🔕 Thông báo: TẮT';
+  btn.style.borderColor = enabled ? 'rgba(34,211,160,.4)' : 'var(--bd)';
+  btn.style.color = enabled ? 'var(--ok)' : 'var(--tx2)';
+}
+
+function isPushEnabled() {
+  return !!localStorage.getItem('tf_push_enabled');
+}
+
+// Send reminder data to SW for local notification check
+function sendRemindersToSW() {
+  if (!swRegistration?.active || !reminders?.length) return;
+  swRegistration.active.postMessage({type:'CHECK_REMINDERS', reminders});
+}
+
+// Local notification fallback (when app is open)
+function scheduleLocalNotifications() {
+  const enabled = localStorage.getItem('tf_push_enabled');
+  if (!enabled) return;
+  const now = Date.now();
+  reminders.filter(r=>!r.done).forEach(r => {
+    const t = new Date(r.remind_at).getTime();
+    const delay = t - now;
+    if (delay > 0 && delay < 3600000) { // within 1 hour
+      setTimeout(() => {
+        if (Notification.permission === 'granted') {
+          new Notification('🔔 ' + r.name, {
+            body: 'Đến giờ nhắc nhở!',
+            icon: '/taskflow/icon-192.png',
+            tag: 'reminder-' + r.id
+          });
+        }
+      }, delay);
+    }
+  });
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return new Uint8Array([...raw].map(c => c.charCodeAt(0)));
+}
+
+
 window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeout(applyLogoSpin,400);});
 </script>
 
@@ -5761,6 +6301,10 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
         <span style="font-size:11px">🖌</span>
         <span class="tb-color-indicator" id="tb-color-ind"></span>
       </button>
+      <button class="tb-highlight-btn" id="tb-hl-btn" onmousedown="event.preventDefault()" onclick="showHighlightPicker(this,'ne-content','tb-hl-ind')" title="Highlight chữ">
+        <span style="font-size:12px">🖊</span><span style="font-size:11px;font-weight:800">H</span>
+        <span class="highlight-ind" id="tb-hl-ind"></span>
+      </button>
       <div class="tb-sep"></div>
       <!-- Lists -->
       <button class="tb-btn" onmousedown="event.preventDefault()" onclick="execCmd('insertUnorderedList')" title="Danh sách dấu chấm">• ≡</button>
@@ -5826,6 +6370,7 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 <div id="item-edit-popup" class="item-edit-popup" style="display:none">
   <div class="iep-header">
     <input class="iep-title-inp" id="iep-name" placeholder="Tên việc cần làm...">
+    <button class="iep-expand-btn" id="iep-expand-btn" onmousedown="event.preventDefault()" onclick="toggleIepExpand()" title="Mở rộng">⛶</button>
   </div>
   <div class="iep-mini-toolbar">
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepCmd('bold')" title="In đậm"><b>B</b></button>
@@ -5873,6 +6418,22 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   <div class="iep-footer">
     <button onclick="closeItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--s2);color:var(--tx2);font-size:12px;cursor:pointer">Hủy</button>
     <button onclick="saveItemEdit()" style="padding:5px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:600;cursor:pointer">✓ Lưu</button>
+  </div>
+</div>
+
+<!-- REMINDER STARTUP POPUP -->
+<div id="reminder-popup-overlay" class="reminder-popup-overlay" style="display:none">
+  <div class="reminder-popup-box">
+    <div class="reminder-popup-header">
+      <div class="reminder-popup-title">🔔 Nhắc nhở hôm nay</div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <button class="reminder-popup-close-all" onclick="dismissAllReminders()">✕ Tắt tất cả</button>
+      </div>
+    </div>
+    <div class="reminder-popup-list" id="reminder-popup-list"></div>
+    <div class="reminder-popup-footer">
+      <button class="reminder-popup-go" onclick="document.getElementById('reminder-popup-overlay').style.display='none';switchToRemindersView()">Xem tất cả reminders →</button>
+    </div>
   </div>
 </div>
 </body>
