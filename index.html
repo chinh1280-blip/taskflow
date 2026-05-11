@@ -1876,8 +1876,16 @@ async function startApp(){
       _appStarted = true;
       render();setInterval(tickClock,1000);tickClock();
       setInterval(checkDeadlines,60000);setInterval(autoRefresh,30000);
-      loadDailyData();requestNotifPermission();
+      loadDailyData();
+      loadNotes();
+      loadBoards();
+      requestNotifPermission();
+      registerServiceWorker().then(()=>updatePushBtn());
       showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
+      // Load reminders → show popup after 2s
+      loadReminders().then(() => {
+        setTimeout(checkStartupReminders, 2000);
+      });
     },300);
   }catch(e){
     if(_timedOut)return;
@@ -5978,19 +5986,17 @@ function closeOverduePopup() {
 function checkStartupReminders() {
   const now = Date.now();
   const today = new Date(); today.setHours(23,59,59,999);
-  const urgent = reminders.filter(r => !r.done && new Date(r.remind_at).getTime() <= today.getTime());
-  console.log('[Reminder] total:', reminders.length, 'urgent:', urgent.length);
+  const all = reminders || [];
+  const urgent = all.filter(r => !r.done && new Date(r.remind_at).getTime() <= today.getTime());
+  console.log('[Reminder] total:', all.length, 'urgent today:', urgent.length);
   if (!urgent.length) {
-    setTimeout(showOverduePopup, 1500);
+    // No reminders today → show overdue popup
+    setTimeout(showOverduePopup, 500);
     return;
   }
-  const dismissed = JSON.parse(localStorage.getItem('tf_reminder_dismissed')||'[]');
-  const toShow = urgent.filter(r => !dismissed.includes(r.id));
-  console.log('[Reminder] toShow:', toShow.length, 'dismissed:', dismissed.length);
-  if (!toShow.length) {
-    setTimeout(showOverduePopup, 1500);
-    return;
-  }
+  // Always show all urgent reminders (ignore dismissed for now)
+  const toShow = urgent;
+  console.log('[Reminder] showing:', toShow.length);
   const list = document.getElementById('reminder-popup-list');
   if (!list) return;
   list.innerHTML = toShow.map(r => {
@@ -6004,8 +6010,14 @@ function checkStartupReminders() {
       <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Bỏ qua">✕</button>
     </div>`;
   }).join('');
-  document.getElementById('reminder-popup-overlay').style.display = 'flex';
-  // Show overdue project popup 3 seconds AFTER reminder popup
+  const overlay = document.getElementById('reminder-popup-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    console.log('[Reminder] popup shown');
+  } else {
+    console.error('[Reminder] overlay element not found!');
+  }
+  // Show overdue popup 3s later
   setTimeout(showOverduePopup, 3000);
 }
 
@@ -6160,7 +6172,7 @@ async function deleteReminder(id) {
 // ════════════════════════════════════════════════════════
 // WEB PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════════════
-const VAPID_PUBLIC_KEY = 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
+const VAPID_PUBLIC_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
 let swRegistration = null;
 let pushSubscription = null;
 
@@ -6203,7 +6215,7 @@ async function enablePushNotifications() {
     return;
   }
   try {
-    if (VAPID_PUBLIC_KEY === 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk') {
+    if (VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
       // No VAPID key — use local notification only
       showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
       localStorage.setItem('tf_push_enabled','local');
