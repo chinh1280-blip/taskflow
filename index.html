@@ -967,10 +967,11 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .reminder-time{font-size:11px;color:var(--tx3);margin-top:2px}
 .reminder-time.overdue-time{color:var(--er);font-weight:600}
 .reminder-time.today-time{color:var(--wa);font-weight:600}
-.reminder-del{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer;
-  padding:3px;border-radius:5px;opacity:0;transition:opacity .15s}
+.reminder-del{background:none;border:none;color:var(--tx3);font-size:13px;cursor:pointer;
+  padding:3px 5px;border-radius:5px;opacity:0;transition:all .15s}
 .reminder-item:hover .reminder-del{opacity:1}
-.reminder-del:hover{background:rgba(255,79,109,.15);color:var(--er)}
+.reminder-del:hover{background:rgba(79,124,255,.15);color:var(--ac)}
+.reminder-del:last-child:hover{background:rgba(255,79,109,.15);color:var(--er)}
 
 /* Add reminder form */
 .reminder-add-form{
@@ -5984,6 +5985,38 @@ function closeOverduePopup() {
   // Không lưu trạng thái — lần sau vẫn hiện lại
 }
 
+
+// ── Smart time label for reminders ───────────────────────
+function reminderTimeLabel(remindAt) {
+  const now = Date.now();
+  const t = new Date(remindAt).getTime();
+  const diff = t - now; // positive = future, negative = past
+  const absDiff = Math.abs(diff);
+  const mins  = Math.floor(absDiff / 60000);
+  const hours = Math.floor(absDiff / 3600000);
+  const days  = Math.floor(absDiff / 86400000);
+  const fmt   = new Date(t).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit'})
+              + ' ' + new Date(t).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+
+  if (diff < 0) {
+    // Quá hạn
+    let ago;
+    if (mins < 60)        ago = mins + ' phút';
+    else if (hours < 48)  ago = hours + ' giờ';
+    else                  ago = days + ' ngày';
+    return { fmt, status: 'Quá hạn ' + ago, cls: 'overdue-time', badge: 'overdue' };
+  } else {
+    // Còn lại
+    let left;
+    if (mins < 60)        left = mins + ' phút';
+    else if (hours < 48)  left = hours + ' giờ';
+    else                  left = days + ' ngày';
+    const cls = hours < 24 ? 'today-time' : hours < 48 ? 'today-time' : 'ok-time';
+    const badge = hours < 24 ? 'today' : hours < 48 ? 'today' : 'upcoming';
+    return { fmt, status: 'Còn ' + left, cls, badge };
+  }
+}
+
 function checkStartupReminders() {
   const now = Date.now();
   const in3days = now + 3 * 86400000;
@@ -6001,36 +6034,16 @@ function checkStartupReminders() {
   const list = document.getElementById('reminder-popup-list');
   if (!list) return;
 
-  function fmtTime(t) {
-    const ms = t.getTime();
-    const diffMs = ms - now;
-    const diffMin = Math.round(diffMs / 60000);
-    const diffH = Math.round(diffMs / 3600000);
-    const timeStr = t.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
-    const dateStr = t.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'});
-    if (ms < now) {
-      // Quá hạn
-      const ago = Math.round((now - ms) / 60000);
-      if (ago < 60) return {label:`⚠️ Quá hạn ${ago} phút`, cls:'overdue-time', badge:'overdue'};
-      if (ago < 1440) return {label:`⚠️ Quá hạn ${Math.round(ago/60)}h`, cls:'overdue-time', badge:'overdue'};
-      return {label:`⚠️ Quá hạn từ ${dateStr} ${timeStr}`, cls:'overdue-time', badge:'overdue'};
-    } else if (ms <= todayEnd.getTime()) {
-      if (diffMin < 60) return {label:`⏰ ${timeStr} (còn ${diffMin} phút)`, cls:'today-time', badge:'today'};
-      return {label:`⏰ ${timeStr} hôm nay`, cls:'today-time', badge:'today'};
-    } else {
-      return {label:`📅 ${dateStr} ${timeStr}`, cls:'', badge:'upcoming'};
-    }
-  }
-
   list.innerHTML = toShow.map(r => {
-    const t = new Date(r.remind_at);
-    const {label, cls, badge} = fmtTime(t);
+    const {fmt, status, cls, badge} = reminderTimeLabel(r.remind_at);
     return `<div class="reminder-popup-item ${badge}" id="rpp_${r.id}">
-      <div class="reminder-popup-info">
-        <div class="reminder-popup-name">${esc(r.name)}</div>
-        <div class="reminder-popup-time ${cls}">${label}</div>
+      <div class="reminder-popup-name">${esc(r.name)}</div>
+      <div class="reminder-popup-time">
+        <span class="due-date">Due: ${fmt}</span>
+        <span style="color:var(--bd)">|</span>
+        <span class="due-status ${cls}">${status}</span>
       </div>
-      <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Bỏ qua">✕</button>
+      <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Đóng">✕</button>
     </div>`;
   }).join('');
 
@@ -6142,11 +6155,56 @@ function renderReminderItem(r, now, todayEnd) {
       <div class="reminder-name ${r.done?'done-text':''}">${esc(r.name)}</div>
       <div class="reminder-time ${isOv?'overdue-time':isToday?'today-time':''}">${isOv?'⚠️ Quá hạn: ':isToday?'⏰ Hôm nay: ':'📅 '}${fmt}</div>
     </div>
-    <button class="reminder-del" onclick="deleteReminder('${r.id}')">🗑</button>
+    <button class="reminder-del" onclick="openReminderEdit('${r.id}')" title="Sửa" style="font-size:13px;right:30px">✏️</button>
+    <button class="reminder-del" onclick="deleteReminder('${r.id}')" title="Xóa">🗑</button>
   </div>`;
 }
 
 // ── CRUD ───────────────────────────────────────────────
+
+// ── Edit reminder ─────────────────────────────────────────
+let _editRemId = null;
+
+function openReminderEdit(id) {
+  const r = reminders.find(r=>r.id===id);
+  if (!r) return;
+  _editRemId = id;
+  // Reuse add form fields — scroll to top and populate
+  const nameEl = document.getElementById('ri-name');
+  const timeEl = document.getElementById('ri-time');
+  if (nameEl) nameEl.value = r.name;
+  if (timeEl) timeEl.value = new Date(r.remind_at).toISOString().slice(0,16);
+  // Change button text
+  const btn = document.querySelector('.reminder-add-btn');
+  if (btn) { btn.textContent = '💾 Cập nhật'; btn.onclick = saveReminderEdit; }
+  // Scroll view to top
+  const view = document.getElementById('reminders-view');
+  if (view) view.scrollTop = 0;
+  if (nameEl) nameEl.focus();
+}
+
+async function saveReminderEdit() {
+  const name = document.getElementById('ri-name')?.value.trim();
+  const time = document.getElementById('ri-time')?.value;
+  if (!name || !time || !_editRemId) return;
+  const r = reminders.find(r=>r.id===_editRemId);
+  if (!r) return;
+  r.name = name;
+  r.remind_at = new Date(time).toISOString();
+  _editRemId = null;
+  // Reset button
+  const btn = document.querySelector('.reminder-add-btn');
+  if (btn) { btn.textContent = 'Thêm'; btn.onclick = addReminder; }
+  document.getElementById('ri-name').value = '';
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  renderRemindersView();
+  scheduleLocalNotifications();
+  try { await dbReminders.update(r.id, {name:r.name, remind_at:r.remind_at}); }
+  catch(e) { console.warn('update reminder:', e); }
+  showNotif('ns','✅ Đã cập nhật','Reminder đã được sửa.');
+}
+
 async function addReminder() {
   const name = document.getElementById('ri-name')?.value.trim();
   const time = document.getElementById('ri-time')?.value;
