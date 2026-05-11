@@ -1,69 +1,69 @@
-// Service Worker for Web Push Notifications — TaskFlow
-const CACHE = 'taskflow-v1';
+// TaskFlow Service Worker — Web Push + Local Notifications
+const SW_VERSION = 'taskflow-v2';
 
 self.addEventListener('install', e => {
+  console.log('[SW] Install');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
+  console.log('[SW] Activate');
   e.waitUntil(clients.claim());
 });
 
-// Handle push notification
+// Handle web push (when app is closed)
 self.addEventListener('push', e => {
+  console.log('[SW] Push received');
   if (!e.data) return;
   let data;
-  try { data = e.data.json(); } catch { data = {title:'TaskFlow', body: e.data.text()}; }
+  try { data = e.data.json(); } 
+  catch { data = { title: '🔔 TaskFlow', body: e.data.text() }; }
+
   e.waitUntil(
     self.registration.showNotification(data.title || '🔔 TaskFlow Reminder', {
-      body:    data.body  || '',
-      icon:    data.icon  || '/taskflow/icon-192.png',
-      badge:   data.badge || '/taskflow/icon-192.png',
-      tag:     data.tag   || 'taskflow-reminder',
-      data:    data.data  || {},
+      body:    data.body || '',
+      icon:    data.icon || '/taskflow/icon.svg',
+      badge:   '/taskflow/icon.svg',
+      tag:     data.tag  || 'taskflow',
+      data:    { url: data.url || self.registration.scope },
       requireInteraction: true,
       actions: [
-        { action: 'view',    title: 'Xem ngay' },
-        { action: 'dismiss', title: 'Bỏ qua'   }
+        { action: 'view',    title: '📋 Xem ngay' },
+        { action: 'dismiss', title: '✕ Bỏ qua'   }
       ]
     })
   );
 });
 
-// Click notification → open app
+// Notification click → open/focus app
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   if (e.action === 'dismiss') return;
+  const url = e.notification.data?.url || self.registration.scope;
   e.waitUntil(
-    clients.matchAll({type:'window', includeUncontrolled:true}).then(list => {
-      for (const client of list) {
-        if (client.url.includes('taskflow') && 'focus' in client) return client.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ('focus' in c) { c.focus(); return; }
       }
-      return clients.openWindow('https://chinh1280-blip.github.io/taskflow/');
+      return clients.openWindow(url);
     })
   );
 });
 
-// Schedule local push checks (runs every minute when SW active)
+// Message from app → check reminders and fire local notification
 self.addEventListener('message', e => {
-  if (e.data?.type === 'CHECK_REMINDERS') {
-    checkRemindersAndNotify(e.data.reminders);
-  }
-});
-
-function checkRemindersAndNotify(reminders) {
-  if (!reminders?.length) return;
+  if (e.data?.type !== 'CHECK_REMINDERS') return;
+  const reminders = e.data.reminders || [];
   const now = Date.now();
   reminders.forEach(r => {
     if (r.done) return;
     const t = new Date(r.remind_at).getTime();
-    // Within 1 minute of reminder time
-    if (Math.abs(t - now) < 60000) {
+    if (Math.abs(t - now) < 65000) {   // within 65s of reminder time
       self.registration.showNotification('🔔 ' + r.name, {
-        body: 'Đến giờ nhắc nhở rồi!',
+        body: '⏰ Đến giờ nhắc nhở!',
         tag:  'reminder-' + r.id,
         requireInteraction: true,
       });
     }
   });
-}
+});
