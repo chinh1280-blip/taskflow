@@ -952,9 +952,10 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   background:var(--s1);border:1px solid var(--bd);border-radius:11px;
   padding:10px 14px;transition:all .15s;
 }
-.reminder-item.overdue{border-color:rgba(255,79,109,.35);background:rgba(255,79,109,.04)}
-.reminder-item.today{border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.04)}
-.reminder-item.done-item{opacity:.45}
+.reminder-item.overdue{border-color:rgba(255,79,109,.4);background:rgba(255,79,109,.05)}
+.reminder-item.today{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.05)}
+.reminder-item.upcoming{border-color:rgba(79,124,255,.3);background:rgba(79,124,255,.04)}
+.reminder-item.done-item{opacity:.4}
 .reminder-cb{
   width:20px;height:20px;border-radius:6px;border:2px solid var(--bd);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -6144,19 +6145,22 @@ function renderRemindersView() {
 }
 
 function renderReminderItem(r, now, todayEnd) {
-  const t = new Date(r.remind_at);
-  const isOv = !r.done && t.getTime() < now;
-  const isToday = !r.done && !isOv && t.getTime() <= todayEnd.getTime();
-  const fmt = t.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
-              t.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
-  return `<div class="reminder-item ${isOv?'overdue':isToday?'today':''} ${r.done?'done-item':''}">
+  const {fmt, status, cls, badge} = reminderTimeLabel(r.remind_at);
+  const rowCls = r.done ? 'done-item' : badge;
+  return `<div class="reminder-item ${rowCls}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
     <div class="reminder-info">
       <div class="reminder-name ${r.done?'done-text':''}">${esc(r.name)}</div>
-      <div class="reminder-time ${isOv?'overdue-time':isToday?'today-time':''}">${isOv?'⚠️ Quá hạn: ':isToday?'⏰ Hôm nay: ':'📅 '}${fmt}</div>
+      <div class="reminder-time">
+        <span class="rdue">Due: ${fmt}</span>
+        <span class="rsep">|</span>
+        <span class="rstatus ${cls}">${status}</span>
+      </div>
     </div>
-    <button class="reminder-del" onclick="openReminderEdit('${r.id}')" title="Sửa" style="font-size:13px;right:30px">✏️</button>
-    <button class="reminder-del" onclick="deleteReminder('${r.id}')" title="Xóa">🗑</button>
+    <div class="reminder-actions">
+      <button onclick="openReminderEdit('${r.id}')" title="Sửa">✏️</button>
+      <button onclick="deleteReminder('${r.id}')" title="Xóa">🗑</button>
+    </div>
   </div>`;
 }
 
