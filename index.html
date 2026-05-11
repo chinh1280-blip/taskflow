@@ -1019,20 +1019,49 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .reminder-popup-close-all:hover{background:rgba(255,79,109,.15);color:var(--er)}
 .reminder-popup-list{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:7px}
 .reminder-popup-item{
-  display:flex;align-items:center;gap:10px;
-  background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px
+  display:block;                      /* BLOCK — không flex */
+  padding:10px 44px 10px 12px;
+  border-radius:9px;
+  border:1px solid rgba(255,79,109,.25);
+  border-left:3px solid var(--er);
+  background:rgba(255,79,109,.06);
+  position:relative;
+  box-sizing:border-box;
 }
-.reminder-popup-item.overdue{border-color:rgba(255,79,109,.4)}
-.reminder-popup-item.today{border-color:rgba(251,191,36,.4)}
-.reminder-popup-name{flex:1;font-size:13px;color:var(--tx);font-weight:500}
-.reminder-popup-time{font-size:11px;color:var(--tx3);flex-shrink:0}
-.reminder-popup-time.overdue-time{color:var(--er);font-weight:600}
-.reminder-popup-time.today-time{color:var(--wa);font-weight:600}
+.reminder-popup-item.today{
+  border-color:rgba(251,191,36,.35);
+  border-left-color:var(--wa);
+  background:rgba(251,191,36,.06)
+}
+.reminder-popup-item.upcoming{
+  border-color:rgba(34,211,160,.3);
+  border-left-color:var(--ok);
+  background:rgba(34,211,160,.05)
+}
+.reminder-popup-name{
+  display:block;                      /* BLOCK — chiếm hết width */
+  font-size:12px;font-weight:600;
+  color:var(--tx);word-break:break-word;
+  line-height:1.4;margin-bottom:5px;
+}
+.reminder-popup-meta{
+  display:block;                      /* BLOCK — xuống dòng mới */
+  font-size:11px;color:var(--tx3);
+  line-height:1.4;
+}
+.reminder-popup-meta .rstatus.overdue-time{color:var(--er);font-weight:700}
+.reminder-popup-meta .rstatus.today-time{color:var(--wa);font-weight:700}
+.reminder-popup-meta .rstatus.ok-time{color:var(--ok);font-weight:700}
 .reminder-popup-dismiss{
-  background:none;border:none;color:var(--tx3);font-size:16px;cursor:pointer;
-  padding:2px;line-height:1;flex-shrink:0
+  position:absolute;top:50%;right:10px;
+  transform:translateY(-50%);
+  background:none;border:none;color:var(--tx3);
+  font-size:14px;cursor:pointer;
+  width:22px;height:22px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
 }
-.reminder-popup-dismiss:hover{color:var(--tx)}
+.reminder-popup-dismiss:hover{background:rgba(255,79,109,.2);color:var(--er)}
 .reminder-popup-footer{padding:12px 18px;border-top:1px solid var(--bd);flex-shrink:0}
 .reminder-popup-go{
   width:100%;padding:9px;border-radius:9px;border:none;
@@ -6050,12 +6079,8 @@ function checkStartupReminders() {
   list.innerHTML = toShow.map(r => {
     const {fmt, status, cls, badge} = reminderTimeLabel(r.remind_at);
     return `<div class="reminder-popup-item ${badge}" id="rpp_${r.id}">
-      <span class="reminder-popup-name">${esc(r.name)}</span>
-      <div class="reminder-popup-meta">
-        <span class="rdue">Due: ${fmt}</span>
-        <span class="rsep">|</span>
-        <span class="rstatus ${cls}">${status}</span>
-      </div>
+      <div class="reminder-popup-name">${esc(r.name)}</div>
+      <div class="reminder-popup-meta">Due: ${fmt} | <span class="rstatus ${cls}">${status}</span></div>
       <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Đóng">✕</button>
     </div>`;
   }).join('');
