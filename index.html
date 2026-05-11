@@ -1017,7 +1017,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   color:var(--tx2);font-size:12px;cursor:pointer;transition:all .15s
 }
 .reminder-popup-close-all:hover{background:rgba(255,79,109,.15);color:var(--er)}
-.reminder-popup-list{flex:1;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:8px}
+.reminder-popup-list{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:7px}
 .reminder-popup-item{
   display:flex;align-items:center;gap:10px;
   background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px
@@ -6050,8 +6050,8 @@ function checkStartupReminders() {
   list.innerHTML = toShow.map(r => {
     const {fmt, status, cls, badge} = reminderTimeLabel(r.remind_at);
     return `<div class="reminder-popup-item ${badge}" id="rpp_${r.id}">
-      <div class="reminder-popup-name">${esc(r.name)}</div>
-      <div class="reminder-popup-time">
+      <span class="reminder-popup-name">${esc(r.name)}</span>
+      <div class="reminder-popup-meta">
         <span class="rdue">Due: ${fmt}</span>
         <span class="rsep">|</span>
         <span class="rstatus ${cls}">${status}</span>
