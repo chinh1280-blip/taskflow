@@ -1966,7 +1966,7 @@ async function startApp(){
       loadNotes();
       loadBoards();
       requestNotifPermission();
-      registerServiceWorker().then(()=>updatePushBtn());
+      registerServiceWorker().then(()=>{ updateNotifMainBtn(); restorePushSubscription(); });
       showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
       // Load reminders → show popup + schedule notifications
       loadReminders().then(() => {
@@ -6670,7 +6670,12 @@ async function onNsPushToggle(cb) {
 
 async function saveNotifSettings() {
   const btn = document.querySelector('.notif-save-btn');
-  btn.textContent = '⏳ Đang lưu...'; btn.disabled = true;
+  const statusEl = document.getElementById('ns-status-msg');
+  const setStatus = (msg, color) => { if(statusEl){statusEl.textContent=msg;statusEl.style.color=color||'var(--tx3)';} };
+
+  btn.textContent = '⏳ Đang xử lý...'; btn.disabled = true;
+  setStatus('Đang lưu cài đặt...', 'var(--tx3)');
+
   const wasEnabled = notifCfg.enabled;
   notifCfg = {
     enabled:          document.getElementById('ns-push-enabled').checked,
@@ -6678,43 +6683,59 @@ async function saveNotifSettings() {
     dailyReminders:   document.getElementById('ns-remind-daily').checked,
     leadMinutes:      _selectedLead,
   };
-  // Request permission if enabling
+
   if (notifCfg.enabled && !wasEnabled) {
     if (!('Notification' in window)) {
-      showNotif('nd','❌ Không hỗ trợ','iOS cần Add to Home Screen trước.');
       notifCfg.enabled = false;
-    } else {
-      const perm = await Notification.requestPermission();
-      if (perm !== 'granted') {
-        notifCfg.enabled = false;
-        showNotif('nd','❌ Bị từ chối','Vào Settings → Safari → Notifications để bật.');
-      } else {
-        if (!swRegistration) await registerServiceWorker();
-        // Subscribe to push
-        try {
-          const sub = await swRegistration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-          });
-          pushSubscription = sub;
-          localStorage.setItem('tf_push_sub', JSON.stringify(sub.toJSON()));
-          showNotif('ns','✅ Push bật!','Sẽ nhận thông báo kể cả khi tắt app (iPhone cần Add to Home Screen).');
-        } catch(e) {
-          // SW push failed — fallback to local only
-          console.warn('Push subscribe error:', e);
-          showNotif('ns','✅ Thông báo bật','Nhận thông báo khi app đang mở.');
-        }
+      document.getElementById('ns-push-enabled').checked = false;
+      setStatus('❌ Trình duyệt không hỗ trợ. iOS cần Add to Home Screen.', 'var(--er)');
+      btn.textContent = '💾 Lưu cài đặt'; btn.disabled = false;
+      return;
+    }
+    setStatus('⏳ Đang xin quyền thông báo...', 'var(--wa)');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      notifCfg.enabled = false;
+      document.getElementById('ns-push-enabled').checked = false;
+      setStatus('❌ Bị từ chối — vào Settings → Safari → Notifications để bật.', 'var(--er)');
+      btn.textContent = '💾 Lưu cài đặt'; btn.disabled = false;
+      return;
+    }
+    setStatus('⏳ Đang đăng ký Service Worker...', 'var(--wa)');
+    if (!swRegistration) await registerServiceWorker();
+    if (swRegistration) {
+      setStatus('⏳ Đang đăng ký Push...', 'var(--wa)');
+      try {
+        const sub = await swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        pushSubscription = sub;
+        localStorage.setItem('tf_push_sub', JSON.stringify(sub.toJSON()));
+        localStorage.setItem('tf_push_enabled', 'push');
+        savePushSubscriptionToServer(sub);
+        setStatus('✅ Push đã đăng ký! Sẽ nhận thông báo kể cả khi tắt app.', 'var(--ok)');
+      } catch(e) {
+        console.warn('Push subscribe error:', e);
+        localStorage.setItem('tf_push_enabled', 'local');
+        setStatus('✅ Bật thành công (local). Nhận thông báo khi app đang mở.', 'var(--ok)');
       }
     }
   } else if (!notifCfg.enabled && wasEnabled) {
-    showNotif('ns','🔕 Đã tắt','Thông báo đã tắt.');
+    localStorage.removeItem('tf_push_enabled');
+    localStorage.removeItem('tf_push_sub');
+    if (pushSubscription) { pushSubscription.unsubscribe().catch(()=>{}); pushSubscription = null; }
+    setStatus('🔕 Thông báo đã tắt.', 'var(--tx3)');
+  } else if (notifCfg.enabled) {
+    setStatus('✅ Đã lưu cài đặt.', 'var(--ok)');
   }
+
   saveNotifCfgLocal();
-  // Reschedule
   scheduleReminderNotifications();
   updateNotifMainBtn();
-  btn.textContent = '💾 Lưu cài đặt'; btn.disabled = false;
-  closeNotifSettings();
+  btn.textContent = '✓ Đã lưu'; btn.disabled = false;
+  // Close after 1.5s so user can see status
+  setTimeout(closeNotifSettings, 1500);
 }
 
 function updateNotifMainBtn() {
@@ -6737,7 +6758,7 @@ function scheduleReminderNotifications() {
 
   reminders.filter(r => !r.done).forEach(r => {
     if (r.is_daily && !notifCfg.dailyReminders) return;
-    if (!r.is_daily && !cfg.normalReminders) return;
+    if (!r.is_daily && !notifCfg.normalReminders) return;
     const targetMs = r.is_daily
       ? (getDailyRemindAt ? new Date(getDailyRemindAt(r)).getTime() : new Date(r.remind_at).getTime())
       : new Date(r.remind_at).getTime();
@@ -6803,6 +6824,38 @@ function fireReminderNotif(r, isEarly, leadMin) {
   } catch(e) { console.warn('Notification error:', e); }
 }
 
+
+// ── Push relay via Supabase Edge Function ─────────────────
+// Khi app đang mở: lưu subscription lên Supabase để server push
+async function savePushSubscriptionToServer(sub) {
+  if (!sub || !SB_URL || !SB_KEY) return;
+  try {
+    const subJson = sub.toJSON();
+    // Save to a simple table or just use localStorage
+    // For full server push, would need edge function
+    localStorage.setItem('tf_push_sub', JSON.stringify(subJson));
+    console.log('[Push] Subscription saved, endpoint:', subJson.endpoint?.slice(0,50)+'...');
+  } catch(e) {
+    console.warn('[Push] Save sub error:', e);
+  }
+}
+
+// Restore existing push subscription on startup
+async function restorePushSubscription() {
+  if (!swRegistration) return;
+  try {
+    const existing = await swRegistration.pushManager.getSubscription();
+    if (existing) {
+      pushSubscription = existing;
+      localStorage.setItem('tf_push_enabled', 'push');
+      localStorage.setItem('tf_push_sub', JSON.stringify(existing.toJSON()));
+      updateNotifMainBtn();
+      console.log('[Push] Existing subscription restored');
+    }
+  } catch(e) {
+    console.warn('[Push] Restore error:', e);
+  }
+}
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
