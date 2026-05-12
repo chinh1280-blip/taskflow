@@ -1183,6 +1183,14 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .lead-opt.active{background:rgba(79,124,255,.18);border-color:var(--ac);color:var(--ac);font-weight:600}
 .notif-settings-footer{padding:12px 18px;border-top:1px solid var(--bd)}
 .notif-save-btn{width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+
+.reminder-popup-item .popup-done-btn{
+  background:none;border:1px solid var(--bd);
+  border-radius:5px;color:var(--tx3);font-size:11px;
+  padding:3px 7px;cursor:pointer;white-space:nowrap;
+  transition:all .15s;flex-shrink:0;line-height:1.4
+}
+.reminder-popup-item .popup-done-btn:hover{background:rgba(34,211,160,.15);border-color:var(--ok);color:var(--ok)}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -6126,7 +6134,10 @@ function checkStartupReminders() {
     return `<div class="reminder-popup-item ${badge}" id="rpp_${r.id}">
       <div class="reminder-popup-name">${esc(r.name)}</div>
       <div class="reminder-popup-meta">Due: ${fmt} | <span class="rstatus ${cls}">${status}</span></div>
-      <button class="reminder-popup-dismiss" onclick="dismissOneReminder('${r.id}')" title="Đóng">✕</button>
+      <div style="display:flex;gap:5px;position:absolute;top:9px;right:9px">
+        <button class="popup-done-btn" onclick="doneReminderFromPopup('${r.id}')" title="Đánh dấu xong">✓</button>
+        <button class="reminder-popup-dismiss" style="position:static;transform:none" onclick="dismissOneReminder('${r.id}')" title="Đóng">✕</button>
+      </div>
     </div>`;
   }).join('');
 
@@ -6138,9 +6149,12 @@ function checkStartupReminders() {
       dailyList.innerHTML = dailyItems.map(r => {
         const ea = getDailyRemindAt ? getDailyRemindAt(r) : r.remind_at;
         const {fmt, status, cls, badge} = reminderTimeLabel(ea);
-        return `<div class="reminder-popup-item ${badge}">
+        return `<div class="reminder-popup-item ${badge}" id="rpp_d_${r.id}">
           <div class="reminder-popup-name">${esc(r.name)} <span class="reminder-daily-badge">Daily</span></div>
           <div class="reminder-popup-meta">Due: ${fmt} | <span class="rstatus ${cls}">${status}</span></div>
+          <div style="display:flex;gap:5px;position:absolute;top:9px;right:9px">
+            <button class="popup-done-btn" onclick="doneReminderFromPopup('${r.id}')" title="Đánh dấu xong">✓</button>
+          </div>
         </div>`;
       }).join('');
     } else {
@@ -6152,6 +6166,29 @@ function checkStartupReminders() {
   setTimeout(showOverduePopup, 3000);
 }
 
+
+function doneReminderFromPopup(id) {
+  // Mark done immediately (optimistic)
+  const r = reminders.find(r => r.id === id);
+  if (r) r.done = true;
+  // Remove from both popup lists
+  document.getElementById('rpp_' + id)?.remove();
+  document.getElementById('rpp_d_' + id)?.remove();
+  // Close if no items left
+  const normalList = document.getElementById('reminder-popup-list');
+  const dailyList  = document.getElementById('reminder-popup-daily');
+  const normalEmpty = !normalList?.children.length;
+  const dailyEmpty  = !dailyList?.children.length;
+  if (normalEmpty && dailyEmpty) {
+    document.getElementById('reminder-popup-overlay').style.display = 'none';
+  }
+  // Persist
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  if (isRemindersView) renderRemindersView();
+  dbReminders.update(id, {done: true}).catch(() => {});
+  showNotif('ns', '✅ Xong!', 'Đã đánh dấu hoàn thành.');
+}
 function dismissOneReminder(id) {
   // Chỉ xóa khỏi popup hiện tại, không lưu dismissed
   const el = document.getElementById('rpp_'+id);
@@ -6226,6 +6263,10 @@ function renderRemindersView() {
         <input class="reminder-name-inp" id="ri-name" placeholder="Việc cần nhắc..." onkeydown="if(event.key==='Enter')addReminder()">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="reminder-time-inp" id="ri-time" type="datetime-local">
+          <div style="display:flex;gap:4px">
+            <button type="button" onclick="setReminderNow()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);color:var(--tx2);font-size:11px;cursor:pointer;white-space:nowrap" title="Đặt đúng giờ hiện tại">Now</button>
+            <button type="button" onclick="setReminderToday()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);color:var(--tx2);font-size:11px;cursor:pointer;white-space:nowrap" title="Đặt hôm nay">Today</button>
+          </div>
           <label class="daily-toggle"><input type="checkbox" id="ri-daily" onchange="toggleDailyMode()"> Hằng ngày</label>
         </div>
         <button class="reminder-add-btn" id="ri-add-btn" onclick="addReminder()">Thêm</button>
@@ -6243,7 +6284,7 @@ function renderRemindersView() {
   const inp = document.getElementById('ri-time');
   if (inp && !inp.value) {
     const d = new Date(Date.now()+3600000);
-    inp.value = d.toISOString().slice(0,16);
+    inp.value = toLocalISOString(d);
   }
 }
 
@@ -6318,6 +6359,31 @@ async function saveReminderEdit() {
 
 function toLocalISOStringAlias(d){ return toLocalISOString(d); }
 
+
+function setReminderNow() {
+  const inp = document.getElementById('ri-time');
+  if (!inp) return;
+  inp.type = 'datetime-local';
+  inp.className = 'reminder-time-inp';
+  inp.value = toLocalISOString(new Date());
+  // Uncheck daily if it was checked
+  const daily = document.getElementById('ri-daily');
+  if (daily?.checked) { daily.checked = false; toggleDailyMode(); }
+}
+
+function setReminderToday() {
+  const inp = document.getElementById('ri-time');
+  if (!inp) return;
+  inp.type = 'datetime-local';
+  inp.className = 'reminder-time-inp';
+  // Keep current time if already set, otherwise use now+1h
+  const cur = inp.value ? new Date(inp.value) : new Date(Date.now()+3600000);
+  const today = new Date();
+  today.setHours(cur.getHours(), cur.getMinutes(), 0, 0);
+  inp.value = toLocalISOString(today);
+  const daily = document.getElementById('ri-daily');
+  if (daily?.checked) { daily.checked = false; toggleDailyMode(); }
+}
 function toggleDailyMode() {
   const isDaily = document.getElementById('ri-daily')?.checked;
   const inp = document.getElementById('ri-time');
@@ -6415,7 +6481,7 @@ async function deleteReminder(id) {
 // ════════════════════════════════════════════════════════
 // WEB PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════════════
-const VAPID_PUBLIC_KEY = '"BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
+const VAPID_PUBLIC_KEY = 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
 let swRegistration = null;
 let pushSubscription = null;
 
@@ -6458,13 +6524,7 @@ async function enablePushNotifications() {
     return;
   }
   try {
-    if (VAPID_PUBLIC_KEY === '"BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk') {
-      // No VAPID key — use local notification only
-      showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
-      localStorage.setItem('tf_push_enabled','local');
-      updatePushBtn();
-      return;
-    }
+    // VAPID key present — proceed with real push subscription
     const sub = await swRegistration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -6492,12 +6552,8 @@ async function disablePushNotifications() {
 }
 
 function updatePushBtn() {
-  const btn = document.getElementById('push-toggle-btn');
-  if (!btn) return;
-  const enabled = localStorage.getItem('tf_push_enabled');
-  btn.textContent = enabled ? '🔔 Thông báo: BẬT' : '🔕 Thông báo: TẮT';
-  btn.style.borderColor = enabled ? 'rgba(34,211,160,.4)' : 'var(--bd)';
-  btn.style.color = enabled ? 'var(--ok)' : 'var(--tx2)';
+  // Handled by updateNotifMainBtn now
+  updateNotifMainBtn?.();
 }
 
 function isPushEnabled() {
@@ -6634,7 +6690,20 @@ async function saveNotifSettings() {
         showNotif('nd','❌ Bị từ chối','Vào Settings → Safari → Notifications để bật.');
       } else {
         if (!swRegistration) await registerServiceWorker();
-        showNotif('ns','✅ Thông báo bật!','Sẽ nhận thông báo theo cài đặt đã chọn.');
+        // Subscribe to push
+        try {
+          const sub = await swRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+          pushSubscription = sub;
+          localStorage.setItem('tf_push_sub', JSON.stringify(sub.toJSON()));
+          showNotif('ns','✅ Push bật!','Sẽ nhận thông báo kể cả khi tắt app (iPhone cần Add to Home Screen).');
+        } catch(e) {
+          // SW push failed — fallback to local only
+          console.warn('Push subscribe error:', e);
+          showNotif('ns','✅ Thông báo bật','Nhận thông báo khi app đang mở.');
+        }
       }
     }
   } else if (!notifCfg.enabled && wasEnabled) {
@@ -6662,37 +6731,58 @@ function scheduleReminderNotifications() {
   if (!notifCfg.enabled) return;
   if (Notification.permission !== 'granted') return;
   const now = Date.now();
+  // Clear old timers
+  if (window._reminderTimers) window._reminderTimers.forEach(t => clearTimeout(t));
+  window._reminderTimers = [];
+
   reminders.filter(r => !r.done).forEach(r => {
-    // Determine effective time
-    let targetMs;
-    if (r.is_daily) {
-      if (!notifCfg.dailyReminders) return;
-      targetMs = new Date(getDailyRemindAt ? getDailyRemindAt(r) : r.remind_at).getTime();
-    } else {
-      if (!notifCfg.normalReminders) return;
-      targetMs = new Date(r.remind_at).getTime();
-    }
+    if (r.is_daily && !notifCfg.dailyReminders) return;
+    if (!r.is_daily && !cfg.normalReminders) return;
+    const targetMs = r.is_daily
+      ? (getDailyRemindAt ? new Date(getDailyRemindAt(r)).getTime() : new Date(r.remind_at).getTime())
+      : new Date(r.remind_at).getTime();
     const leadMs = (notifCfg.leadMinutes || 0) * 60000;
-    // Early warning (leadMinutes before)
-    if (leadMs > 0) {
-      const earlyMs = targetMs - leadMs;
-      const earlyDelay = earlyMs - now;
-      if (earlyDelay > 0 && earlyDelay < 86400000) {
-        setTimeout(() => fireReminderNotif(r, true, notifCfg.leadMinutes), earlyDelay);
-      }
-    }
-    // On-time notification
+
+    // Past due within 5 min → notify now
     const onTimeDelay = targetMs - now;
-    if (onTimeDelay > 0 && onTimeDelay < 86400000) {
-      setTimeout(() => fireReminderNotif(r, false, 0), onTimeDelay);
-    }
-    // Past due (within last 5 min) → notify now
     if (onTimeDelay < 0 && onTimeDelay > -300000) {
       fireReminderNotif(r, false, 0);
+      return;
     }
+
+    // Early warning
+    if (leadMs > 0) {
+      const earlyDelay = (targetMs - leadMs) - now;
+      if (earlyDelay > 0 && earlyDelay < 86400000)
+        window._reminderTimers.push(setTimeout(() => fireReminderNotif(r, true, notifCfg.leadMinutes), earlyDelay));
+    }
+    // On-time
+    if (onTimeDelay > 0 && onTimeDelay < 86400000)
+      window._reminderTimers.push(setTimeout(() => fireReminderNotif(r, false, 0), onTimeDelay));
   });
-  // Also send to SW for background check
-  sendRemindersToSW();
+
+  // Send full schedule to SW — SW will fire when app is in background
+  scheduleViaSW();
+}
+
+function scheduleViaSW() {
+  if (!swRegistration?.active) return;
+  const now = Date.now();
+  // Build schedule array for SW
+  const schedule = [];
+  reminders.filter(r => !r.done).forEach(r => {
+    if (r.is_daily && !notifCfg.dailyReminders) return;
+    if (!r.is_daily && !notifCfg.normalReminders) return;
+    const targetMs = r.is_daily
+      ? (getDailyRemindAt ? new Date(getDailyRemindAt(r)).getTime() : new Date(r.remind_at).getTime())
+      : new Date(r.remind_at).getTime();
+    const leadMs = (notifCfg.leadMinutes || 0) * 60000;
+    if (leadMs > 0 && targetMs - leadMs > now)
+      schedule.push({id: r.id, name: r.name, fireAt: targetMs - leadMs, isEarly: true, leadMin: notifCfg.leadMinutes, isDaily: !!r.is_daily});
+    if (targetMs > now)
+      schedule.push({id: r.id, name: r.name, fireAt: targetMs, isEarly: false, leadMin: 0, isDaily: !!r.is_daily});
+  });
+  swRegistration.active.postMessage({type: 'SCHEDULE_NOTIFICATIONS', schedule});
 }
 
 function fireReminderNotif(r, isEarly, leadMin) {
