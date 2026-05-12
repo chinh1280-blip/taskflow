@@ -1157,6 +1157,32 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .rp-tab.active{color:var(--ac);border-bottom-color:var(--ac)}
 .ri-time-only{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--tx);outline:none;flex-shrink:0}
 .ri-time-only:focus{border-color:var(--ac)}
+
+/* Notification Settings Modal */
+.notif-settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:2100;display:none;align-items:center;justify-content:center;padding:20px}
+.notif-settings-overlay.open{display:flex}
+.notif-settings-box{background:var(--s1);border:1px solid var(--bd);border-radius:18px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.6);overflow:hidden}
+.notif-settings-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--bd)}
+.notif-settings-title{font-size:16px;font-weight:700;color:var(--tx)}
+.notif-settings-body{padding:18px;display:flex;flex-direction:column;gap:14px}
+.notif-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.notif-setting-label{font-size:13px;color:var(--tx);font-weight:500;flex:1}
+.notif-setting-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+/* Toggle switch */
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:var(--bd);border-radius:24px;cursor:pointer;transition:background .2s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle-switch input:checked + .toggle-slider{background:var(--ac)}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px)}
+/* Lead time select */
+.notif-lead-row{background:var(--s2);border-radius:10px;padding:12px 14px}
+.notif-lead-label{font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px}
+.notif-lead-opts{display:flex;gap:6px;flex-wrap:wrap}
+.lead-opt{padding:5px 12px;border-radius:20px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:12px;cursor:pointer;transition:all .15s}
+.lead-opt.active{background:rgba(79,124,255,.18);border-color:var(--ac);color:var(--ac);font-weight:600}
+.notif-settings-footer{padding:12px 18px;border-top:1px solid var(--bd)}
+.notif-save-btn{width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -1301,9 +1327,9 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
         <button class="side-btn" onclick="openConfigModal()" title="Cấu hình Supabase">⚙️ Config</button>
       </div>
       <button id="theme-toggle" onclick="toggleTheme()" style="width:100%;margin-top:8px;justify-content:center" title="Đổi giao diện">🌙 Dark</button>
-      <button id="push-toggle-btn" onclick="isPushEnabled()?disablePushNotifications():enablePushNotifications()"
-        style="width:100%;margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:12px;cursor:pointer;transition:all .2s">
-        🔕 Thông báo: TẮT
+      <button onclick="openNotifSettings()"
+        style="width:100%;margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:12px;cursor:pointer;transition:all .2s" id="notif-main-btn">
+        🔔 Thông báo & Nhắc nhở
       </button>
       <button class="side-btn" onclick="logout()" style="width:100%;margin-top:6px;color:var(--er);border-color:rgba(255,79,109,.3)" title="Đăng xuất">🔒 Đăng xuất</button>
     </div>
@@ -1934,9 +1960,12 @@ async function startApp(){
       requestNotifPermission();
       registerServiceWorker().then(()=>updatePushBtn());
       showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
-      // Load reminders → show popup after 2s
+      // Load reminders → show popup + schedule notifications
       loadReminders().then(() => {
+        loadNotifCfg();
+        updateNotifMainBtn();
         setTimeout(checkStartupReminders, 2000);
+        setTimeout(scheduleReminderNotifications, 3000);
       });
     },300);
   }catch(e){
@@ -6359,6 +6388,7 @@ async function addReminder() {
   updateRemindersBadge();
   renderRemindersView();
   scheduleLocalNotifications();
+  scheduleReminderNotifications();
   try { await dbReminders.insert(rec); } catch(e) { console.warn('reminder insert:',e); }
 }
 
@@ -6385,7 +6415,7 @@ async function deleteReminder(id) {
 // ════════════════════════════════════════════════════════
 // WEB PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════════════
-const VAPID_PUBLIC_KEY = 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk';
+const VAPID_PUBLIC_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
 let swRegistration = null;
 let pushSubscription = null;
 
@@ -6428,7 +6458,7 @@ async function enablePushNotifications() {
     return;
   }
   try {
-    if (VAPID_PUBLIC_KEY === 'BKddE94d4vFYyXA1N53emk14v-ZcYKVDels1inIc-_Mi80Hebio8v1UZdK5gO57zs8bMU6qCjYQroo9ddgwDGhk') {
+    if (VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
       // No VAPID key — use local notification only
       showNotif('ns','✅ Thông báo bật','Sẽ nhận thông báo khi app đang mở.');
       localStorage.setItem('tf_push_enabled','local');
@@ -6477,7 +6507,11 @@ function isPushEnabled() {
 // Send reminder data to SW for local notification check
 function sendRemindersToSW() {
   if (!swRegistration?.active || !reminders?.length) return;
-  swRegistration.active.postMessage({type:'CHECK_REMINDERS', reminders});
+  swRegistration.active.postMessage({
+    type:'CHECK_REMINDERS',
+    reminders,
+    cfg: notifCfg
+  });
 }
 
 // Local notification fallback (when app is open)
@@ -6500,6 +6534,183 @@ function scheduleLocalNotifications() {
       }, delay);
     }
   });
+}
+
+
+// ════════════════════════════════════════════════════════
+// NOTIFICATION SETTINGS
+// ════════════════════════════════════════════════════════
+const NOTIF_CFG_KEY = 'tf_notif_cfg';
+let notifCfg = {
+  enabled: false,
+  normalReminders: true,
+  dailyReminders: true,
+  leadMinutes: 0,   // minutes before due to send early warning
+};
+
+function loadNotifCfg() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NOTIF_CFG_KEY)||'null');
+    if (saved) notifCfg = {...notifCfg, ...saved};
+  } catch {}
+}
+
+function saveNotifCfgLocal() {
+  localStorage.setItem(NOTIF_CFG_KEY, JSON.stringify(notifCfg));
+}
+
+function openNotifSettings() {
+  loadNotifCfg();
+  // Populate toggles
+  document.getElementById('ns-push-enabled').checked = notifCfg.enabled;
+  document.getElementById('ns-remind-normal').checked = notifCfg.normalReminders;
+  document.getElementById('ns-remind-daily').checked  = notifCfg.dailyReminders;
+  selectLeadTime(notifCfg.leadMinutes, false);
+  document.getElementById('ns-status-msg').textContent = notifCfg.enabled
+    ? '✅ Thông báo đang BẬT' : '🔕 Thông báo đang TẮT';
+  document.getElementById('notif-settings-overlay').classList.add('open');
+}
+
+function closeNotifSettings() {
+  document.getElementById('notif-settings-overlay').classList.remove('open');
+}
+
+let _selectedLead = 0;
+function selectLeadTime(val, updateDesc = true) {
+  _selectedLead = val;
+  document.querySelectorAll('.lead-opt').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.val) === val);
+  });
+  if (!updateDesc) return;
+  const descEl = document.getElementById('ns-lead-desc');
+  if (!descEl) return;
+  if (val === 0) {
+    descEl.textContent = 'Thông báo đúng lúc đến hạn.';
+  } else {
+    const h = Math.floor(val/60), m = val%60;
+    const timeStr = h > 0 ? (m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`) : `${m} phút`;
+    descEl.textContent = `Báo trước ${timeStr} → VÀ báo lại đúng giờ due.`;
+  }
+}
+
+async function onNsPushToggle(cb) {
+  if (!cb.checked) return; // turning off handled in save
+  // Request permission right away
+  if (!('Notification' in window)) {
+    cb.checked = false;
+    document.getElementById('ns-status-msg').textContent = '❌ Trình duyệt không hỗ trợ. iOS cần Add to Home Screen.';
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    cb.checked = false;
+    document.getElementById('ns-status-msg').textContent = '❌ Bị từ chối — vào Settings → Safari → Notifications để cho phép.';
+    return;
+  }
+  document.getElementById('ns-status-msg').textContent = '✅ Đã cấp quyền thông báo!';
+  // Register SW
+  if (!swRegistration) await registerServiceWorker();
+}
+
+async function saveNotifSettings() {
+  const btn = document.querySelector('.notif-save-btn');
+  btn.textContent = '⏳ Đang lưu...'; btn.disabled = true;
+  const wasEnabled = notifCfg.enabled;
+  notifCfg = {
+    enabled:          document.getElementById('ns-push-enabled').checked,
+    normalReminders:  document.getElementById('ns-remind-normal').checked,
+    dailyReminders:   document.getElementById('ns-remind-daily').checked,
+    leadMinutes:      _selectedLead,
+  };
+  // Request permission if enabling
+  if (notifCfg.enabled && !wasEnabled) {
+    if (!('Notification' in window)) {
+      showNotif('nd','❌ Không hỗ trợ','iOS cần Add to Home Screen trước.');
+      notifCfg.enabled = false;
+    } else {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        notifCfg.enabled = false;
+        showNotif('nd','❌ Bị từ chối','Vào Settings → Safari → Notifications để bật.');
+      } else {
+        if (!swRegistration) await registerServiceWorker();
+        showNotif('ns','✅ Thông báo bật!','Sẽ nhận thông báo theo cài đặt đã chọn.');
+      }
+    }
+  } else if (!notifCfg.enabled && wasEnabled) {
+    showNotif('ns','🔕 Đã tắt','Thông báo đã tắt.');
+  }
+  saveNotifCfgLocal();
+  // Reschedule
+  scheduleReminderNotifications();
+  updateNotifMainBtn();
+  btn.textContent = '💾 Lưu cài đặt'; btn.disabled = false;
+  closeNotifSettings();
+}
+
+function updateNotifMainBtn() {
+  const btn = document.getElementById('notif-main-btn');
+  if (!btn) return;
+  const on = notifCfg.enabled;
+  btn.textContent = on ? '🔔 Thông báo: BẬT' : '🔔 Thông báo & Nhắc nhở';
+  btn.style.borderColor = on ? 'rgba(34,211,160,.4)' : 'var(--bd)';
+  btn.style.color = on ? 'var(--ok)' : 'var(--tx2)';
+}
+
+// ── Schedule notifications from reminder list ─────────────
+function scheduleReminderNotifications() {
+  if (!notifCfg.enabled) return;
+  if (Notification.permission !== 'granted') return;
+  const now = Date.now();
+  reminders.filter(r => !r.done).forEach(r => {
+    // Determine effective time
+    let targetMs;
+    if (r.is_daily) {
+      if (!notifCfg.dailyReminders) return;
+      targetMs = new Date(getDailyRemindAt ? getDailyRemindAt(r) : r.remind_at).getTime();
+    } else {
+      if (!notifCfg.normalReminders) return;
+      targetMs = new Date(r.remind_at).getTime();
+    }
+    const leadMs = (notifCfg.leadMinutes || 0) * 60000;
+    // Early warning (leadMinutes before)
+    if (leadMs > 0) {
+      const earlyMs = targetMs - leadMs;
+      const earlyDelay = earlyMs - now;
+      if (earlyDelay > 0 && earlyDelay < 86400000) {
+        setTimeout(() => fireReminderNotif(r, true, notifCfg.leadMinutes), earlyDelay);
+      }
+    }
+    // On-time notification
+    const onTimeDelay = targetMs - now;
+    if (onTimeDelay > 0 && onTimeDelay < 86400000) {
+      setTimeout(() => fireReminderNotif(r, false, 0), onTimeDelay);
+    }
+    // Past due (within last 5 min) → notify now
+    if (onTimeDelay < 0 && onTimeDelay > -300000) {
+      fireReminderNotif(r, false, 0);
+    }
+  });
+  // Also send to SW for background check
+  sendRemindersToSW();
+}
+
+function fireReminderNotif(r, isEarly, leadMin) {
+  if (Notification.permission !== 'granted') return;
+  const h = Math.floor(leadMin/60), m = leadMin%60;
+  const leadStr = isEarly
+    ? (h > 0 ? (m > 0 ? `${h}g${m}ph` : `${h}h`) : `${m}ph`) + ' nữa'
+    : 'Đến giờ!';
+  const title = isEarly ? `⏰ ${r.name}` : `🔔 ${r.name}`;
+  const body  = isEarly ? `Còn ${leadStr} — ${r.is_daily?'Hằng ngày':'Nhắc nhở'}` : `${r.is_daily?'🔁 Hằng ngày':'📋 Nhắc nhở'} — Đến hạn rồi!`;
+  try {
+    new Notification(title, {
+      body,
+      tag: `reminder-${r.id}-${isEarly?'early':'due'}`,
+      requireInteraction: true,
+      icon: '/taskflow/icon-192.png',
+    });
+  } catch(e) { console.warn('Notification error:', e); }
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -6781,6 +6992,73 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
     <div class="reminder-popup-list" id="reminder-popup-daily" style="display:none"></div>
     <div class="reminder-popup-footer">
       <button class="reminder-popup-go" onclick="document.getElementById('reminder-popup-overlay').style.display='none';switchToRemindersView()">Xem tất cả reminders →</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION SETTINGS MODAL -->
+<div class="notif-settings-overlay" id="notif-settings-overlay" onclick="if(event.target===this)closeNotifSettings()">
+  <div class="notif-settings-box">
+    <div class="notif-settings-header">
+      <div class="notif-settings-title">🔔 Cài đặt thông báo</div>
+      <button onclick="closeNotifSettings()" style="background:none;border:none;color:var(--tx3);font-size:20px;cursor:pointer;padding:2px">✕</button>
+    </div>
+    <div class="notif-settings-body">
+
+      <!-- Enable toggle -->
+      <div class="notif-setting-row">
+        <div>
+          <div class="notif-setting-label">Bật thông báo Push</div>
+          <div class="notif-setting-sub">Yêu cầu iPhone: Add to Home Screen (iOS 16.4+)</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="ns-push-enabled" onchange="onNsPushToggle(this)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- Reminder types -->
+      <div style="border-top:1px solid var(--bd);padding-top:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Loại nhắc nhở</div>
+        <div class="notif-setting-row" style="margin-bottom:10px">
+          <div>
+            <div class="notif-setting-label">📋 Reminder thông thường</div>
+            <div class="notif-setting-sub">Thông báo reminder một lần theo thời gian đặt</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ns-remind-normal" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="notif-setting-row">
+          <div>
+            <div class="notif-setting-label">🔁 Reminder hằng ngày</div>
+            <div class="notif-setting-sub">Thông báo lặp lại mỗi ngày theo giờ đã chọn</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ns-remind-daily" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Lead time -->
+      <div class="notif-lead-row">
+        <div class="notif-lead-label">⏰ Báo trước bao lâu trước giờ due?</div>
+        <div class="notif-lead-opts" id="ns-lead-opts">
+          <button class="lead-opt" data-val="0" onclick="selectLeadTime(0)">Đúng giờ</button>
+          <button class="lead-opt" data-val="10" onclick="selectLeadTime(10)">10 phút</button>
+          <button class="lead-opt" data-val="30" onclick="selectLeadTime(30)">30 phút</button>
+          <button class="lead-opt" data-val="60" onclick="selectLeadTime(60)">1 giờ</button>
+          <button class="lead-opt" data-val="120" onclick="selectLeadTime(120)">2 giờ</button>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:8px" id="ns-lead-desc"></div>
+      </div>
+
+      <div id="ns-status-msg" style="font-size:12px;text-align:center;min-height:16px;color:var(--tx3)"></div>
+    </div>
+    <div class="notif-settings-footer">
+      <button class="notif-save-btn" onclick="saveNotifSettings()">💾 Lưu cài đặt</button>
     </div>
   </div>
 </div>
