@@ -6831,10 +6831,23 @@ async function savePushSubscriptionToServer(sub) {
   if (!sub || !SB_URL || !SB_KEY) return;
   try {
     const subJson = sub.toJSON();
-    // Save to a simple table or just use localStorage
-    // For full server push, would need edge function
     localStorage.setItem('tf_push_sub', JSON.stringify(subJson));
-    console.log('[Push] Subscription saved, endpoint:', subJson.endpoint?.slice(0,50)+'...');
+    // Save to Supabase push_subscriptions table
+    const res = await fetch(SB_URL + '/rest/v1/push_subscriptions', {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({ subscription: subJson, updated_at: new Date().toISOString() })
+    });
+    if (res.ok || res.status === 409) {
+      console.log('[Push] ✅ Subscription saved to Supabase');
+    } else {
+      console.warn('[Push] Save failed:', res.status, await res.text());
+    }
   } catch(e) {
     console.warn('[Push] Save sub error:', e);
   }
@@ -7199,6 +7212,9 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
       </div>
 
       <div id="ns-status-msg" style="font-size:12px;text-align:center;min-height:16px;color:var(--tx3)"></div>
+      <div style="font-size:11px;color:var(--tx3);background:var(--s2);border-radius:8px;padding:8px 10px;line-height:1.5">
+        💡 <b>Để nhận thông báo khi tắt màn hình iPhone:</b> cần deploy Supabase Edge Function <code>send-push</code> + setup Cron mỗi phút. Xem hướng dẫn trong file <code>supabase/</code>.
+      </div>
     </div>
     <div class="notif-settings-footer">
       <button class="notif-save-btn" onclick="saveNotifSettings()">💾 Lưu cài đặt</button>
