@@ -6187,12 +6187,12 @@ function checkStartupReminders() {
   const in3days = now + 3 * 86400000;
   const all = reminders || [];
 
-  // Phân loại: quá hạn, hôm nay, sắp tới (3 ngày)
-  const overdue  = all.filter(r => !r.done && new Date(r.remind_at).getTime() < now);
+  // Tab Nhắc nhở: chỉ non-daily
+  const normalAll = all.filter(r => !r.is_daily);
   const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
-  const todayArr = all.filter(r => !r.done && new Date(r.remind_at).getTime() >= now && new Date(r.remind_at).getTime() <= todayEnd.getTime());
-  const upcoming = all.filter(r => !r.done && new Date(r.remind_at).getTime() > todayEnd.getTime() && new Date(r.remind_at).getTime() <= in3days);
-
+  const overdue  = normalAll.filter(r => !r.done && new Date(r.remind_at).getTime() < now);
+  const todayArr = normalAll.filter(r => !r.done && new Date(r.remind_at).getTime() >= now && new Date(r.remind_at).getTime() <= todayEnd.getTime());
+  const upcoming = normalAll.filter(r => !r.done && new Date(r.remind_at).getTime() > todayEnd.getTime() && new Date(r.remind_at).getTime() <= in3days);
   const toShow = [...overdue, ...todayArr, ...upcoming];
   if (!toShow.length) { setTimeout(showOverduePopup, 500); return; }
 
@@ -6323,8 +6323,11 @@ function renderRemindersView() {
   const now = Date.now();
   const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
   const sorted = [...reminders].sort((a,b)=>new Date(a.remind_at)-new Date(b.remind_at));
-  const pending = sorted.filter(r=>!r.done);
-  const done    = sorted.filter(r=> r.done);
+  // Tab Nhắc nhở: chỉ non-daily; Daily riêng tab Hằng ngày
+  const pending = sorted.filter(r=>!r.done && !r.is_daily);
+  const done    = sorted.filter(r=> r.done && !r.is_daily);
+  const pendingDaily = sorted.filter(r=>!r.done && r.is_daily);
+  const doneDaily    = sorted.filter(r=> r.done && r.is_daily);
 
   el.innerHTML = `
     <div class="reminder-add-form">
@@ -6348,6 +6351,12 @@ function renderRemindersView() {
     ${done.length ? `
     <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-top:8px">Đã xong (${done.length})</div>
     <div class="reminder-list">${done.map(r=>renderReminderItem(r,now,todayEnd)).join('')}</div>` : ''}
+    ${pendingDaily.length ? `
+    <div style="font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.8px;margin-top:12px">🔁 Hằng ngày - Đang chờ (${pendingDaily.length})</div>
+    <div class="reminder-list">${pendingDaily.map(r=>renderReminderItem(r,now,todayEnd)).join('')}</div>` : ''}
+    ${doneDaily.length ? `
+    <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-top:8px">🔁 Hằng ngày - Đã xong hôm nay (${doneDaily.length})</div>
+    <div class="reminder-list">${doneDaily.map(r=>renderReminderItem(r,now,todayEnd)).join('')}</div>` : ''}
     ${!reminders.length ? '<div class="reminder-empty"><div style="font-size:36px;margin-bottom:12px">🔔</div><div style="font-size:15px;font-weight:600;color:var(--tx2)">Chưa có nhắc nhở nào</div></div>' : ''}
   `;
   // Set default time = 1 hour from now
@@ -7176,6 +7185,10 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
     <button class="iep-color-btn" onmousedown="event.preventDefault()" onclick="showAdvColorPicker(this,'iep-note','iep-color-btn')" title="Màu chữ">
       <span style="font-size:12px;font-weight:800">A</span><span style="font-size:10px">🖌</span>
       <span class="iep-color-indicator" id="iep-color-ind"></span>
+    </button>
+    <button class="iep-highlight-btn" onmousedown="event.preventDefault()" onclick="showHighlightPicker(this,'iep-note','iep-hl-ind')" title="Highlight chữ">
+      <span style="font-size:11px">🖊</span><span style="font-size:10px;font-weight:800">H</span>
+      <span class="highlight-ind" id="iep-hl-ind" style="width:12px;height:2px"></span>
     </button>
         <div class="iep-tb-sep"></div>
     <button class="iep-tb-btn" onmousedown="event.preventDefault()" onclick="iepInsertLink()" title="Chèn link">🔗</button>
