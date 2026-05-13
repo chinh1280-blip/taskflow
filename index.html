@@ -6331,7 +6331,25 @@ function renderRemindersView() {
   if (!el) return;
   const now = Date.now();
   const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
-  const sorted = [...reminders].sort((a,b)=>new Date(a.remind_at)-new Date(b.remind_at));
+  const now2 = Date.now();
+  // Sắp xếp: quá hạn lên đầu (mới nhất trước), sau đó sắp tới (sớm nhất trước)
+  const sorted = [...reminders].sort((a, b) => {
+    const getEffectiveTs = r => {
+      if (!r.is_daily) return new Date(r.remind_at).getTime();
+      const stored = new Date(r.remind_at);
+      const t = new Date();
+      t.setHours(stored.getHours(), stored.getMinutes(), 0, 0);
+      return t.getTime();
+    };
+    const tA = getEffectiveTs(a);
+    const tB = getEffectiveTs(b);
+    const ovA = tA < now2; // a quá hạn
+    const ovB = tB < now2; // b quá hạn
+    if (ovA && ovB) return tA - tB;      // cả 2 quá hạn: cũ nhất lên đầu
+    if (ovA && !ovB) return -1;           // a quá hạn → lên trước
+    if (!ovA && ovB) return 1;            // b quá hạn → b lên trước
+    return tA - tB;                       // cả 2 chưa hạn: sớm nhất lên đầu
+  });
   // Tab Nhắc nhở: chỉ non-daily; Daily riêng tab Hằng ngày
   const pending = sorted.filter(r=>!r.done && !r.is_daily);
   const done    = sorted.filter(r=> r.done && !r.is_daily);
