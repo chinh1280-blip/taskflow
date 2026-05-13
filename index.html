@@ -6238,25 +6238,34 @@ function checkStartupReminders() {
 
 
 function doneReminderFromPopup(id) {
-  // Mark done immediately (optimistic)
   const r = reminders.find(r => r.id === id);
-  if (r) r.done = true;
-  // Remove from both popup lists
+  if (r) {
+    r.done = true;
+    // Daily: lưu done_date để reset vào hôm sau
+    if (r.is_daily) {
+      r.done_date = new Date().toDateString();
+    }
+  }
+  // Remove từ popup
   document.getElementById('rpp_' + id)?.remove();
   document.getElementById('rpp_d_' + id)?.remove();
-  // Close if no items left
   const normalList = document.getElementById('reminder-popup-list');
   const dailyList  = document.getElementById('reminder-popup-daily');
-  const normalEmpty = !normalList?.children.length;
-  const dailyEmpty  = !dailyList?.children.length;
-  if (normalEmpty && dailyEmpty) {
+  if (!normalList?.children.length && !dailyList?.children.length) {
     document.getElementById('reminder-popup-overlay').style.display = 'none';
   }
-  // Persist
+  // Persist ngay lập tức — cả localStorage và Supabase
   localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
   updateRemindersBadge();
   if (isRemindersView) renderRemindersView();
-  dbReminders.update(id, {done: true}).catch(() => {});
+  // Lưu Supabase đồng bộ với done_date
+  const updateData = { done: true };
+  if (r?.is_daily) updateData.done_date = new Date().toDateString();
+  dbReminders.update(id, updateData).catch(e => {
+    console.warn('doneReminderFromPopup save error:', e);
+    // Retry sau 2s
+    setTimeout(() => dbReminders.update(id, updateData).catch(()=>{}), 2000);
+  });
   showNotif('ns', '✅ Xong!', 'Đã đánh dấu hoàn thành.');
 }
 function dismissOneReminder(id) {
