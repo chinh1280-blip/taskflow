@@ -6397,15 +6397,31 @@ function openReminderEdit(id) {
   const r = reminders.find(r=>r.id===id);
   if (!r) return;
   _editRemId = id;
-  // Reuse add form fields — scroll to top and populate
   const nameEl = document.getElementById('ri-name');
   const timeEl = document.getElementById('ri-time');
+  const dailyCb = document.getElementById('ri-daily');
   if (nameEl) nameEl.value = r.name;
-  if (timeEl) timeEl.value = toLocalISOString(r.remind_at);
-  // Change button text
+
+  // Set đúng trạng thái daily / non-daily
+  if (dailyCb) {
+    dailyCb.checked = !!r.is_daily;
+    if (r.is_daily) {
+      // Daily: chỉ hiện time picker
+      timeEl.type = 'time';
+      timeEl.className = 'ri-time-only';
+      const stored = new Date(r.remind_at);
+      const pad = n => String(n).padStart(2,'0');
+      timeEl.value = pad(stored.getHours()) + ':' + pad(stored.getMinutes());
+    } else {
+      // Non-daily: datetime-local
+      timeEl.type = 'datetime-local';
+      timeEl.className = 'reminder-time-inp';
+      timeEl.value = toLocalISOString(r.remind_at);
+    }
+  }
+
   const btn = document.querySelector('.reminder-add-btn');
   if (btn) { btn.textContent = '💾 Cập nhật'; btn.onclick = saveReminderEdit; }
-  // Scroll view to top
   const view = document.getElementById('reminders-view');
   if (view) view.scrollTop = 0;
   if (nameEl) nameEl.focus();
@@ -6526,7 +6542,7 @@ async function addReminder() {
   const isDaily = document.getElementById('ri-daily')?.checked || false;
   const remind_at2 = (typeof getReminderTime === 'function') ? getReminderTime() : new Date(time).toISOString();
   if (!remind_at2) { showNotif('nw','⚠️','Chọn thời gian nhắc.'); return; }
-  const rec = { id:'rem_'+Date.now(), name, remind_at:remind_at2, is_daily:isDaily, done:false, created_at:new Date().toISOString() };
+  const rec = { id:'rem_'+Date.now(), name, remind_at:remind_at2, is_daily:isDaily, done:false, created_at:new Date().toISOString(), updated_at:new Date().toISOString() };
   reminders.push(rec);
   reminders.sort((a,b)=>new Date(a.remind_at)-new Date(b.remind_at));
   localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
