@@ -1204,57 +1204,62 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 /* ─── Reminder Timeline ─────────────────────────────── */
 .reminder-timeline-wrap{
   background:var(--s1);border:1px solid var(--bd);border-radius:14px;
-  padding:14px 14px 18px;user-select:none;
-  min-height:120px;
+  padding:14px 16px 10px;user-select:none;
 }
-.rtl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.rtl-title{font-size:12px;font-weight:700;color:var(--tx2);letter-spacing:.5px}
-.rtl-now-label{font-size:11px;color:var(--ac);font-family:"Roboto Mono",monospace;font-weight:600}
-/* Track */
-.rtl-track{position:relative;height:72px;margin:0 4px;padding-bottom:20px}
-.rtl-axis{position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--bd);border-radius:1px}
-/* Now marker */
-.rtl-now-marker{
-  position:absolute;bottom:-4px;width:12px;height:12px;
-  border-radius:50%;background:var(--ac);border:2px solid var(--bg);
-  transform:translateX(-50%);z-index:5;
-  box-shadow:0 0 0 3px rgba(79,124,255,.25);
-  transition:left .5s linear;
-}
+.rtl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.rtl-title{font-size:12px;font-weight:700;color:var(--tx2);letter-spacing:.3px;display:flex;align-items:center;gap:5px}
+.rtl-now-label{font-size:12px;color:var(--ac);font-family:"Roboto Mono",monospace;font-weight:700;letter-spacing:1px}
+/* Outer container — gives space for dots above + labels below */
+.rtl-outer{position:relative;padding:4px 0 22px;margin:0 2px}
+/* Track axis */
+.rtl-axis{position:absolute;bottom:20px;left:0;right:0;height:2px;background:var(--bd);border-radius:2px}
+/* Now marker vertical line */
 .rtl-now-line{
-  position:absolute;bottom:0;width:1px;background:var(--ac);
-  opacity:.4;transform:translateX(-50%);transition:left .5s linear;
+  position:absolute;bottom:20px;width:2px;
+  background:linear-gradient(to bottom,transparent,var(--ac));
+  transform:translateX(-50%);transition:left 1s linear;z-index:2;
 }
-/* Hour ticks */
-.rtl-tick{position:absolute;bottom:0;width:1px;background:var(--bd)}
+/* Now diamond marker ON axis */
+.rtl-now-marker{
+  position:absolute;bottom:14px;width:14px;height:14px;
+  background:var(--ac);border:2px solid var(--bg);
+  transform:translateX(-50%) rotate(45deg);z-index:5;
+  box-shadow:0 0 0 3px rgba(79,124,255,.3);
+  transition:left 1s linear;
+}
+/* Hour ticks — sit on axis */
+.rtl-tick{position:absolute;bottom:20px;width:1px;background:rgba(255,255,255,.12)}
+.rtl-tick.major{background:var(--bd);width:1px}
+/* Hour labels — below axis */
 .rtl-tick-label{
-  position:absolute;bottom:-18px;font-size:9px;color:var(--tx3);
+  position:absolute;bottom:2px;font-size:9px;color:var(--tx3);
   transform:translateX(-50%);font-family:"Roboto Mono",monospace;
-  white-space:nowrap;
+  white-space:nowrap;pointer-events:none;
 }
-/* Dot */
+/* Dots — sit above axis */
 .rtl-dot{
   position:absolute;border-radius:50%;border:2px solid;
   cursor:pointer;transition:transform .15s,box-shadow .15s;
-  display:flex;align-items:center;justify-content:center;
-  font-size:7px;font-weight:700;color:#fff;
-  transform:translateX(-50%);z-index:3;
+  transform:translateX(-50%);z-index:3;box-sizing:border-box;
 }
-.rtl-dot:hover{transform:translateX(-50%) scale(1.4);z-index:10}
+.rtl-dot:hover,.rtl-dot:active{transform:translateX(-50%) scale(1.5);z-index:10;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
 .rtl-dot.overdue{background:var(--er);border-color:var(--er)}
 .rtl-dot.today{background:var(--wa);border-color:var(--wa)}
 .rtl-dot.upcoming{background:var(--ac);border-color:var(--ac)}
-.rtl-dot.daily{background:none;border-color:var(--wa)}
-.rtl-dot.daily.overdue{border-color:var(--er)}
-.rtl-dot.done-dot{opacity:.3;background:var(--tx3);border-color:var(--tx3)}
+.rtl-dot.daily-r{background:none;border-color:var(--wa);background:rgba(255,179,71,.15)}
+.rtl-dot.daily-r.overdue{border-color:var(--er);background:rgba(255,79,109,.1)}
+.rtl-dot.done-dot{opacity:.25;background:var(--tx3)!important;border-color:var(--tx3)!important}
 /* Tooltip */
 .rtl-tooltip{
   position:fixed;background:var(--s1);border:1px solid var(--bd);
-  border-radius:8px;padding:6px 10px;font-size:11px;z-index:999;
-  pointer-events:none;white-space:nowrap;max-width:200px;white-space:normal;
-  box-shadow:0 4px 16px rgba(0,0,0,.4);line-height:1.4;
+  border-radius:9px;padding:8px 12px;font-size:12px;z-index:9999;
+  pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.45);line-height:1.5;
+  max-width:220px;
 }
-.rtl-legend{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+.rtl-legend{
+  display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;
+  padding-top:8px;border-top:1px solid var(--bd);
+}
 .rtl-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx3)}
 .rtl-leg-dot{width:10px;height:10px;border-radius:50%;border:2px solid;flex-shrink:0}
 </style>
@@ -6226,82 +6231,90 @@ function buildReminderTimeline() {
 
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
-  const totalMins = 24 * 60;
-  const nowPct = (nowMins / totalMins) * 100;
+  const nowPct  = (nowMins / 1440) * 100;
 
-  // Build dots data
+  // ── Collect dots ────────────────────────────────────
   const dots = [];
-  const allR = reminders || [];
-  allR.forEach(r => {
+  (reminders || []).forEach(r => {
     let h, m;
     if (r.is_daily) {
-      const stored = new Date(r.remind_at);
-      h = stored.getHours(); m = stored.getMinutes();
+      const s = new Date(r.remind_at);
+      h = s.getHours(); m = s.getMinutes();
     } else {
       const t = new Date(r.remind_at);
-      // Only show today's reminders on timeline
-      const today = new Date();
-      if (t.toDateString() !== today.toDateString()) return;
+      if (t.toDateString() !== now.toDateString()) return;
       h = t.getHours(); m = t.getMinutes();
     }
     const mins = h * 60 + m;
-    const pct  = (mins / totalMins) * 100;
-    const isOverdue = mins < nowMins && !r.done;
-    const cls = r.done ? 'done-dot' : isOverdue ? 'overdue' : mins <= nowMins + 120 ? 'today' : 'upcoming';
-    const dailyCls = r.is_daily ? ' daily' : '';
-    dots.push({ r, mins, pct, cls: cls + dailyCls, h, m, isOverdue });
+    const pct  = (mins / 1440) * 100;
+    const isOv = mins < nowMins && !r.done;
+    const baseCls = r.done ? 'done-dot'
+                  : isOv  ? 'overdue'
+                  : mins <= nowMins + 120 ? 'today' : 'upcoming';
+    const dailyCls = r.is_daily ? ' daily-r' : '';
+    dots.push({ r, mins, pct, cls: baseCls + dailyCls, h, m, isOv });
   });
 
-  // Stack dots at same time slot (within 15 min)
-  const SLOT = 15;
+  // ── Stack dots in same 20-min slot ──────────────────
+  const SLOT = 20;
   const slotMap = {};
   dots.forEach(d => {
-    const slot = Math.round(d.mins / SLOT);
-    if (!slotMap[slot]) slotMap[slot] = [];
-    slotMap[slot].push(d);
+    const k = Math.round(d.mins / SLOT);
+    (slotMap[k] = slotMap[k] || []).push(d);
   });
 
-  // Build SVG-style HTML dots
+  // ── Render dots ─────────────────────────────────────
+  const DOT = 11; // dot size px
+  const AXIS_BOTTOM = 20; // px from bottom of .rtl-outer to axis
+  const STACK_GAP   = 14; // px per stacked level
   let dotsHtml = '';
   Object.values(slotMap).forEach(group => {
     group.forEach((d, i) => {
-      const bottom = 4 + i * 14; // stack upward
-      const size = 11;
+      const bottom = AXIS_BOTTOM + 4 + i * STACK_GAP; // above axis
+      const nameE  = esc(d.r.name);
+      const timeStr = `${d.h}:${String(d.m).padStart(2,'0')}`;
+      const status  = d.r.done ? 'done' : d.isOv ? 'overdue' : 'ok';
       dotsHtml += `<div class="rtl-dot ${d.cls}"
-        style="left:${d.pct.toFixed(2)}%;bottom:${bottom}px;width:${size}px;height:${size}px"
-        onmouseenter="showRtlTooltip(event,'${esc(d.r.name)}','${d.h}:${String(d.m).padStart(2,'0')}','${d.r.done?'done':d.isOverdue?'overdue':'ok'}')"
+        style="left:${d.pct.toFixed(2)}%;bottom:${bottom}px;width:${DOT}px;height:${DOT}px"
+        onmouseenter="showRtlTooltip(event,'${nameE}','${timeStr}','${status}')"
         onmouseleave="hideRtlTooltip()"
-        ontouchstart="showRtlTooltip(event,'${esc(d.r.name)}','${d.h}:${String(d.m).padStart(2,'0')}','${d.r.done?'done':d.isOverdue?'overdue':'ok'}')"
-        ></div>`;
+        ontouchstart="showRtlTooltip(event,'${nameE}','${timeStr}','${status}')"></div>`;
     });
   });
 
-  // Hour ticks (every 3h)
+  // ── Hour ticks: 0,3,6,...,24 ────────────────────────
   let ticksHtml = '';
   for (let h = 0; h <= 24; h += 3) {
     const pct = (h / 24) * 100;
-    ticksHtml += `<div class="rtl-tick" style="left:${pct}%;height:${h%6===0?8:5}px"></div>`;
+    const isMajor = h % 6 === 0;
+    ticksHtml += `<div class="rtl-tick ${isMajor?'major':''}"
+      style="left:${pct}%;height:${isMajor?10:6}px;bottom:20px"></div>`;
     ticksHtml += `<div class="rtl-tick-label" style="left:${pct}%">${h}</div>`;
   }
+
+  // ── Dynamic outer height ─────────────────────────────
+  // Find max stack depth
+  const maxStack = Math.max(0, ...Object.values(slotMap).map(g => g.length));
+  const outerH = AXIS_BOTTOM + 4 + (maxStack || 1) * STACK_GAP + 8;
 
   wrap.innerHTML = `
     <div class="rtl-header">
       <div class="rtl-title">📅 Timeline hôm nay</div>
-      <div class="rtl-now-label" id="rtl-clock">${now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="rtl-now-label" id="rtl-clock">${now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>
     </div>
-    <div class="rtl-track" id="rtl-track">
+    <div class="rtl-outer" id="rtl-outer" style="height:${outerH}px">
       <div class="rtl-axis"></div>
-      <div class="rtl-now-line" id="rtl-now-line" style="left:${nowPct.toFixed(2)}%;height:44px;top:0"></div>
-      <div class="rtl-now-marker" id="rtl-now-marker" style="left:${nowPct.toFixed(2)}%"></div>
+      <div class="rtl-now-line"  id="rtl-now-line"   style="left:${nowPct.toFixed(3)}%;height:${outerH - AXIS_BOTTOM + 4}px"></div>
+      <div class="rtl-now-marker" id="rtl-now-marker" style="left:${nowPct.toFixed(3)}%"></div>
       ${ticksHtml}
       ${dotsHtml}
     </div>
     <div class="rtl-legend">
       <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--er);border-color:var(--er)"></div>Quá hạn</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--wa);border-color:var(--wa)"></div>Sắp đến</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--wa);border-color:var(--wa)"></div>Sắp đến 2h</div>
       <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac)"></div>Còn lâu</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:none;border-color:var(--wa)"></div>Hằng ngày</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac);opacity:.3"></div>Đã xong</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(255,179,71,.15);border-color:var(--wa)"></div>Hằng ngày</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="opacity:.25;background:var(--tx3);border-color:var(--tx3)"></div>Đã xong</div>
     </div>`;
 }
 
@@ -6309,6 +6322,7 @@ function updateRtlClock() {
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes() + now.getSeconds()/60;
   const pct = (nowMins / (24*60)) * 100;
+  const outer  = document.getElementById('rtl-outer');
   const marker = document.getElementById('rtl-now-marker');
   const line   = document.getElementById('rtl-now-line');
   const clock  = document.getElementById('rtl-clock');
