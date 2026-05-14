@@ -1200,6 +1200,61 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   transition:all .15s;flex-shrink:0;line-height:1.4
 }
 .reminder-popup-item .popup-done-btn:hover{background:rgba(34,211,160,.15);border-color:var(--ok);color:var(--ok)}
+
+/* ─── Reminder Timeline ─────────────────────────────── */
+.reminder-timeline-wrap{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;
+  padding:14px 14px 10px;overflow:hidden;user-select:none;
+}
+.rtl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.rtl-title{font-size:12px;font-weight:700;color:var(--tx2);letter-spacing:.5px}
+.rtl-now-label{font-size:11px;color:var(--ac);font-family:"Roboto Mono",monospace;font-weight:600}
+/* Track */
+.rtl-track{position:relative;height:52px;margin:0 4px}
+.rtl-axis{position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--bd);border-radius:1px}
+/* Now marker */
+.rtl-now-marker{
+  position:absolute;bottom:-4px;width:12px;height:12px;
+  border-radius:50%;background:var(--ac);border:2px solid var(--bg);
+  transform:translateX(-50%);z-index:5;
+  box-shadow:0 0 0 3px rgba(79,124,255,.25);
+  transition:left .5s linear;
+}
+.rtl-now-line{
+  position:absolute;bottom:0;width:1px;background:var(--ac);
+  opacity:.4;transform:translateX(-50%);transition:left .5s linear;
+}
+/* Hour ticks */
+.rtl-tick{position:absolute;bottom:0;width:1px;background:var(--bd)}
+.rtl-tick-label{
+  position:absolute;bottom:-16px;font-size:9px;color:var(--tx3);
+  transform:translateX(-50%);font-family:"Roboto Mono",monospace;
+}
+/* Dot */
+.rtl-dot{
+  position:absolute;border-radius:50%;border:2px solid;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+  display:flex;align-items:center;justify-content:center;
+  font-size:7px;font-weight:700;color:#fff;
+  transform:translateX(-50%);z-index:3;
+}
+.rtl-dot:hover{transform:translateX(-50%) scale(1.4);z-index:10}
+.rtl-dot.overdue{background:var(--er);border-color:var(--er)}
+.rtl-dot.today{background:var(--wa);border-color:var(--wa)}
+.rtl-dot.upcoming{background:var(--ac);border-color:var(--ac)}
+.rtl-dot.daily{background:none;border-color:var(--wa)}
+.rtl-dot.daily.overdue{border-color:var(--er)}
+.rtl-dot.done-dot{opacity:.3;background:var(--tx3);border-color:var(--tx3)}
+/* Tooltip */
+.rtl-tooltip{
+  position:fixed;background:var(--s1);border:1px solid var(--bd);
+  border-radius:8px;padding:6px 10px;font-size:11px;z-index:999;
+  pointer-events:none;white-space:nowrap;max-width:200px;white-space:normal;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);line-height:1.4;
+}
+.rtl-legend{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+.rtl-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx3)}
+.rtl-leg-dot{width:10px;height:10px;border-radius:50%;border:2px solid;flex-shrink:0}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -6159,6 +6214,133 @@ function toLocalISOString(date) {
   const pad = n => String(n).padStart(2,'0');
   return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
 }
+
+// ── Reminder Timeline ─────────────────────────────────────
+let _rtlTimer = null;
+
+function buildReminderTimeline() {
+  const wrap = document.getElementById('reminder-timeline');
+  if (!wrap) return;
+
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const totalMins = 24 * 60;
+  const nowPct = (nowMins / totalMins) * 100;
+
+  // Build dots data
+  const dots = [];
+  const allR = reminders || [];
+  allR.forEach(r => {
+    let h, m;
+    if (r.is_daily) {
+      const stored = new Date(r.remind_at);
+      h = stored.getHours(); m = stored.getMinutes();
+    } else {
+      const t = new Date(r.remind_at);
+      // Only show today's reminders on timeline
+      const today = new Date();
+      if (t.toDateString() !== today.toDateString()) return;
+      h = t.getHours(); m = t.getMinutes();
+    }
+    const mins = h * 60 + m;
+    const pct  = (mins / totalMins) * 100;
+    const isOverdue = mins < nowMins && !r.done;
+    const cls = r.done ? 'done-dot' : isOverdue ? 'overdue' : mins <= nowMins + 120 ? 'today' : 'upcoming';
+    const dailyCls = r.is_daily ? ' daily' : '';
+    dots.push({ r, mins, pct, cls: cls + dailyCls, h, m, isOverdue });
+  });
+
+  // Stack dots at same time slot (within 15 min)
+  const SLOT = 15;
+  const slotMap = {};
+  dots.forEach(d => {
+    const slot = Math.round(d.mins / SLOT);
+    if (!slotMap[slot]) slotMap[slot] = [];
+    slotMap[slot].push(d);
+  });
+
+  // Build SVG-style HTML dots
+  let dotsHtml = '';
+  Object.values(slotMap).forEach(group => {
+    group.forEach((d, i) => {
+      const bottom = 4 + i * 14; // stack upward
+      const size = 11;
+      dotsHtml += `<div class="rtl-dot ${d.cls}"
+        style="left:${d.pct.toFixed(2)}%;bottom:${bottom}px;width:${size}px;height:${size}px"
+        onmouseenter="showRtlTooltip(event,'${esc(d.r.name)}','${d.h}:${String(d.m).padStart(2,'0')}','${d.r.done?'done':d.isOverdue?'overdue':'ok'}')"
+        onmouseleave="hideRtlTooltip()"
+        ontouchstart="showRtlTooltip(event,'${esc(d.r.name)}','${d.h}:${String(d.m).padStart(2,'0')}','${d.r.done?'done':d.isOverdue?'overdue':'ok'}')"
+        ></div>`;
+    });
+  });
+
+  // Hour ticks (every 3h)
+  let ticksHtml = '';
+  for (let h = 0; h <= 24; h += 3) {
+    const pct = (h / 24) * 100;
+    ticksHtml += `<div class="rtl-tick" style="left:${pct}%;height:${h%6===0?8:5}px"></div>`;
+    ticksHtml += `<div class="rtl-tick-label" style="left:${pct}%">${h}</div>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="rtl-header">
+      <div class="rtl-title">📅 Timeline hôm nay</div>
+      <div class="rtl-now-label" id="rtl-clock">${now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+    <div class="rtl-track" id="rtl-track">
+      <div class="rtl-axis"></div>
+      <div class="rtl-now-line" id="rtl-now-line" style="left:${nowPct.toFixed(2)}%;height:44px;top:0"></div>
+      <div class="rtl-now-marker" id="rtl-now-marker" style="left:${nowPct.toFixed(2)}%"></div>
+      ${ticksHtml}
+      ${dotsHtml}
+    </div>
+    <div class="rtl-legend">
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--er);border-color:var(--er)"></div>Quá hạn</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--wa);border-color:var(--wa)"></div>Sắp đến</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac)"></div>Còn lâu</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:none;border-color:var(--wa)"></div>Hằng ngày</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac);opacity:.3"></div>Đã xong</div>
+    </div>`;
+}
+
+function updateRtlClock() {
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes() + now.getSeconds()/60;
+  const pct = (nowMins / (24*60)) * 100;
+  const marker = document.getElementById('rtl-now-marker');
+  const line   = document.getElementById('rtl-now-line');
+  const clock  = document.getElementById('rtl-clock');
+  if (marker) marker.style.left = pct.toFixed(3) + '%';
+  if (line)   line.style.left   = pct.toFixed(3) + '%';
+  if (clock)  clock.textContent = now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function startRtlTimer() {
+  if (_rtlTimer) clearInterval(_rtlTimer);
+  _rtlTimer = setInterval(updateRtlClock, 1000);
+}
+
+function stopRtlTimer() {
+  if (_rtlTimer) { clearInterval(_rtlTimer); _rtlTimer = null; }
+}
+
+function showRtlTooltip(e, name, time, status) {
+  hideRtlTooltip();
+  const tip = document.createElement('div');
+  tip.id = 'rtl-tip';
+  tip.className = 'rtl-tooltip';
+  const statusMap = {done:'✅ Đã xong', overdue:'‼️ Quá hạn', ok:'🔔 Nhắc nhở'};
+  tip.innerHTML = `<div style="font-weight:600;margin-bottom:2px">${name}</div><div style="color:var(--tx3)">${time} — ${statusMap[status]||''}</div>`;
+  document.body.appendChild(tip);
+  const x = Math.min(e.clientX + 8, window.innerWidth - 210);
+  const y = Math.max(e.clientY - 60, 8);
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+
+function hideRtlTooltip() {
+  document.getElementById('rtl-tip')?.remove();
+}
+
 function reminderTimeLabel(remindAt) {
   const now = Date.now();
   const t = new Date(remindAt).getTime();
@@ -6307,7 +6489,8 @@ function switchToRemindersView() {
   document.getElementById('topbar-task-row').style.display = 'none';
   document.getElementById('topbar-view-row').style.display = '';
   document.getElementById('page-title').textContent = '🔔 Reminders';
-  document.getElementById('topbar-view-actions').innerHTML = '';
+  document.getElementById('topbar-view-actions').innerHTML =
+    '<button class="refresh-topbar" onclick="manualRefresh(this)" title="Đồng bộ">↻</button>';
   if (!reminders.length) loadReminders();
   else renderRemindersView();
   closeSide();
@@ -6315,6 +6498,7 @@ function switchToRemindersView() {
 
 function switchFromRemindersView() {
   isRemindersView = false;
+  stopRtlTimer();
   document.getElementById('reminders-view').style.display = 'none';
   document.getElementById('nav-reminders')?.classList.remove('active');
   document.getElementById('content').style.display = '';
@@ -6379,6 +6563,7 @@ function renderRemindersView() {
         <button class="reminder-add-btn" id="ri-add-btn" onclick="addReminder()">Thêm</button>
       </div>
     </div>
+    <div class="reminder-timeline-wrap" id="reminder-timeline"></div>
     ${pending.length ? `
     <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">Đang chờ (${pending.length})</div>
     <div class="reminder-list">${pending.map(r=>renderReminderItem(r,now,todayEnd)).join('')}</div>` : ''}
@@ -6399,6 +6584,8 @@ function renderRemindersView() {
     const d = new Date(Date.now()+3600000);
     inp.value = toLocalISOString(d);
   }
+  // Build timeline
+  setTimeout(() => { buildReminderTimeline(); startRtlTimer(); }, 50);
 }
 
 function renderReminderItem(r, now, todayEnd) {
