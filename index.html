@@ -1975,7 +1975,14 @@ async function startApp(){
       loadNotes();
       loadBoards();
       requestNotifPermission();
-      registerServiceWorker().then(()=>{ updateNotifMainBtn(); restorePushSubscription(); });
+      registerServiceWorker().then(async () => {
+        updateNotifMainBtn();
+        // Đợi SW ready rồi mới restore subscription
+        if (swRegistration) {
+          await swRegistration.ready;
+          restorePushSubscription();
+        }
+      });
       showNotif('ni','☁️ Đã kết nối','Dữ liệu đồng bộ tự động.');
       // Load reminders → show popup + schedule notifications
       loadReminders().then(() => {
@@ -6963,7 +6970,7 @@ async function savePushSubscriptionToServer(sub) {
   try {
     const subJson = sub.toJSON();
     localStorage.setItem('tf_push_sub', JSON.stringify(subJson));
-    // Save to Supabase push_subscriptions table
+    // Upsert vào Supabase — update nếu đã có (endpoint có thể đổi)
     const res = await fetch(SB_URL + '/rest/v1/push_subscriptions', {
       method: 'POST',
       headers: {
@@ -6972,12 +6979,16 @@ async function savePushSubscriptionToServer(sub) {
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates,return=minimal',
       },
-      body: JSON.stringify({ subscription: subJson, updated_at: new Date().toISOString() })
+      body: JSON.stringify({
+        subscription: subJson,
+        updated_at: new Date().toISOString()
+      })
     });
-    if (res.ok || res.status === 409) {
-      console.log('[Push] ✅ Subscription saved to Supabase');
+    if (res.ok || res.status === 201 || res.status === 409) {
+      console.log('[Push] ✅ Subscription upserted to Supabase');
     } else {
-      console.warn('[Push] Save failed:', res.status, await res.text());
+      const errText = await res.text();
+      console.warn('[Push] Save failed:', res.status, errText);
     }
   } catch(e) {
     console.warn('[Push] Save sub error:', e);
@@ -6987,17 +6998,40 @@ async function savePushSubscriptionToServer(sub) {
 // Restore existing push subscription on startup
 async function restorePushSubscription() {
   if (!swRegistration) return;
+  const wasEnabled = localStorage.getItem('tf_push_enabled');
+  if (!wasEnabled) return; // User chưa bật thông báo
+  if (Notification.permission !== 'granted') return;
+
   try {
-    const existing = await swRegistration.pushManager.getSubscription();
-    if (existing) {
-      pushSubscription = existing;
-      localStorage.setItem('tf_push_enabled', 'push');
-      localStorage.setItem('tf_push_sub', JSON.stringify(existing.toJSON()));
-      updateNotifMainBtn();
-      console.log('[Push] Existing subscription restored');
+    let sub = await swRegistration.pushManager.getSubscription();
+
+    if (!sub) {
+      // Subscription bị mất (iOS invalidate) → subscribe lại tự động
+      console.log('[Push] No subscription found, re-subscribing...');
+      sub = await swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+      console.log('[Push] Re-subscribed successfully');
     }
+
+    pushSubscription = sub;
+    localStorage.setItem('tf_push_enabled', 'push');
+    localStorage.setItem('tf_push_sub', JSON.stringify(sub.toJSON()));
+    updateNotifMainBtn();
+
+    // Luôn sync subscription mới nhất lên Supabase
+    // (endpoint có thể thay đổi sau khi iOS rotate)
+    await savePushSubscriptionToServer(sub);
+    console.log('[Push] Subscription synced to server');
+
   } catch(e) {
-    console.warn('[Push] Restore error:', e);
+    console.warn('[Push] Restore/re-subscribe error:', e.message);
+    // Nếu lỗi thật sự → mark disabled
+    if (e.message?.includes('permission') || e.message?.includes('denied')) {
+      localStorage.removeItem('tf_push_enabled');
+      updateNotifMainBtn();
+    }
   }
 }
 function urlBase64ToUint8Array(base64String) {
