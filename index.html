@@ -1204,13 +1204,14 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 /* ─── Reminder Timeline ─────────────────────────────── */
 .reminder-timeline-wrap{
   background:var(--s1);border:1px solid var(--bd);border-radius:14px;
-  padding:14px 14px 10px;overflow:hidden;user-select:none;
+  padding:14px 14px 18px;user-select:none;
+  min-height:120px;
 }
 .rtl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .rtl-title{font-size:12px;font-weight:700;color:var(--tx2);letter-spacing:.5px}
 .rtl-now-label{font-size:11px;color:var(--ac);font-family:"Roboto Mono",monospace;font-weight:600}
 /* Track */
-.rtl-track{position:relative;height:52px;margin:0 4px}
+.rtl-track{position:relative;height:72px;margin:0 4px;padding-bottom:20px}
 .rtl-axis{position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--bd);border-radius:1px}
 /* Now marker */
 .rtl-now-marker{
@@ -1227,8 +1228,9 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 /* Hour ticks */
 .rtl-tick{position:absolute;bottom:0;width:1px;background:var(--bd)}
 .rtl-tick-label{
-  position:absolute;bottom:-16px;font-size:9px;color:var(--tx3);
+  position:absolute;bottom:-18px;font-size:9px;color:var(--tx3);
   transform:translateX(-50%);font-family:"Roboto Mono",monospace;
+  white-space:nowrap;
 }
 /* Dot */
 .rtl-dot{
@@ -6489,8 +6491,7 @@ function switchToRemindersView() {
   document.getElementById('topbar-task-row').style.display = 'none';
   document.getElementById('topbar-view-row').style.display = '';
   document.getElementById('page-title').textContent = '🔔 Reminders';
-  document.getElementById('topbar-view-actions').innerHTML =
-    '<button class="refresh-topbar" onclick="manualRefresh(this)" title="Đồng bộ">↻</button>';
+  document.getElementById('topbar-view-actions').innerHTML = '';
   if (!reminders.length) loadReminders();
   else renderRemindersView();
   closeSide();
