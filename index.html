@@ -6348,9 +6348,8 @@ function buildReminderTimeline() {
         style="left:${d.pct.toFixed(2)}%;bottom:${bot}px;width:${DOT}px;height:${DOT}px"
         onmouseenter="showRtlTooltip(event,'${name}','${tStr}','${d.statusStr}')"
         onmouseleave="hideRtlTooltip()"
-        onclick="showDotPopup(event,'${rid}','${name}','${tStr}','${d.statusStr}')"
-        ondblclick="dotScrollTo('${rid}')"
-        ontouchstart="handleDotDoubleTap(event,'${rid}')"
+        onclick="handleDotClick(event,'${rid}','${name}','${tStr}','${d.statusStr}')"
+        ontouchstart="handleDotDoubleTap(event,'${rid}','${name}','${tStr}','${d.statusStr}')"
         ontouchend="event.stopPropagation()"></div>`;
     });
   });
@@ -6527,29 +6526,67 @@ function dotScrollTo(id) {
   // Mở reminders view nếu chưa mở
   if (!isRemindersView) {
     switchToRemindersView();
-    setTimeout(() => dotScrollTo(id), 300);
+    setTimeout(() => dotScrollTo(id), 400);
     return;
   }
-  // Scroll đến element
-  const el = document.getElementById('rem_' + id);
-  if (el) {
-    el.scrollIntoView({behavior:'smooth', block:'center'});
+  // Chờ render xong rồi scroll
+  setTimeout(() => {
+    const el = document.getElementById('rem_' + id);
+    if (!el) { console.warn('dotScrollTo: element not found for id', id); return; }
+
+    // Tìm scroll container (reminders-view có overflow-y:auto)
+    const container = document.getElementById('reminders-view');
+    if (container) {
+      const containerRect = container.getBoundingClientRect();
+      const elRect        = el.getBoundingClientRect();
+      const offset        = elRect.top - containerRect.top + container.scrollTop - (containerRect.height / 2) + (elRect.height / 2);
+      container.scrollTo({ top: offset, behavior: 'smooth' });
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     // Highlight flash
-    el.style.transition = 'box-shadow .2s';
-    el.style.boxShadow  = '0 0 0 3px var(--ac)';
-    setTimeout(() => { el.style.boxShadow = ''; }, 1200);
-  }
+    el.style.transition = 'box-shadow .15s, outline .15s';
+    el.style.outline    = '2px solid var(--ac)';
+    el.style.boxShadow  = '0 0 0 4px rgba(79,124,255,.25)';
+    setTimeout(() => { el.style.outline = ''; el.style.boxShadow = ''; }, 1500);
+  }, 50);
 }
 
-// Double-tap detection (mobile)
-function handleDotDoubleTap(e, remId) {
+// Click handler — single=popup, double=scroll
+function handleDotClick(e, remId, name, tStr, statusStr) {
+  e.stopPropagation();
   const now = Date.now();
-  if (_dotTapTimer[remId] && now - _dotTapTimer[remId] < 350) {
-    // Double tap → scroll to
+  if (_dotTapTimer[remId] && now - _dotTapTimer[remId] < 400) {
+    // Double click → scroll
     delete _dotTapTimer[remId];
+    hideDotPopup();
     dotScrollTo(remId);
   } else {
     _dotTapTimer[remId] = now;
+    // Single click → popup (delay 300ms to check for double)
+    setTimeout(() => {
+      if (!_dotTapTimer[remId]) return; // was double-clicked
+      delete _dotTapTimer[remId];
+      showDotPopup(e, remId, name, tStr, statusStr);
+    }, 300);
+  }
+}
+
+// Double-tap detection (mobile touch)
+function handleDotDoubleTap(e, remId, name, tStr, statusStr) {
+  const now = Date.now();
+  if (_dotTapTimer['t_' + remId] && now - _dotTapTimer['t_' + remId] < 350) {
+    delete _dotTapTimer['t_' + remId];
+    dotScrollTo(remId);
+  } else {
+    _dotTapTimer['t_' + remId] = now;
+    // Single tap → popup after delay
+    setTimeout(() => {
+      if (!_dotTapTimer['t_' + remId]) return;
+      delete _dotTapTimer['t_' + remId];
+      showDotPopup(e, remId, name, tStr, statusStr);
+    }, 300);
   }
 }
 function reminderTimeLabel(remindAt) {
@@ -6802,7 +6839,7 @@ function renderReminderItem(r, now, todayEnd) {
   const effectiveAt = (typeof getDailyRemindAt === 'function') ? getDailyRemindAt(r) : r.remind_at;
   const {fmt, status, cls, badge} = reminderTimeLabel(effectiveAt);
   const rowCls = r.done ? 'done-item' : badge;
-  return `<div class="reminder-item ${rowCls}">
+  return `<div class="reminder-item ${rowCls}" id="rem_${r.id}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
     <div class="reminder-info">
       <div class="reminder-name ${r.done?'done-text':''}">${esc(r.name)}${r.is_daily?'<span class="reminder-daily-badge">Daily</span>':''}</div>
