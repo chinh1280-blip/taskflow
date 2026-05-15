@@ -1243,12 +1243,24 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   transform:translateX(-50%);z-index:3;box-sizing:border-box;
 }
 .rtl-dot:hover,.rtl-dot:active{transform:translateX(-50%) scale(1.5);z-index:10;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
-.rtl-dot.overdue{background:var(--er);border-color:var(--er)}
-.rtl-dot.today{background:var(--wa);border-color:var(--wa)}
-.rtl-dot.upcoming{background:var(--ac);border-color:var(--ac)}
-.rtl-dot.daily-r{background:none;border-color:var(--wa);background:rgba(255,179,71,.15)}
-.rtl-dot.daily-r.overdue{border-color:var(--er);background:rgba(255,79,109,.1)}
-.rtl-dot.done-dot{opacity:.25;background:var(--tx3)!important;border-color:var(--tx3)!important}
+/* ── Reminder thường ── */
+.rtl-dot.r-future  {background:rgba(79,124,255,.25);border-color:var(--ac)}          /* Chưa đến: xanh nhạt */
+.rtl-dot.r-soon    {background:var(--ac);border-color:var(--ac);animation:rtlPulse 1.2s ease-in-out infinite} /* Sắp đến <1h: xanh đặc + nhấp nháy */
+.rtl-dot.r-overdue {background:var(--er);border-color:var(--er)}                     /* Quá hạn: đỏ đặc */
+.rtl-dot.r-done    {opacity:.22;background:var(--tx3)!important;border-color:var(--tx3)!important}
+/* ── Reminder daily ── */
+.rtl-dot.d-future  {background:rgba(255,179,71,.15);border-color:var(--wa)}          /* Chưa đến: viền cam */
+.rtl-dot.d-soon    {background:rgba(255,179,71,.2);border-color:var(--wa);animation:rtlPulseOrange 1.2s ease-in-out infinite} /* Sắp <1h */
+.rtl-dot.d-overdue {background:rgba(255,79,109,.1);border-color:var(--er)}           /* Quá hạn: viền đỏ */
+.rtl-dot.d-done    {opacity:.22;background:rgba(255,255,255,.05)!important;border-color:var(--tx3)!important}
+@keyframes rtlPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(79,124,255,.5)}
+  50%    {box-shadow:0 0 0 5px rgba(79,124,255,0)}
+}
+@keyframes rtlPulseOrange{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,179,71,.6)}
+  50%    {box-shadow:0 0 0 5px rgba(255,179,71,0)}
+}
 /* Tooltip */
 .rtl-tooltip{
   position:fixed;background:var(--s1);border:1px solid var(--bd);
@@ -6225,96 +6237,120 @@ function toLocalISOString(date) {
 // ── Reminder Timeline ─────────────────────────────────────
 let _rtlTimer = null;
 
+let _rtlDayOffset = 0; // 0=hôm nay, -1=hôm qua, +1=ngày mai
+
 function buildReminderTimeline() {
   const wrap = document.getElementById('reminder-timeline');
   if (!wrap) return;
 
-  const now = new Date();
-  const nowMins = now.getHours() * 60 + now.getMinutes();
-  const nowPct  = (nowMins / 1440) * 100;
+  const now      = new Date();
+  const viewDate = new Date(now);
+  viewDate.setDate(viewDate.getDate() + _rtlDayOffset);
+  const isToday  = _rtlDayOffset === 0;
 
-  // ── Collect dots ────────────────────────────────────
+  // Thời điểm "hiện tại" chỉ dùng khi xem hôm nay
+  const nowMins  = isToday ? (now.getHours() * 60 + now.getMinutes()) : -1;
+  const nowPct   = isToday ? (nowMins / 1440 * 100) : -1;
+
+  // ── Label ngày ──────────────────────────────────────
+  const dayLabel = _rtlDayOffset === 0  ? 'Hôm nay'
+                 : _rtlDayOffset === -1 ? 'Hôm qua'
+                 : _rtlDayOffset === 1  ? 'Ngày mai'
+                 : viewDate.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'});
+
+  // ── Collect dots ─────────────────────────────────────
   const dots = [];
   (reminders || []).forEach(r => {
-    let h, m;
+    let h, m, isDone;
     if (r.is_daily) {
+      // Daily: luôn hiện ở mọi ngày, done_date chỉ tính cho ngày đó
       const s = new Date(r.remind_at);
       h = s.getHours(); m = s.getMinutes();
+      // Daily coi như chưa làm trừ khi done_date = viewDate
+      isDone = r.done && r.done_date === viewDate.toDateString();
     } else {
       const t = new Date(r.remind_at);
-      if (t.toDateString() !== now.toDateString()) return;
+      if (t.toDateString() !== viewDate.toDateString()) return;
       h = t.getHours(); m = t.getMinutes();
+      isDone = !!r.done;
     }
-    const mins = h * 60 + m;
-    const pct  = (mins / 1440) * 100;
-    const isOv = mins < nowMins && !r.done;
-    const baseCls = r.done ? 'done-dot'
-                  : isOv  ? 'overdue'
-                  : mins <= nowMins + 120 ? 'today' : 'upcoming';
-    const dailyCls = r.is_daily ? ' daily-r' : '';
-    dots.push({ r, mins, pct, cls: baseCls + dailyCls, h, m, isOv });
+    const mins    = h * 60 + m;
+    const pct     = (mins / 1440) * 100;
+    const isOv    = isToday ? (mins < nowMins && !isDone) : false;
+    const isSoon  = isToday && !isOv && !isDone && (mins - nowMins) <= 60 && (mins - nowMins) >= 0;
+
+    // Classify
+    let cls;
+    if (r.is_daily) {
+      cls = isDone ? 'd-done' : isOv ? 'd-overdue' : isSoon ? 'd-soon' : 'd-future';
+    } else {
+      cls = isDone ? 'r-done' : isOv ? 'r-overdue' : isSoon ? 'r-soon' : 'r-future';
+    }
+    const statusStr = isDone ? 'done' : isOv ? 'overdue' : isSoon ? 'soon' : 'future';
+    dots.push({ r, mins, pct, cls, h, m, isOv, isSoon, isDone, statusStr });
   });
 
-  // ── Stack dots in same 20-min slot ──────────────────
-  const SLOT = 20;
+  // ── Stack in 20-min slots ────────────────────────────
   const slotMap = {};
   dots.forEach(d => {
-    const k = Math.round(d.mins / SLOT);
+    const k = Math.round(d.mins / 20);
     (slotMap[k] = slotMap[k] || []).push(d);
   });
 
-  // ── Render dots ─────────────────────────────────────
-  const DOT = 11; // dot size px
-  const AXIS_BOTTOM = 20; // px from bottom of .rtl-outer to axis
-  const STACK_GAP   = 14; // px per stacked level
+  // ── Render dots ──────────────────────────────────────
+  const DOT = 11, AXIS_B = 20, GAP = 14;
   let dotsHtml = '';
   Object.values(slotMap).forEach(group => {
     group.forEach((d, i) => {
-      const bottom = AXIS_BOTTOM + 4 + i * STACK_GAP; // above axis
-      const nameE  = esc(d.r.name);
-      const timeStr = `${d.h}:${String(d.m).padStart(2,'0')}`;
-      const status  = d.r.done ? 'done' : d.isOv ? 'overdue' : 'ok';
+      const bot  = AXIS_B + 4 + i * GAP;
+      const name = esc(d.r.name);
+      const tStr = `${d.h}:${String(d.m).padStart(2,'0')}`;
       dotsHtml += `<div class="rtl-dot ${d.cls}"
-        style="left:${d.pct.toFixed(2)}%;bottom:${bottom}px;width:${DOT}px;height:${DOT}px"
-        onmouseenter="showRtlTooltip(event,'${nameE}','${timeStr}','${status}')"
+        style="left:${d.pct.toFixed(2)}%;bottom:${bot}px;width:${DOT}px;height:${DOT}px"
+        onmouseenter="showRtlTooltip(event,'${name}','${tStr}','${d.statusStr}')"
         onmouseleave="hideRtlTooltip()"
-        ontouchstart="showRtlTooltip(event,'${nameE}','${timeStr}','${status}')"></div>`;
+        ontouchstart="showRtlTooltip(event,'${name}','${tStr}','${d.statusStr}')"></div>`;
     });
   });
 
-  // ── Hour ticks: 0,3,6,...,24 ────────────────────────
+  // ── Ticks ────────────────────────────────────────────
   let ticksHtml = '';
   for (let h = 0; h <= 24; h += 3) {
-    const pct = (h / 24) * 100;
+    const pct     = (h / 24) * 100;
     const isMajor = h % 6 === 0;
-    ticksHtml += `<div class="rtl-tick ${isMajor?'major':''}"
-      style="left:${pct}%;height:${isMajor?10:6}px;bottom:20px"></div>`;
+    ticksHtml += `<div class="rtl-tick ${isMajor?'major':''}" style="left:${pct}%;height:${isMajor?10:6}px;bottom:20px"></div>`;
     ticksHtml += `<div class="rtl-tick-label" style="left:${pct}%">${h}</div>`;
   }
 
-  // ── Dynamic outer height ─────────────────────────────
-  // Find max stack depth
-  const maxStack = Math.max(0, ...Object.values(slotMap).map(g => g.length));
-  const outerH = AXIS_BOTTOM + 4 + (maxStack || 1) * STACK_GAP + 8;
+  const maxStack = Math.max(1, ...Object.values(slotMap).map(g => g.length));
+  const outerH   = AXIS_B + 4 + maxStack * GAP + 8;
+
+  // ── Now marker (only today) ──────────────────────────
+  const nowMarkerHtml = isToday ? `
+    <div class="rtl-now-line"   id="rtl-now-line"   style="left:${nowPct.toFixed(2)}%;height:${outerH - AXIS_B + 4}px"></div>
+    <div class="rtl-now-marker" id="rtl-now-marker" style="left:${nowPct.toFixed(2)}%"></div>` : '';
 
   wrap.innerHTML = `
     <div class="rtl-header">
-      <div class="rtl-title">📅 Timeline hôm nay</div>
-      <div class="rtl-now-label" id="rtl-clock">${now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>
+      <div class="rtl-title">📅 ${dayLabel}
+        <button onclick="_rtlDayOffset--;buildReminderTimeline()" style="background:none;border:1px solid var(--bd);border-radius:5px;color:var(--tx2);padding:1px 7px;cursor:pointer;font-size:12px;margin-left:6px">‹</button>
+        <button onclick="_rtlDayOffset=0;buildReminderTimeline()" style="background:${_rtlDayOffset===0?'rgba(79,124,255,.15)':'none'};border:1px solid var(--bd);border-radius:5px;color:var(--ac);padding:1px 7px;cursor:pointer;font-size:10px">●</button>
+        <button onclick="_rtlDayOffset++;buildReminderTimeline()" style="background:none;border:1px solid var(--bd);border-radius:5px;color:var(--tx2);padding:1px 7px;cursor:pointer;font-size:12px">›</button>
+      </div>
+      <div class="rtl-now-label" id="rtl-clock">${isToday ? now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : viewDate.toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit'})}</div>
     </div>
     <div class="rtl-outer" id="rtl-outer" style="height:${outerH}px">
       <div class="rtl-axis"></div>
-      <div class="rtl-now-line"  id="rtl-now-line"   style="left:${nowPct.toFixed(3)}%;height:${outerH - AXIS_BOTTOM + 4}px"></div>
-      <div class="rtl-now-marker" id="rtl-now-marker" style="left:${nowPct.toFixed(3)}%"></div>
+      ${nowMarkerHtml}
       ${ticksHtml}
       ${dotsHtml}
     </div>
     <div class="rtl-legend">
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(79,124,255,.25);border-color:var(--ac)"></div>Chưa đến</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac)"></div>Sắp đến &lt;1h ✨</div>
       <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--er);border-color:var(--er)"></div>Quá hạn</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--wa);border-color:var(--wa)"></div>Sắp đến 2h</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac)"></div>Còn lâu</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(255,179,71,.15);border-color:var(--wa)"></div>Hằng ngày</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="opacity:.25;background:var(--tx3);border-color:var(--tx3)"></div>Đã xong</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(255,179,71,.15);border-color:var(--wa)"></div>Daily chưa đến</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(255,79,109,.1);border-color:var(--er)"></div>Daily quá hạn</div>
     </div>`;
 }
 
@@ -6345,7 +6381,7 @@ function showRtlTooltip(e, name, time, status) {
   const tip = document.createElement('div');
   tip.id = 'rtl-tip';
   tip.className = 'rtl-tooltip';
-  const statusMap = {done:'✅ Đã xong', overdue:'‼️ Quá hạn', ok:'🔔 Nhắc nhở'};
+  const statusMap = {done:'✅ Đã xong', overdue:'‼️ Quá hạn', soon:'⚠️ Sắp đến', future:'🔔 Chưa đến'};
   tip.innerHTML = `<div style="font-weight:600;margin-bottom:2px">${name}</div><div style="color:var(--tx3)">${time} — ${statusMap[status]||''}</div>`;
   document.body.appendChild(tip);
   const x = Math.min(e.clientX + 8, window.innerWidth - 210);
