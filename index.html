@@ -6176,14 +6176,23 @@ async function loadReminders() {
 
 function resetDailyReminders(list) {
   const today = new Date().toDateString();
-  return list.map(r => {
+  const toSync = [];
+  const result = list.map(r => {
     if (!r.is_daily || !r.done) return r;
-    // Nếu done_date khác hôm nay → reset lại để nhắc hôm nay
     if (!r.done_date || r.done_date !== today) {
+      toSync.push(r.id);
       return { ...r, done: false, done_date: null };
     }
     return r;
   });
+  // Sync reset về Supabase để edge function đọc đúng
+  if (toSync.length) {
+    toSync.forEach(id => {
+      dbReminders.update(id, { done: false, done_date: null }).catch(() => {});
+    });
+    console.log('[Reset] Daily reminders reset in Supabase:', toSync.length);
+  }
+  return result;
 }
 
 function updateRemindersBadge() {
