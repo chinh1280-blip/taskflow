@@ -1274,6 +1274,35 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 }
 .rtl-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx3)}
 .rtl-leg-dot{width:10px;height:10px;border-radius:50%;border:2px solid;flex-shrink:0}
+
+/* ─── Dot click popup ──────────────────────────────── */
+.rtl-dot-popup{
+  position:fixed;z-index:9999;
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:14px;padding:0;
+  width:220px;box-shadow:0 8px 32px rgba(0,0,0,.5);
+  overflow:hidden;animation:rtlPopIn .15s ease-out;
+}
+@keyframes rtlPopIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+.rtl-dp-header{
+  padding:12px 14px 8px;border-bottom:1px solid var(--bd);
+}
+.rtl-dp-name{font-size:13px;font-weight:700;color:var(--tx);line-height:1.4;word-break:break-word}
+.rtl-dp-meta{font-size:11px;color:var(--tx3);margin-top:3px}
+.rtl-dp-actions{display:flex;border-top:1px solid var(--bd)}
+.rtl-dp-btn{
+  flex:1;padding:9px 6px;border:none;background:none;
+  font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  transition:background .15s;
+}
+.rtl-dp-btn:hover{background:var(--s2)}
+.rtl-dp-btn.done-btn{color:var(--ok)}
+.rtl-dp-btn.done-btn:hover{background:rgba(34,211,160,.1)}
+.rtl-dp-btn.goto-btn{color:var(--ac)}
+.rtl-dp-btn.goto-btn:hover{background:rgba(79,124,255,.1)}
+.rtl-dp-btn.cancel-btn{color:var(--tx3)}
+.rtl-dp-btn + .rtl-dp-btn{border-left:1px solid var(--bd)}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -6314,11 +6343,15 @@ function buildReminderTimeline() {
       const bot  = AXIS_B + 4 + i * GAP;
       const name = esc(d.r.name);
       const tStr = `${d.h}:${String(d.m).padStart(2,'0')}`;
+      const rid = d.r.id;
       dotsHtml += `<div class="rtl-dot ${d.cls}"
         style="left:${d.pct.toFixed(2)}%;bottom:${bot}px;width:${DOT}px;height:${DOT}px"
         onmouseenter="showRtlTooltip(event,'${name}','${tStr}','${d.statusStr}')"
         onmouseleave="hideRtlTooltip()"
-        ontouchstart="showRtlTooltip(event,'${name}','${tStr}','${d.statusStr}')"></div>`;
+        onclick="showDotPopup(event,'${rid}','${name}','${tStr}','${d.statusStr}')"
+        ondblclick="dotScrollTo('${rid}')"
+        ontouchstart="handleDotDoubleTap(event,'${rid}')"
+        ontouchend="event.stopPropagation()"></div>`;
     });
   });
 
@@ -6402,6 +6435,123 @@ function hideRtlTooltip() {
   document.getElementById('rtl-tip')?.remove();
 }
 
+
+// ── Dot popup ──────────────────────────────────────────
+let _dotTapTimer = {};   // track double tap per reminder id
+
+function showDotPopup(e, remId, name, timeStr, statusStr) {
+  e.stopPropagation();
+  hideRtlTooltip();
+  hideDotPopup();
+
+  const r = (reminders||[]).find(r => r.id === remId);
+  if (!r) return;
+
+  const statusMap = {
+    done:    '✅ Đã xong',
+    overdue: '‼️ Quá hạn',
+    soon:    '⚠️ Sắp đến',
+    future:  '🔔 Chưa đến',
+  };
+  const typeLabel = r.is_daily ? '🔁 Hằng ngày' : '📋 Nhắc nhở';
+
+  const popup = document.createElement('div');
+  popup.id = 'rtl-dot-popup';
+  popup.className = 'rtl-dot-popup';
+  popup.innerHTML = `
+    <div class="rtl-dp-header">
+      <div class="rtl-dp-name">${esc(name)}</div>
+      <div class="rtl-dp-meta">${typeLabel} · ${timeStr} · ${statusMap[statusStr]||''}</div>
+    </div>
+    <div class="rtl-dp-actions">
+      ${!r.done ? `<button class="rtl-dp-btn done-btn" onclick="dotMarkDone('${remId}')">✓ Xong</button>` : `<button class="rtl-dp-btn done-btn" onclick="dotMarkUndone('${remId}')">↩ Bỏ xong</button>`}
+      <button class="rtl-dp-btn goto-btn" onclick="dotScrollTo('${remId}')">→ Đến</button>
+      <button class="rtl-dp-btn cancel-btn" onclick="hideDotPopup()">✕</button>
+    </div>`;
+
+  document.body.appendChild(popup);
+
+  // Position popup near dot, avoid edges
+  const rect = e.target.getBoundingClientRect();
+  const pw = 220, ph = 100;
+  let px = rect.left + rect.width/2 - pw/2;
+  let py = rect.top - ph - 8;
+  if (py < 8) py = rect.bottom + 8;
+  if (px < 8) px = 8;
+  if (px + pw > window.innerWidth - 8) px = window.innerWidth - pw - 8;
+  popup.style.left = px + 'px';
+  popup.style.top  = py + 'px';
+
+  // Close on outside click
+  setTimeout(() => document.addEventListener('click', hideDotPopupOutside, {once:true}), 10);
+}
+
+function hideDotPopupOutside(e) {
+  const p = document.getElementById('rtl-dot-popup');
+  if (p && !p.contains(e.target)) hideDotPopup();
+  else if (p) document.addEventListener('click', hideDotPopupOutside, {once:true});
+}
+
+function hideDotPopup() {
+  document.getElementById('rtl-dot-popup')?.remove();
+}
+
+function dotMarkDone(id) {
+  hideDotPopup();
+  const r = (reminders||[]).find(r=>r.id===id);
+  if (!r) return;
+  r.done = true;
+  if (r.is_daily) r.done_date = new Date().toDateString();
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  if (isRemindersView) renderRemindersView(); else buildReminderTimeline();
+  const upd = {done:true};
+  if (r.is_daily) upd.done_date = r.done_date;
+  dbReminders.update(id, upd).catch(()=>{});
+  showNotif('ns','✅ Xong!', esc(r.name));
+}
+
+function dotMarkUndone(id) {
+  hideDotPopup();
+  const r = (reminders||[]).find(r=>r.id===id);
+  if (!r) return;
+  r.done = false; r.done_date = null;
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  updateRemindersBadge();
+  if (isRemindersView) renderRemindersView(); else buildReminderTimeline();
+  dbReminders.update(id, {done:false, done_date:null}).catch(()=>{});
+}
+
+function dotScrollTo(id) {
+  hideDotPopup();
+  // Mở reminders view nếu chưa mở
+  if (!isRemindersView) {
+    switchToRemindersView();
+    setTimeout(() => dotScrollTo(id), 300);
+    return;
+  }
+  // Scroll đến element
+  const el = document.getElementById('rem_' + id);
+  if (el) {
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    // Highlight flash
+    el.style.transition = 'box-shadow .2s';
+    el.style.boxShadow  = '0 0 0 3px var(--ac)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1200);
+  }
+}
+
+// Double-tap detection (mobile)
+function handleDotDoubleTap(e, remId) {
+  const now = Date.now();
+  if (_dotTapTimer[remId] && now - _dotTapTimer[remId] < 350) {
+    // Double tap → scroll to
+    delete _dotTapTimer[remId];
+    dotScrollTo(remId);
+  } else {
+    _dotTapTimer[remId] = now;
+  }
+}
 function reminderTimeLabel(remindAt) {
   const now = Date.now();
   const t = new Date(remindAt).getTime();
