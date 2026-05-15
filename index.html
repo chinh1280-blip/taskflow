@@ -1243,16 +1243,16 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   transform:translateX(-50%);z-index:3;box-sizing:border-box;
 }
 .rtl-dot:hover,.rtl-dot:active{transform:translateX(-50%) scale(1.5);z-index:10;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
-/* ── Reminder thường ── */
-.rtl-dot.r-future  {background:rgba(79,124,255,.25);border-color:var(--ac)}          /* Chưa đến: xanh nhạt */
-.rtl-dot.r-soon    {background:var(--ac);border-color:var(--ac);animation:rtlPulse 1.2s ease-in-out infinite} /* Sắp đến <1h: xanh đặc + nhấp nháy */
-.rtl-dot.r-overdue {background:var(--er);border-color:var(--er)}                     /* Quá hạn: đỏ đặc */
-.rtl-dot.r-done    {opacity:.22;background:var(--tx3)!important;border-color:var(--tx3)!important}
-/* ── Reminder daily ── */
-.rtl-dot.d-future  {background:rgba(255,179,71,.15);border-color:var(--wa)}          /* Chưa đến: viền cam */
-.rtl-dot.d-soon    {background:rgba(255,179,71,.2);border-color:var(--wa);animation:rtlPulseOrange 1.2s ease-in-out infinite} /* Sắp <1h */
-.rtl-dot.d-overdue {background:rgba(255,79,109,.1);border-color:var(--er)}           /* Quá hạn: viền đỏ */
-.rtl-dot.d-done    {opacity:.22;background:rgba(255,255,255,.05)!important;border-color:var(--tx3)!important}
+/* ── Reminder thường — xanh, không có viền nổi bật ── */
+.rtl-dot.r-future  {background:#2563eb!important;border-color:#2563eb!important;opacity:.55}
+.rtl-dot.r-soon    {background:#1d4ed8!important;border-color:#93c5fd!important;opacity:1;animation:rtlPulse 1.2s ease-in-out infinite}
+.rtl-dot.r-overdue {background:var(--er)!important;border-color:var(--er)!important;opacity:1}
+.rtl-dot.r-done    {background:#64748b!important;border-color:#64748b!important;opacity:.25}
+/* ── Reminder daily — viền cam / đỏ, nền trong suốt ── */
+.rtl-dot.d-future  {background:rgba(251,146,60,.1)!important;border-color:#f97316!important;border-width:2px;opacity:.7}
+.rtl-dot.d-soon    {background:rgba(251,146,60,.2)!important;border-color:#fb923c!important;border-width:2px;animation:rtlPulseOrange 1.2s ease-in-out infinite}
+.rtl-dot.d-overdue {background:rgba(239,68,68,.12)!important;border-color:#ef4444!important;border-width:2px}
+.rtl-dot.d-done    {background:rgba(100,116,139,.1)!important;border-color:#64748b!important;border-width:2px;opacity:.3}
 @keyframes rtlPulse{
   0%,100%{box-shadow:0 0 0 0 rgba(79,124,255,.5)}
   50%    {box-shadow:0 0 0 5px rgba(79,124,255,0)}
@@ -6346,11 +6346,11 @@ function buildReminderTimeline() {
       ${dotsHtml}
     </div>
     <div class="rtl-legend">
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(79,124,255,.25);border-color:var(--ac)"></div>Chưa đến</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--ac);border-color:var(--ac)"></div>Sắp đến &lt;1h ✨</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:#2563eb;border-color:#2563eb;opacity:.55"></div>Chưa đến</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:#1d4ed8;border-color:#93c5fd"></div>Sắp &lt;1h ✨</div>
       <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:var(--er);border-color:var(--er)"></div>Quá hạn</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(255,179,71,.15);border-color:var(--wa)"></div>Daily chưa đến</div>
-      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(255,79,109,.1);border-color:var(--er)"></div>Daily quá hạn</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(251,146,60,.1);border-color:#f97316;border-width:2px"></div>Daily chưa đến</div>
+      <div class="rtl-leg-item"><div class="rtl-leg-dot" style="background:rgba(239,68,68,.12);border-color:#ef4444;border-width:2px"></div>Daily quá hạn</div>
     </div>`;
 }
 
