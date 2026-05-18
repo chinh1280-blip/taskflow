@@ -7568,10 +7568,31 @@ let cfType = 'income';
 let cfFilter = 'all';
 let isCashFlowView = false;
 
-function loadCfData() {
-  try { cfTransactions = JSON.parse(localStorage.getItem(CF_KEY) || '[]'); } catch { cfTransactions = []; }
+async function loadCfData() {
+  // Load từ localStorage trước (nhanh)
+  try {
+    const cached = JSON.parse(localStorage.getItem(CF_KEY) || '[]');
+    if (cached.length) { cfTransactions = cached; renderCfView(); }
+  } catch {}
+  // Fetch Supabase
+  try {
+    const fresh = await dbCashflow.getAll();
+    if (fresh?.length >= 0) {
+      cfTransactions = fresh.map(t => ({
+        id:     t.id,
+        type:   t.type,
+        amount: t.amount,
+        cat:    t.cat,
+        desc:   t.description || t.cat,
+        date:   t.tx_date || t.created_at,
+      }));
+      localStorage.setItem(CF_KEY, JSON.stringify(cfTransactions));
+      renderCfView();
+    }
+  } catch(e) { console.warn('loadCfData error:', e); }
 }
-function saveCfData() {
+
+function saveCfLocal() {
   localStorage.setItem(CF_KEY, JSON.stringify(cfTransactions));
 }
 
@@ -7592,8 +7613,8 @@ function switchToCashFlowView() {
 
   isCashFlowView = true;
   isRemindersView = false;
-  loadCfData();
-  renderCfView();
+  renderCfView(); // show empty state first
+  loadCfData();   // async load từ Supabase
   closeSidebar?.();
 }
 
@@ -7619,7 +7640,7 @@ function fmtMoney(n) {
 }
 function fmtMoneyFull(n) { return n.toLocaleString('vi-VN') + 'đ'; }
 
-function addCfTransaction() {
+async function addCfTransaction() {
   const amount = parseFloat(document.getElementById('cf-amount').value);
   if (!amount || amount <= 0) { showNotif('nw','⚠️','Nhập số tiền hợp lệ'); return; }
   const cat  = document.getElementById('cf-cat').value;
@@ -7632,18 +7653,31 @@ function addCfTransaction() {
     date:   new Date().toISOString(),
   };
   cfTransactions.unshift(tx);
-  saveCfData();
+  saveCfLocal();
+  renderCfView();
   // Reset form
   document.getElementById('cf-amount').value = '';
   document.getElementById('cf-desc').value = '';
-  renderCfView();
   showNotif('ns', cfType === 'income' ? '💚 Đã thêm thu nhập' : '❤️ Đã thêm chi tiêu', fmtMoneyFull(tx.amount));
+  // Save to Supabase
+  try {
+    await dbCashflow.insert({
+      id:          tx.id,
+      type:        tx.type,
+      amount:      tx.amount,
+      cat:         tx.cat,
+      description: tx.desc,
+      tx_date:     tx.date,
+    });
+  } catch(e) { console.warn('addCfTransaction Supabase error:', e); }
 }
 
-function deleteCfTx(id) {
+async function deleteCfTx(id) {
   cfTransactions = cfTransactions.filter(t => t.id !== id);
-  saveCfData();
+  saveCfLocal();
   renderCfView();
+  try { await dbCashflow.delete(id); }
+  catch(e) { console.warn('deleteCfTx error:', e); }
 }
 
 function renderCfView() {
