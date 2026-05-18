@@ -7971,6 +7971,8 @@ function loadTrackData() {
     if (cfTrackData.targetAmount) { const el=document.getElementById('cf-target-amount'); if(el) el.value=cfTrackData.targetAmount; }
     if (cfTrackData.startDate)    { const el=document.getElementById('cf-start-date');    if(el) el.value=cfTrackData.startDate; }
   } catch {}
+  // Render sau khi load
+  setTimeout(() => { renderSaveItems(); renderTrackingGrid(); calcSavings(); updateTargetProgress(); }, 50);
 }
 
 function saveTrackData() {
@@ -7983,10 +7985,10 @@ function saveTrackData() {
   window._savePlanSyncTimer = setTimeout(syncSavePlanToSupabase, 1500);
 }
 
-function savePlanMeta() { saveTrackData(); updateTargetProgress(); }
+function savePlanMeta() { saveTrackData(); renderTrackingGrid(); calcSavings(); updateTargetProgress(); }
 
 function getDaysElapsed() {
-  const start = cfTrackData.startDate;
+  const start = cfTrackData.startDate || document.getElementById('cf-start-date')?.value;
   if (!start) return 0;
   const ms = Date.now() - new Date(start).getTime();
   return Math.max(0, Math.floor(ms / 86400000));
@@ -8035,8 +8037,12 @@ function renderSaveItems() {
 function renderTrackingGrid() {
   const section = document.getElementById('cf-tracking-section');
   if (!section) return;
+  // Sync startDate từ input nếu chưa có
+  const startDateInput = document.getElementById('cf-start-date')?.value;
+  if (startDateInput && !cfTrackData.startDate) cfTrackData.startDate = startDateInput;
   if (!cfSaveItems.length || !cfTrackData.startDate) {
-    section.style.display = 'none'; return;
+    section.style.display = 'none';
+    return;
   }
   section.style.display = '';
 
