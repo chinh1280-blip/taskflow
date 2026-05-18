@@ -6606,15 +6606,17 @@ function reminderTimeLabel(remindAt) {
     if (mins < 60)        ago = mins + ' phút';
     else if (hours < 48)  ago = hours + ' giờ';
     else                  ago = days + ' ngày';
-    return { fmt, status: 'Quá hạn ' + ago, cls: 'overdue-time', badge: 'overdue' };
+    return { fmt, status: 'Quá hạn ' + ago, cls: 'overdue', badge: 'overdue' };
+  } else if (mins < 60) {
+    // Sắp đến < 1 giờ
+    return { fmt, status: 'Còn ' + mins + ' phút', cls: 'soon', badge: 'today' };
   } else {
     // Còn lại
     let left;
-    if (mins < 60)        left = mins + ' phút';
-    else if (hours < 48)  left = hours + ' giờ';
-    else                  left = days + ' ngày';
-    const cls = hours < 24 ? 'today-time' : hours < 48 ? 'today-time' : 'ok-time';
-    const badge = hours < 24 ? 'today' : hours < 48 ? 'today' : 'upcoming';
+    if (hours < 48)  left = hours + ' giờ';
+    else             left = days + ' ngày';
+    const cls   = hours < 24 ? 'today' : 'future';
+    const badge = hours < 24 ? 'today' : 'upcoming';
     return { fmt, status: 'Còn ' + left, cls, badge };
   }
 }
@@ -6846,7 +6848,7 @@ function renderReminderItem(r, now, todayEnd) {
   const {fmt, status, cls, badge} = reminderTimeLabel(effectiveAt);
   const rowCls = r.done ? 'done-item' : badge;
   // Badge style
-  const badge2 = cls === 'overdue-text' ? 'overdue' : cls === 'soon-text' ? 'soon' : cls === 'today-text' ? 'today' : 'future';
+  const badge2 = cls === 'overdue' ? 'overdue' : cls === 'soon' ? 'soon' : cls === 'today' ? 'today' : 'future';
   const statusIcon = badge2 === 'overdue' ? '‼️' : badge2 === 'soon' ? '⚠️' : badge2 === 'today' ? '🔔' : '🕐';
   return `<div class="reminder-item ${rowCls}" id="rem_${r.id}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
