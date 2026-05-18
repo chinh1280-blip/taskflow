@@ -1379,18 +1379,34 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .cf-edit-highlight{outline:2px solid var(--ac)!important}
 
 /* Daily tracking grid */
-.cf-track-table{border-collapse:collapse;font-size:11px;min-width:600px}
-.cf-track-table th{padding:4px 8px;background:var(--s2);color:var(--tx3);font-weight:700;text-align:center;position:sticky;top:0;white-space:nowrap;border:1px solid var(--bd)}
-.cf-track-table td{padding:3px 6px;border:1px solid var(--bd);text-align:center;vertical-align:middle;white-space:nowrap}
-.cf-track-table td.row-label{text-align:left;font-weight:600;color:var(--tx);background:var(--s2);position:sticky;left:0;max-width:130px;overflow:hidden;text-overflow:ellipsis;padding-left:8px}
-.cf-track-table td.day-num{background:var(--s2);color:var(--tx3);font-weight:700;font-size:10px}
-.cf-track-cell{width:22px;height:22px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:12px;transition:transform .1s}
-.cf-track-cell:hover{transform:scale(1.2)}
-.cf-track-cell.done{background:rgba(22,163,74,.2);color:#16a34a}
-.cf-track-cell.skip{background:rgba(239,68,68,.12);color:#ef4444}
-.cf-track-cell.empty{background:var(--s2);color:var(--tx3);opacity:.4}
-.cf-track-cell.future{background:none;color:var(--bd);cursor:default}
-.cf-actual-row td{font-size:10px;color:var(--ac);font-weight:700}
+.cf-track-table{border-collapse:collapse;font-size:11px;table-layout:fixed}
+.cf-track-table th{
+  padding:3px 2px;background:var(--s2);color:var(--tx3);font-weight:700;
+  text-align:center;white-space:nowrap;border:1px solid var(--bd);
+  width:28px;font-size:10px;
+}
+.cf-track-table th.row-label-th{width:120px;text-align:left;padding-left:6px}
+.cf-track-table td{
+  padding:2px;border:1px solid var(--bd);
+  text-align:center;vertical-align:middle;
+  width:28px;
+}
+.cf-track-table td.row-label{
+  text-align:left;font-weight:600;color:var(--tx);background:var(--s2);
+  width:120px;max-width:120px;overflow:hidden;text-overflow:ellipsis;
+  padding-left:6px;font-size:11px;white-space:nowrap;
+}
+.cf-track-cell{
+  width:22px;height:22px;border-radius:4px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;transition:transform .1s;margin:auto;
+}
+.cf-track-cell:hover{transform:scale(1.25)}
+.cf-track-cell.done  {background:rgba(22,163,74,.2);color:#16a34a}
+.cf-track-cell.skip  {background:rgba(239,68,68,.12);color:#ef4444}
+.cf-track-cell.empty {background:var(--s2);color:var(--tx3);opacity:.5}
+.cf-track-cell.future{background:none;color:var(--bd);cursor:default;font-size:9px}
+.cf-actual-row td{font-size:9px;color:var(--ac);font-weight:700;padding:2px 1px}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -3673,6 +3689,7 @@ function switchToDailyView() {
 }
 
 function switchToTaskView() {
+  hideCashFlowView();
   isDailyView = false;
   document.getElementById('content').style.display = '';
   document.getElementById('daily-view').style.display = 'none';
@@ -6959,7 +6976,14 @@ function dismissAllReminders() {
 }
 
 // ── View ───────────────────────────────────────────────
+function hideCashFlowView() {
+  if (!isCashFlowView) return;
+  isCashFlowView = false;
+  document.getElementById('cashflow-view').style.display = 'none';
+}
+
 function switchToRemindersView() {
+  hideCashFlowView();
   isRemindersView = true;
   if (isDailyView) switchToTaskView();
   if (isNotesView) switchFromNotesView();
@@ -8050,7 +8074,7 @@ function renderTrackingGrid() {
   const showDays    = Math.max(daysElapsed + 1, 7); // show at least 7 days
 
   // Build table header — days 1..N
-  let headCells = '<th class="row-label">Mục tiết kiệm</th>';
+  let headCells = '<th class="row-label-th">Mục</th>';
   for (let d = 1; d <= showDays; d++) {
     const date = new Date(cfTrackData.startDate);
     date.setDate(date.getDate() + d - 1);
