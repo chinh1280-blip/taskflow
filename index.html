@@ -975,10 +975,6 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .reminder-name{font-size:13px;color:var(--tx);font-weight:500;word-break:break-word}
 .reminder-name.done-text{text-decoration:line-through;color:var(--tx3)}
 .reminder-time{font-size:11px;color:var(--tx3);margin-top:2px}
-.reminder-time .rstatus.overdue-time{color:var(--er)!important;font-weight:700}
-.reminder-time .rstatus.soon-time{color:var(--wa)!important;font-weight:700}
-.reminder-time .rstatus.today-time{color:var(--ac)!important;font-weight:600}
-.reminder-time .rstatus.ok-time{color:var(--ok)!important;font-weight:600}
 .reminder-time.today-time{color:var(--wa);font-weight:600}
 .reminder-del{background:none;border:none;color:var(--tx3);font-size:13px;cursor:pointer;
   padding:3px 5px;border-radius:5px;opacity:0;transition:all .15s}
@@ -1061,11 +1057,13 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   font-size:11px;color:var(--tx3);
   line-height:1.4;
 }
-.reminder-popup-meta /* rstatus — dùng trong popup và reminder item */
-.rstatus.overdue-time{color:var(--er)!important;font-weight:700}
-.rstatus.soon-time{color:var(--wa)!important;font-weight:700}
-.rstatus.today-time{color:var(--ac)!important;font-weight:700}
-.rstatus.ok-time{color:var(--ok)!important;font-weight:600}
+.reminder-popup-meta /* rstatus — màu thời gian trong popup và reminder */
+.rstatus.overdue-time {color:#ef4444!important;font-weight:700}  /* đỏ - quá hạn */
+.rstatus.soon-time    {color:#2563eb!important;font-weight:700}  /* xanh dương - <1h */
+.rstatus.green-time   {color:#16a34a!important;font-weight:600}  /* xanh lá - >1h hôm nay */
+.rstatus.future-time  {color:#16a34a!important;font-weight:500;opacity:.75} /* xanh lá nhạt - nhiều ngày */
+.rstatus.ok-time      {color:#16a34a!important;font-weight:600}  /* legacy */
+.rstatus.today-time   {color:#2563eb!important;font-weight:600}  /* legacy */
 .reminder-popup-dismiss{
   position:absolute;top:50%;right:10px;
   transform:translateY(-50%);
@@ -6606,22 +6604,21 @@ function reminderTimeLabel(remindAt) {
               + ' ' + new Date(t).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
 
   if (diff < 0) {
-    // Quá hạn
+    // Quá hạn — đỏ
     let ago;
-    if (mins < 60)        ago = mins + ' phút';
-    else if (hours < 48)  ago = hours + ' giờ';
-    else                  ago = days + ' ngày';
+    if (mins < 60)       ago = mins + ' phút';
+    else if (hours < 48) ago = hours + ' giờ';
+    else                 ago = days + ' ngày';
     return { fmt, status: 'Quá hạn ' + ago, cls: 'overdue-time', badge: 'overdue' };
   } else if (mins < 60) {
-    // Sắp đến < 1 giờ
+    // < 1 giờ — xanh dương đậm
     return { fmt, status: 'Còn ' + mins + ' phút', cls: 'soon-time', badge: 'today' };
   } else if (hours < 24) {
-    // Hôm nay
-    return { fmt, status: 'Còn ' + hours + ' giờ', cls: 'today-time', badge: 'today' };
+    // Hôm nay > 1 giờ — xanh lá
+    return { fmt, status: 'Còn ' + hours + ' giờ', cls: 'green-time', badge: 'today' };
   } else {
-    // Còn nhiều ngày
-    const left = days + ' ngày';
-    return { fmt, status: 'Còn ' + left, cls: 'ok-time', badge: 'upcoming' };
+    // Nhiều ngày — xanh lá nhạt
+    return { fmt, status: 'Còn ' + days + ' ngày', cls: 'future-time', badge: 'upcoming' };
   }
 }
 
@@ -6657,7 +6654,23 @@ function checkStartupReminders() {
   // Daily tab
   const dailyList = document.getElementById('reminder-popup-daily');
   if (dailyList) {
-    const dailyItems = (reminders||[]).filter(r => r.is_daily && !r.done);
+    const _nowMs = Date.now();
+    const dailyItems = (reminders||[])
+      .filter(r => r.is_daily && !r.done)
+      .sort((a, b) => {
+        // Lấy giờ effective HÔM NAY (chỉ dùng HH:MM từ remind_at gốc)
+        const getEffMs = r => {
+          const s = new Date(r.remind_at);
+          const d = new Date();
+          d.setHours(s.getUTCHours() + 7, s.getUTCMinutes(), 0, 0); // UTC+7
+          return d.getTime();
+        };
+        const tA = getEffMs(a), tB = getEffMs(b);
+        const ovA = tA < _nowMs, ovB = tB < _nowMs;
+        if (ovA && !ovB) return -1;  // a quá hạn lên đầu
+        if (!ovA && ovB) return 1;
+        return tA - tB;              // cùng nhóm: giờ nhỏ hơn lên đầu
+      });
     if (dailyItems.length) {
       dailyList.innerHTML = dailyItems.map(r => {
         const ea = getDailyRemindAt ? getDailyRemindAt(r) : r.remind_at;
@@ -6852,8 +6865,8 @@ function renderReminderItem(r, now, todayEnd) {
   const {fmt, status, cls, badge} = reminderTimeLabel(effectiveAt);
   const rowCls = r.done ? 'done-item' : badge;
   // Badge style
-  const badge2 = badge === 'overdue' ? 'overdue' : cls === 'soon-time' ? 'soon' : badge === 'today' ? 'today' : 'future';
-  const statusIcon = badge2 === 'overdue' ? '‼️' : badge2 === 'soon' ? '⚠️' : badge2 === 'today' ? '🔔' : '🕐';
+  const badge2 = cls === 'overdue-time' ? 'overdue' : cls === 'soon-time' ? 'soon' : cls === 'green-time' ? 'green' : 'future';
+  const statusIcon = badge2 === 'overdue' ? '‼️' : badge2 === 'soon' ? '⚠️' : badge2 === 'green' ? '🟢' : '🕐';
   return `<div class="reminder-item ${rowCls}" id="rem_${r.id}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
     <div class="reminder-info">
