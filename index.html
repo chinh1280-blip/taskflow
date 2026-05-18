@@ -6553,40 +6553,40 @@ function dotScrollTo(id) {
   }, 50);
 }
 
-// Click handler — single=popup, double=scroll
+// Desktop click: single=popup, double=scroll
 function handleDotClick(e, remId, name, tStr, statusStr) {
   e.stopPropagation();
   const now = Date.now();
-  if (_dotTapTimer[remId] && now - _dotTapTimer[remId] < 400) {
+  const key = 'c_' + remId;
+  if (_dotTapTimer[key] && now - _dotTapTimer[key] < 350) {
     // Double click → scroll
-    delete _dotTapTimer[remId];
+    delete _dotTapTimer[key];
     hideDotPopup();
     dotScrollTo(remId);
   } else {
-    _dotTapTimer[remId] = now;
-    // Single click → popup (delay 300ms to check for double)
-    setTimeout(() => {
-      if (!_dotTapTimer[remId]) return; // was double-clicked
-      delete _dotTapTimer[remId];
-      showDotPopup(e, remId, name, tStr, statusStr);
-    }, 300);
+    // Single click → popup ngay
+    _dotTapTimer[key] = now;
+    showDotPopup(e, remId, name, tStr, statusStr);
+    setTimeout(() => { delete _dotTapTimer[key]; }, 400);
   }
 }
 
-// Double-tap detection (mobile touch)
+// Touch: 1 tap = popup, 2 taps nhanh = scroll
 function handleDotDoubleTap(e, remId, name, tStr, statusStr) {
+  e.preventDefault(); // chặn click event sau touch
   const now = Date.now();
-  if (_dotTapTimer['t_' + remId] && now - _dotTapTimer['t_' + remId] < 350) {
-    delete _dotTapTimer['t_' + remId];
+  const key = 't_' + remId;
+  if (_dotTapTimer[key] && now - _dotTapTimer[key] < 350) {
+    // Double tap → scroll
+    delete _dotTapTimer[key];
+    hideDotPopup();
     dotScrollTo(remId);
   } else {
-    _dotTapTimer['t_' + remId] = now;
-    // Single tap → popup after delay
-    setTimeout(() => {
-      if (!_dotTapTimer['t_' + remId]) return;
-      delete _dotTapTimer['t_' + remId];
-      showDotPopup(e, remId, name, tStr, statusStr);
-    }, 300);
+    // Single tap → popup ngay (không delay)
+    _dotTapTimer[key] = now;
+    showDotPopup(e, remId, name, tStr, statusStr);
+    // Clear timer sau 400ms
+    setTimeout(() => { delete _dotTapTimer[key]; }, 400);
   }
 }
 function reminderTimeLabel(remindAt) {
@@ -6835,10 +6835,19 @@ function renderRemindersView() {
   setTimeout(() => { buildReminderTimeline(); startRtlTimer(); }, 50);
 }
 
+function fmtDate(isoStr) {
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit'})
+    + ' ' + d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+}
+
 function renderReminderItem(r, now, todayEnd) {
   const effectiveAt = (typeof getDailyRemindAt === 'function') ? getDailyRemindAt(r) : r.remind_at;
   const {fmt, status, cls, badge} = reminderTimeLabel(effectiveAt);
   const rowCls = r.done ? 'done-item' : badge;
+  // Badge style
+  const badge2 = cls === 'overdue-text' ? 'overdue' : cls === 'soon-text' ? 'soon' : cls === 'today-text' ? 'today' : 'future';
+  const statusIcon = badge2 === 'overdue' ? '‼️' : badge2 === 'soon' ? '⚠️' : badge2 === 'today' ? '🔔' : '🕐';
   return `<div class="reminder-item ${rowCls}" id="rem_${r.id}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
     <div class="reminder-info">
