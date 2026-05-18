@@ -1377,6 +1377,20 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .cf-month-bar{height:6px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:4px}
 .cf-month-bar-fill{height:100%;border-radius:3px;transition:width .4s}
 .cf-edit-highlight{outline:2px solid var(--ac)!important}
+
+/* Daily tracking grid */
+.cf-track-table{border-collapse:collapse;font-size:11px;min-width:600px}
+.cf-track-table th{padding:4px 8px;background:var(--s2);color:var(--tx3);font-weight:700;text-align:center;position:sticky;top:0;white-space:nowrap;border:1px solid var(--bd)}
+.cf-track-table td{padding:3px 6px;border:1px solid var(--bd);text-align:center;vertical-align:middle;white-space:nowrap}
+.cf-track-table td.row-label{text-align:left;font-weight:600;color:var(--tx);background:var(--s2);position:sticky;left:0;max-width:130px;overflow:hidden;text-overflow:ellipsis;padding-left:8px}
+.cf-track-table td.day-num{background:var(--s2);color:var(--tx3);font-weight:700;font-size:10px}
+.cf-track-cell{width:22px;height:22px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:12px;transition:transform .1s}
+.cf-track-cell:hover{transform:scale(1.2)}
+.cf-track-cell.done{background:rgba(22,163,74,.2);color:#16a34a}
+.cf-track-cell.skip{background:rgba(239,68,68,.12);color:#ef4444}
+.cf-track-cell.empty{background:var(--s2);color:var(--tx3);opacity:.4}
+.cf-track-cell.future{background:none;color:var(--bd);cursor:default}
+.cf-actual-row td{font-size:10px;color:var(--ac);font-weight:700}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -1611,45 +1625,62 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
     </div>
 
     <!-- Save Money Calculator -->
-    <div class="cf-save-box">
+    <div class="cf-save-box" id="cf-save-box">
       <div class="cf-save-title">🐷 Kế hoạch tiết kiệm</div>
 
-      <!-- Target -->
+      <!-- Target + Start date -->
       <div style="background:var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎯 Mục tiêu tiết kiệm</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <input class="cf-save-inp" id="cf-target-name" placeholder="Tên mục tiêu" style="flex:2;min-width:120px">
-          <input class="cf-save-inp" id="cf-target-amount" type="number" placeholder="Số tiền mục tiêu" style="flex:1.5;min-width:120px" oninput="updateTargetProgress()">
+        <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎯 Mục tiêu</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <input class="cf-save-inp" id="cf-target-name" placeholder="Tên mục tiêu (VD: Mua laptop)" oninput="savePlanMeta()" style="flex:2;min-width:140px">
+          <input class="cf-save-inp" id="cf-target-amount" type="number" placeholder="Số tiền cần đạt" oninput="savePlanMeta();calcSavings()" style="flex:1.2;min-width:110px">
           <span style="font-size:11px;color:var(--tx3)">VNĐ</span>
         </div>
-        <div id="cf-target-progress" style="margin-top:8px;display:none">
-          <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
-            <div id="cf-target-bar" style="height:100%;background:linear-gradient(90deg,var(--ac),var(--ok));border-radius:3px;transition:width .4s"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11px;color:var(--tx3);flex-shrink:0">📅 Bắt đầu từ:</span>
+          <input class="cf-save-inp" id="cf-start-date" type="date" oninput="savePlanMeta();calcSavings()" style="width:140px">
+        </div>
+        <div id="cf-target-progress" style="margin-top:10px;display:none">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--tx3)" id="cf-days-elapsed-label"></span>
+            <span style="font-size:11px;font-weight:700" id="cf-target-pct-label"></span>
           </div>
-          <div id="cf-target-label" style="font-size:11px;color:var(--tx3);margin-top:4px;text-align:right"></div>
+          <div style="height:8px;background:var(--bd);border-radius:4px;overflow:hidden">
+            <div id="cf-target-bar" style="height:100%;background:linear-gradient(90deg,var(--ac),var(--ok));border-radius:4px;transition:width .5s"></div>
+          </div>
+          <div id="cf-target-label" style="font-size:11px;color:var(--tx3);margin-top:4px"></div>
         </div>
       </div>
 
-      <!-- Calculator rows -->
+      <!-- Saving items list -->
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Các mục tiết kiệm</div>
       <div id="cf-save-items-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
 
       <!-- Add saving item -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <input class="cf-save-inp" id="cf-save-desc" placeholder="Không mua gì..." style="flex:2;min-width:100px">
-        <input class="cf-save-inp" id="cf-save-daily" type="number" placeholder="Số tiền/ngày" min="0" step="1000" style="flex:1;min-width:90px">
-        <button onclick="addSaveItem()" style="padding:6px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Thêm</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:var(--s2);border-radius:8px;padding:8px">
+        <input class="cf-save-inp" id="cf-save-desc" placeholder="VD: Không mua cà phê" style="flex:2;min-width:120px">
+        <input class="cf-save-inp" id="cf-save-daily" type="number" placeholder="VNĐ/ngày" min="0" step="1000" style="flex:1;min-width:90px">
+        <button onclick="addSaveItem()" style="padding:6px 14px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:700;cursor:pointer">+ Thêm</button>
       </div>
 
-      <!-- Period selector -->
-      <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--tx3);align-self:center">Tính trong:</span>
+      <!-- Daily tracking grid -->
+      <div id="cf-tracking-section" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">📆 Tracking hàng ngày</div>
+          <div id="cf-actual-summary" style="font-size:11px;color:var(--ac);font-weight:700"></div>
+        </div>
+        <div id="cf-tracking-grid" style="overflow-x:auto;padding-bottom:6px"></div>
+      </div>
+
+      <!-- Period selector + result -->
+      <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;margin-top:8px">
+        <span style="font-size:11px;color:var(--tx3);align-self:center">Ước tính:</span>
         <button class="cf-filter-btn active" id="cf-period-7"   onclick="setSavePeriod(7)">1 tuần</button>
         <button class="cf-filter-btn"        id="cf-period-30"  onclick="setSavePeriod(30)">1 tháng</button>
         <button class="cf-filter-btn"        id="cf-period-90"  onclick="setSavePeriod(90)">1 quý</button>
         <button class="cf-filter-btn"        id="cf-period-180" onclick="setSavePeriod(180)">6 tháng</button>
         <button class="cf-filter-btn"        id="cf-period-365" onclick="setSavePeriod(365)">1 năm</button>
       </div>
-
       <div class="cf-save-result" id="cf-save-result" style="display:none"></div>
     </div>
 
@@ -7703,8 +7734,10 @@ function loadCfData() {
     const cached = JSON.parse(localStorage.getItem(CF_KEY) || '[]');
     if (cached.length) { cfTransactions = cached; renderCfView(); }
   } catch {}
-  // Load save items
+  // Load save items + track data
   try { cfSaveItems = JSON.parse(localStorage.getItem(CF_SAVE_KEY) || '[]'); } catch {}
+  loadTrackData();
+  loadSavePlanFromSupabase();
   // Fetch Supabase
   dbCashflow.getAll().then(fresh => {
     if (!fresh) return;
@@ -7845,6 +7878,8 @@ function renderCfView() {
   renderMonthStats();
   renderCfList();
   renderSaveItems();
+  renderTrackingGrid();
+  calcSavings();
   updateTargetProgress();
 }
 
@@ -7921,7 +7956,43 @@ function renderCfList() {
   `).join('');
 }
 
-// ── Save items ───────────────────────────────────────────
+// ── Save Plan ────────────────────────────────────────────
+// cfSaveItems: [{id,desc,daily}]
+// cfTrackData: {startDate, targetName, targetAmount, logs:{itemId:{dayIndex:true/false}}}
+const CF_TRACK_KEY = 'tf_cf_track';
+let cfTrackData = { startDate:'', targetName:'', targetAmount:0, logs:{} };
+
+function loadTrackData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(CF_TRACK_KEY)||'{}');
+    cfTrackData = { startDate:'', targetName:'', targetAmount:0, logs:{}, ...d };
+    // Restore inputs
+    if (cfTrackData.targetName)   { const el=document.getElementById('cf-target-name');   if(el) el.value=cfTrackData.targetName; }
+    if (cfTrackData.targetAmount) { const el=document.getElementById('cf-target-amount'); if(el) el.value=cfTrackData.targetAmount; }
+    if (cfTrackData.startDate)    { const el=document.getElementById('cf-start-date');    if(el) el.value=cfTrackData.startDate; }
+  } catch {}
+}
+
+function saveTrackData() {
+  cfTrackData.targetName   = document.getElementById('cf-target-name')?.value  || '';
+  cfTrackData.targetAmount = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
+  cfTrackData.startDate    = document.getElementById('cf-start-date')?.value   || '';
+  localStorage.setItem(CF_TRACK_KEY, JSON.stringify(cfTrackData));
+  // Debounced Supabase sync
+  clearTimeout(window._savePlanSyncTimer);
+  window._savePlanSyncTimer = setTimeout(syncSavePlanToSupabase, 1500);
+}
+
+function savePlanMeta() { saveTrackData(); updateTargetProgress(); }
+
+function getDaysElapsed() {
+  const start = cfTrackData.startDate;
+  if (!start) return 0;
+  const ms = Date.now() - new Date(start).getTime();
+  return Math.max(0, Math.floor(ms / 86400000));
+}
+
+// ── Add/Delete saving item ────────────────────────────────
 function addSaveItem() {
   const desc  = document.getElementById('cf-save-desc')?.value.trim();
   const daily = parseFloat(document.getElementById('cf-save-daily')?.value);
@@ -7930,26 +8001,118 @@ function addSaveItem() {
   saveSaveItems();
   document.getElementById('cf-save-desc').value  = '';
   document.getElementById('cf-save-daily').value = '';
-  renderSaveItems(); calcSavings();
+  renderSaveItems(); renderTrackingGrid(); calcSavings();
 }
 
 function deleteSaveItem(id) {
   cfSaveItems = cfSaveItems.filter(s => s.id !== id);
-  saveSaveItems(); renderSaveItems(); calcSavings();
+  delete cfTrackData.logs[id];
+  saveSaveItems(); saveTrackData();
+  renderSaveItems(); renderTrackingGrid(); calcSavings();
 }
 
 function renderSaveItems() {
   const el = document.getElementById('cf-save-items-list');
   if (!el) return;
-  if (!cfSaveItems.length) { el.innerHTML = ''; return; }
-  el.innerHTML = cfSaveItems.map(s => `
+  if (!cfSaveItems.length) { el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px">Chưa có mục tiết kiệm nào. Thêm bên dưới!</div>'; return; }
+  const totalDaily = cfSaveItems.reduce((s,i)=>s+i.daily,0);
+  el.innerHTML = cfSaveItems.map((s,idx) => `
     <div class="cf-save-items-row">
+      <div style="font-size:11px;color:var(--tx3);width:18px;font-weight:700">${idx+1}</div>
       <div class="cf-save-item-name">${esc(s.desc)}</div>
       <div class="cf-save-item-amt">${fmtMoney(s.daily)}/ngày</div>
       <button class="cf-save-item-del" onclick="deleteSaveItem('${s.id}')">✕</button>
-    </div>`).join('');
+    </div>`).join('') +
+    `<div class="cf-save-items-row" style="border-top:2px solid var(--bd);margin-top:4px">
+      <div style="font-size:11px;color:var(--tx3);width:18px"></div>
+      <div style="flex:1;font-size:12px;font-weight:700;color:var(--tx)">Tổng cộng</div>
+      <div class="cf-save-item-amt" style="color:var(--ok)">${fmtMoney(totalDaily)}/ngày</div>
+      <div style="width:22px"></div>
+    </div>`;
 }
 
+// ── Daily Tracking Grid ───────────────────────────────────
+function renderTrackingGrid() {
+  const section = document.getElementById('cf-tracking-section');
+  if (!section) return;
+  if (!cfSaveItems.length || !cfTrackData.startDate) {
+    section.style.display = 'none'; return;
+  }
+  section.style.display = '';
+
+  const daysElapsed = getDaysElapsed();
+  const showDays    = Math.max(daysElapsed + 1, 7); // show at least 7 days
+
+  // Build table header — days 1..N
+  let headCells = '<th class="row-label">Mục tiết kiệm</th>';
+  for (let d = 1; d <= showDays; d++) {
+    const date = new Date(cfTrackData.startDate);
+    date.setDate(date.getDate() + d - 1);
+    const dd = date.getDate() + '/' + (date.getMonth()+1);
+    headCells += `<th title="${dd}">N${d}</th>`;
+  }
+
+  // Build rows per item
+  let rows = '';
+  let colTotals = new Array(showDays).fill(0);
+
+  cfSaveItems.forEach(item => {
+    const logs = cfTrackData.logs[item.id] || {};
+    let cells = `<td class="row-label" title="${esc(item.desc)}">${esc(item.desc)}</td>`;
+    for (let d = 0; d < showDays; d++) {
+      const isFuture  = d >= daysElapsed + 1;
+      const val       = logs[d]; // true=done, false=skip, undefined=empty
+      let cls, icon;
+      if (isFuture)       { cls='future'; icon='·'; }
+      else if (val===true) { cls='done';  icon='✓'; colTotals[d] += item.daily; }
+      else if (val===false){ cls='skip';  icon='✕'; }
+      else                 { cls='empty'; icon='?'; }
+      const clickFn = isFuture ? '' : `onclick="toggleTrackCell('${item.id}',${d})"`;
+      cells += `<td><div class="cf-track-cell ${cls}" ${clickFn}>${icon}</div></td>`;
+    }
+    rows += `<tr>${cells}</tr>`;
+  });
+
+  // Actual saved row
+  let actualCells = '<td class="row-label" style="color:var(--ac)">💰 Thực tế tiết kiệm</td>';
+  let totalActual = 0;
+  colTotals.forEach((v, d) => {
+    totalActual += v;
+    const isFuture = d >= daysElapsed + 1;
+    actualCells += `<td style="color:${v>0?'#16a34a':isFuture?'var(--bd)':'#ef4444'};font-weight:700;font-size:10px">${v>0?fmtMoney(v):isFuture?'':'-'}</td>`;
+  });
+
+  document.getElementById('cf-tracking-grid').innerHTML = `
+    <table class="cf-track-table">
+      <thead><tr>${headCells}</tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="cf-actual-row">${actualCells}</tr>
+      </tbody>
+    </table>`;
+
+  // Summary
+  const summaryEl = document.getElementById('cf-actual-summary');
+  if (summaryEl) {
+    const totalExpected = cfSaveItems.reduce((s,i)=>s+i.daily,0) * Math.min(daysElapsed, showDays);
+    summaryEl.innerHTML = `Tổng thực tế: <span style="color:var(--ok)">${fmtMoneyFull(totalActual)}</span>` +
+      (daysElapsed > 0 ? ` / dự kiến ${fmtMoneyFull(totalExpected)}` : '');
+  }
+}
+
+function toggleTrackCell(itemId, dayIndex) {
+  if (!cfTrackData.logs[itemId]) cfTrackData.logs[itemId] = {};
+  const cur = cfTrackData.logs[itemId][dayIndex];
+  // Cycle: undefined→true→false→undefined
+  if (cur === undefined) cfTrackData.logs[itemId][dayIndex] = true;
+  else if (cur === true)  cfTrackData.logs[itemId][dayIndex] = false;
+  else                    delete cfTrackData.logs[itemId][dayIndex];
+  saveTrackData();
+  renderTrackingGrid();
+  updateTargetProgress();
+}
+
+// ── Period + Calc ─────────────────────────────────────────
 function setSavePeriod(d) {
   cfSavePeriod = d;
   [7,30,90,180,365].forEach(v =>
@@ -7963,77 +8126,142 @@ function calcSavings() {
   if (!cfSaveItems.length) { result.style.display='none'; return; }
   const totalDaily = cfSaveItems.reduce((s,i)=>s+i.daily, 0);
   const p = cfSavePeriod;
-  const total   = totalDaily * p;
-  const weekly  = totalDaily * 7;
-  const monthly = totalDaily * 30;
-  const quarterly = totalDaily * 90;
-  const yearly  = totalDaily * 365;
-  const pLabel  = p===7?'1 tuần':p===30?'1 tháng':p===90?'1 quý':p===180?'6 tháng':'1 năm';
+  const pLabel = p===7?'1 tuần':p===30?'1 tháng':p===90?'1 quý':p===180?'6 tháng':'1 năm';
   result.style.display = 'block';
   result.innerHTML = `
     <div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:8px">
-      Tiết kiệm <b>${fmtMoneyFull(totalDaily)}/ngày</b> trong <b>${pLabel}</b>:
+      Nếu tiết kiệm đều <b>${fmtMoneyFull(totalDaily)}/ngày</b>:
     </div>
-    <div class="cf-save-result-row">
-      <div class="cf-save-result-label">Tiết kiệm được (${pLabel})</div>
-      <div class="cf-save-result-val" style="color:var(--ok)">${fmtMoneyFull(total)}</div>
-    </div>
-    <div class="cf-save-result-row">
-      <div class="cf-save-result-label">Mỗi tuần</div>
-      <div class="cf-save-result-val">${fmtMoneyFull(weekly)}</div>
-    </div>
-    <div class="cf-save-result-row">
-      <div class="cf-save-result-label">Mỗi tháng</div>
-      <div class="cf-save-result-val">${fmtMoneyFull(monthly)}</div>
-    </div>
-    <div class="cf-save-result-row">
-      <div class="cf-save-result-label">Mỗi quý (3 tháng)</div>
-      <div class="cf-save-result-val">${fmtMoneyFull(quarterly)}</div>
-    </div>
-    <div class="cf-save-result-row">
-      <div class="cf-save-result-label">Mỗi năm</div>
-      <div class="cf-save-result-val">${fmtMoneyFull(yearly)}</div>
-    </div>
-    ${updateTargetProgressInline(total)}`;
+    ${[7,30,90,180,365].map(days => {
+      const lbl = days===7?'1 tuần':days===30?'1 tháng':days===90?'1 quý':days===180?'6 tháng':'1 năm';
+      return `<div class="cf-save-result-row" style="${days===p?'font-weight:800':''}" >
+        <div class="cf-save-result-label">${lbl}</div>
+        <div class="cf-save-result-val" style="${days===p?'color:var(--ok);font-size:14px':''}">${fmtMoneyFull(totalDaily*days)}</div>
+      </div>`;
+    }).join('')}
+    ${targetProgressHTML()}`;
+  updateTargetProgress();
 }
 
-function updateTargetProgress() {
-  const totalDaily = cfSaveItems.reduce((s,i)=>s+i.daily, 0);
-  const total = totalDaily * cfSavePeriod;
-  const target = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
-  const prog   = document.getElementById('cf-target-progress');
-  if (!prog) return;
-  if (!target || !total) { prog.style.display='none'; return; }
-  const pct = Math.min(100, (total/target)*100);
-  prog.style.display = '';
-  document.getElementById('cf-target-bar').style.width = pct+'%';
-  const name = document.getElementById('cf-target-name')?.value || 'Mục tiêu';
-  const daysNeeded = Math.ceil(target / (totalDaily||1));
-  document.getElementById('cf-target-label').textContent =
-    `${name}: ${pct.toFixed(0)}% — cần ${daysNeeded} ngày để đạt ${fmtMoneyFull(target)}`;
-}
-
-function updateTargetProgressInline(currentSaved) {
+function targetProgressHTML() {
   const target = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
   const name   = document.getElementById('cf-target-name')?.value || '';
-  if (!target || !name) return '';
-  const pct  = Math.min(100, (currentSaved/target)*100);
-  const met  = currentSaved >= target;
-  return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">
-    <div style="font-size:11px;font-weight:700;color:${met?'#16a34a':'var(--ac)'};margin-bottom:5px">
-      🎯 ${esc(name)}: ${met?'✅ Đạt mục tiêu!':''}
+  if (!target || !name || !cfSaveItems.length) return '';
+  const totalDaily = cfSaveItems.reduce((s,i)=>s+i.daily, 0);
+  const daysNeeded = Math.ceil(target / (totalDaily||1));
+
+  // Actual saved so far from tracking
+  let actualSaved = 0;
+  cfSaveItems.forEach(item => {
+    const logs = cfTrackData.logs[item.id] || {};
+    Object.entries(logs).forEach(([,v]) => { if (v===true) actualSaved += item.daily; });
+  });
+
+  const pct = Math.min(100, (actualSaved/target)*100);
+  const met = actualSaved >= target;
+  const daysElapsed = getDaysElapsed();
+
+  return `<div style="margin-top:10px;padding:10px;background:var(--s2);border-radius:8px">
+    <div style="font-size:12px;font-weight:700;color:${met?'#16a34a':'var(--ac)'};margin-bottom:6px">
+      🎯 ${esc(name)} ${met?'✅ Đạt rồi!':''}
     </div>
-    <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
-      <div style="height:100%;width:${pct}%;background:${met?'#16a34a':pct>70?'var(--wa)':'var(--ac)'};border-radius:3px"></div>
+    <div style="height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin-bottom:5px">
+      <div style="height:100%;width:${pct}%;background:${met?'#16a34a':pct>70?'#f59e0b':'var(--ac)'};border-radius:4px;transition:width .5s"></div>
     </div>
-    <div style="font-size:10px;color:var(--tx3);margin-top:3px">
-      ${fmtMoneyFull(Math.min(currentSaved,target))} / ${fmtMoneyFull(target)} (${pct.toFixed(0)}%)
-      ${!met?`— còn thiếu ${fmtMoneyFull(target-currentSaved)}`:''}
+    <div style="font-size:11px;color:var(--tx3)">
+      Thực tế: <b style="color:var(--ok)">${fmtMoneyFull(actualSaved)}</b> / ${fmtMoneyFull(target)} (${pct.toFixed(1)}%)
+      ${!met ? `— còn thiếu <b style="color:#ef4444">${fmtMoneyFull(target-actualSaved)}</b>` : ''}
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:3px">
+      Cần ${daysNeeded} ngày liên tục · Đã qua ${daysElapsed} ngày
     </div>
   </div>`;
 }
 
+function updateTargetProgress() {
+  const prog = document.getElementById('cf-target-progress');
+  if (!prog) return;
+  const target = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
+  if (!target || !cfSaveItems.length) { prog.style.display='none'; return; }
 
+  let actualSaved = 0;
+  cfSaveItems.forEach(item => {
+    const logs = cfTrackData.logs[item.id] || {};
+    Object.values(logs).forEach(v => { if (v===true) actualSaved += item.daily; });
+  });
+
+  const pct = Math.min(100, (actualSaved/target)*100);
+  const met = actualSaved >= target;
+  const daysElapsed = getDaysElapsed();
+  const totalDaily  = cfSaveItems.reduce((s,i)=>s+i.daily,0);
+  const daysNeeded  = Math.ceil(target/(totalDaily||1));
+  const name        = document.getElementById('cf-target-name')?.value || 'Mục tiêu';
+
+  prog.style.display = '';
+  document.getElementById('cf-target-bar').style.width = pct+'%';
+  document.getElementById('cf-target-bar').style.background =
+    met ? '#16a34a' : pct>70 ? '#f59e0b' : 'linear-gradient(90deg,var(--ac),var(--ok))';
+
+  const elLabel = document.getElementById('cf-days-elapsed-label');
+  if (elLabel) elLabel.textContent = daysElapsed > 0
+    ? `Ngày ${daysElapsed} kể từ ${cfTrackData.startDate}` : 'Chưa bắt đầu';
+
+  const pctLabel = document.getElementById('cf-target-pct-label');
+  if (pctLabel) pctLabel.textContent = `${pct.toFixed(1)}% ${met?'✅':''}`;
+  if (pctLabel) pctLabel.style.color = met ? '#16a34a' : 'var(--ac)';
+
+  const tLabel = document.getElementById('cf-target-label');
+  if (tLabel) tLabel.textContent = met
+    ? `🎉 Đã đạt mục tiêu ${esc(name)}!`
+    : `${fmtMoneyFull(actualSaved)} / ${fmtMoneyFull(target)} — cần ${daysNeeded} ngày liên tục`;
+}
+
+function updateTargetProgressInline(s) { return ''; } // legacy stub
+
+
+
+
+
+// ── Sync save plan to Supabase ────────────────────────────
+async function syncSavePlanToSupabase() {
+  try {
+    const payload = {
+      id:            'default',
+      target_name:   cfTrackData.targetName   || '',
+      target_amount: cfTrackData.targetAmount || 0,
+      start_date:    cfTrackData.startDate    || null,
+      save_items:    cfSaveItems,
+      track_logs:    cfTrackData.logs,
+      updated_at:    new Date().toISOString(),
+    };
+    await sbFetch('cf_save_plan', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(payload),
+    });
+  } catch(e) { console.warn('syncSavePlan error:', e); }
+}
+
+async function loadSavePlanFromSupabase() {
+  try {
+    const data = await sbFetch('cf_save_plan?id=eq.default');
+    if (data?.length) {
+      const p = data[0];
+      if (p.save_items)   cfSaveItems          = p.save_items;
+      if (p.track_logs)   cfTrackData.logs      = p.track_logs;
+      if (p.target_name)  cfTrackData.targetName   = p.target_name;
+      if (p.target_amount) cfTrackData.targetAmount = p.target_amount;
+      if (p.start_date)   cfTrackData.startDate    = p.start_date;
+      // Restore inputs
+      const setVal = (id, v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
+      setVal('cf-target-name',   cfTrackData.targetName);
+      setVal('cf-target-amount', cfTrackData.targetAmount);
+      setVal('cf-start-date',    cfTrackData.startDate);
+      saveSaveItems(); saveTrackData();
+      renderSaveItems(); renderTrackingGrid(); calcSavings(); updateTargetProgress();
+    }
+  } catch(e) { console.warn('loadSavePlan error:', e); }
+}
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
