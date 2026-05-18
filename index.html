@@ -975,7 +975,10 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .reminder-name{font-size:13px;color:var(--tx);font-weight:500;word-break:break-word}
 .reminder-name.done-text{text-decoration:line-through;color:var(--tx3)}
 .reminder-time{font-size:11px;color:var(--tx3);margin-top:2px}
-.reminder-time.overdue-time{color:var(--er);font-weight:600}
+.reminder-time .rstatus.overdue-time{color:var(--er)!important;font-weight:700}
+.reminder-time .rstatus.soon-time{color:var(--wa)!important;font-weight:700}
+.reminder-time .rstatus.today-time{color:var(--ac)!important;font-weight:600}
+.reminder-time .rstatus.ok-time{color:var(--ok)!important;font-weight:600}
 .reminder-time.today-time{color:var(--wa);font-weight:600}
 .reminder-del{background:none;border:none;color:var(--tx3);font-size:13px;cursor:pointer;
   padding:3px 5px;border-radius:5px;opacity:0;transition:all .15s}
@@ -1058,9 +1061,11 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   font-size:11px;color:var(--tx3);
   line-height:1.4;
 }
-.reminder-popup-meta .rstatus.overdue-time{color:var(--er);font-weight:700}
-.reminder-popup-meta .rstatus.today-time{color:var(--wa);font-weight:700}
-.reminder-popup-meta .rstatus.ok-time{color:var(--ok);font-weight:700}
+.reminder-popup-meta /* rstatus — dùng trong popup và reminder item */
+.rstatus.overdue-time{color:var(--er)!important;font-weight:700}
+.rstatus.soon-time{color:var(--wa)!important;font-weight:700}
+.rstatus.today-time{color:var(--ac)!important;font-weight:700}
+.rstatus.ok-time{color:var(--ok)!important;font-weight:600}
 .reminder-popup-dismiss{
   position:absolute;top:50%;right:10px;
   transform:translateY(-50%);
@@ -6606,18 +6611,17 @@ function reminderTimeLabel(remindAt) {
     if (mins < 60)        ago = mins + ' phút';
     else if (hours < 48)  ago = hours + ' giờ';
     else                  ago = days + ' ngày';
-    return { fmt, status: 'Quá hạn ' + ago, cls: 'overdue', badge: 'overdue' };
+    return { fmt, status: 'Quá hạn ' + ago, cls: 'overdue-time', badge: 'overdue' };
   } else if (mins < 60) {
     // Sắp đến < 1 giờ
-    return { fmt, status: 'Còn ' + mins + ' phút', cls: 'soon', badge: 'today' };
+    return { fmt, status: 'Còn ' + mins + ' phút', cls: 'soon-time', badge: 'today' };
+  } else if (hours < 24) {
+    // Hôm nay
+    return { fmt, status: 'Còn ' + hours + ' giờ', cls: 'today-time', badge: 'today' };
   } else {
-    // Còn lại
-    let left;
-    if (hours < 48)  left = hours + ' giờ';
-    else             left = days + ' ngày';
-    const cls   = hours < 24 ? 'today' : 'future';
-    const badge = hours < 24 ? 'today' : 'upcoming';
-    return { fmt, status: 'Còn ' + left, cls, badge };
+    // Còn nhiều ngày
+    const left = days + ' ngày';
+    return { fmt, status: 'Còn ' + left, cls: 'ok-time', badge: 'upcoming' };
   }
 }
 
@@ -6848,7 +6852,7 @@ function renderReminderItem(r, now, todayEnd) {
   const {fmt, status, cls, badge} = reminderTimeLabel(effectiveAt);
   const rowCls = r.done ? 'done-item' : badge;
   // Badge style
-  const badge2 = cls === 'overdue' ? 'overdue' : cls === 'soon' ? 'soon' : cls === 'today' ? 'today' : 'future';
+  const badge2 = badge === 'overdue' ? 'overdue' : cls === 'soon-time' ? 'soon' : badge === 'today' ? 'today' : 'future';
   const statusIcon = badge2 === 'overdue' ? '‼️' : badge2 === 'soon' ? '⚠️' : badge2 === 'today' ? '🔔' : '🕐';
   return `<div class="reminder-item ${rowCls}" id="rem_${r.id}">
     <div class="reminder-cb ${r.done?'checked':''}" onclick="toggleReminder('${r.id}')">${r.done?'✓':''}</div>
