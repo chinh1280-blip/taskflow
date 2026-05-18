@@ -1550,6 +1550,89 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
     <div id="notes-view" class="notes-view" style="display:none"></div>
     <div id="boards-view" class="boards-view" style="display:none"></div>
     <div id="reminders-view" class="reminders-view" style="display:none"></div>
+    <div id="cashflow-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+    <div class="cf-view" id="cf-scroll">
+
+    <!-- Summary -->
+    <div class="cf-summary">
+      <div class="cf-card income">
+        <div class="cf-card-label">Thu nhập</div>
+        <div class="cf-card-value" id="cf-total-income">0</div>
+      </div>
+      <div class="cf-card expense">
+        <div class="cf-card-label">Chi tiêu</div>
+        <div class="cf-card-value" id="cf-total-expense">0</div>
+      </div>
+      <div class="cf-card balance" id="cf-balance-card">
+        <div class="cf-card-label">Số dư</div>
+        <div class="cf-card-value" id="cf-balance">0</div>
+      </div>
+    </div>
+
+    <!-- Add transaction -->
+    <div class="cf-form">
+      <div class="cf-form-title">➕ Thêm giao dịch</div>
+      <div class="cf-type-row">
+        <button class="cf-type-btn income active" id="cf-btn-income" onclick="setCfType('income')">💚 Thu nhập</button>
+        <button class="cf-type-btn expense" id="cf-btn-expense" onclick="setCfType('expense')">❤️ Chi tiêu</button>
+      </div>
+      <div class="cf-input-row">
+        <input class="cf-inp amount" id="cf-amount" type="number" placeholder="Số tiền (VNĐ)" min="0" step="1000">
+        <select class="cf-cat-select" id="cf-cat">
+          <option value="🍜 Ăn uống">🍜 Ăn uống</option>
+          <option value="🚗 Di chuyển">🚗 Di chuyển</option>
+          <option value="🛍 Mua sắm">🛍 Mua sắm</option>
+          <option value="🏠 Nhà ở">🏠 Nhà ở</option>
+          <option value="💊 Sức khỏe">💊 Sức khỏe</option>
+          <option value="📚 Học tập">📚 Học tập</option>
+          <option value="🎮 Giải trí">🎮 Giải trí</option>
+          <option value="💰 Lương">💰 Lương</option>
+          <option value="📈 Đầu tư">📈 Đầu tư</option>
+          <option value="🎁 Khác">🎁 Khác</option>
+        </select>
+      </div>
+      <div class="cf-input-row">
+        <input class="cf-inp" id="cf-desc" placeholder="Mô tả (tùy chọn)" style="flex:2">
+        <button class="cf-add-btn" onclick="addCfTransaction()">Thêm</button>
+      </div>
+    </div>
+
+    <!-- Save Money Calculator -->
+    <div class="cf-save-box">
+      <div class="cf-save-title">🐷 Tính tiết kiệm</div>
+      <div class="cf-save-rows">
+        <div class="cf-save-row">
+          <div class="cf-save-label">Không chi cho</div>
+          <input class="cf-save-inp" id="cf-save-desc" placeholder="Cà phê, trà sữa..." style="width:160px">
+        </div>
+        <div class="cf-save-row">
+          <div class="cf-save-label">Mỗi ngày tiết kiệm</div>
+          <input class="cf-save-inp" id="cf-save-daily" type="number" placeholder="35000" min="0" step="1000" oninput="calcSavings()">
+          <span style="font-size:11px;color:var(--tx3)">VNĐ</span>
+        </div>
+        <div class="cf-save-row">
+          <div class="cf-save-label">Trong</div>
+          <input class="cf-save-inp" id="cf-save-days" type="number" placeholder="30" min="1" step="1" oninput="calcSavings()" style="width:70px">
+          <span style="font-size:11px;color:var(--tx3)">ngày</span>
+        </div>
+      </div>
+      <div class="cf-save-result" id="cf-save-result" style="display:none"></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="cf-list-header">
+      <div class="cf-list-title">Lịch sử giao dịch</div>
+      <div class="cf-filter-row">
+        <button class="cf-filter-btn active" id="cf-f-all" onclick="setCfFilter('all')">Tất cả</button>
+        <button class="cf-filter-btn" id="cf-f-income" onclick="setCfFilter('income')">Thu</button>
+        <button class="cf-filter-btn" id="cf-f-expense" onclick="setCfFilter('expense')">Chi</button>
+      </div>
+    </div>
+    <div id="cf-tx-list" style="display:flex;flex-direction:column;gap:8px"></div>
+
+  </div>
+</div>
+
   </main>
 </div>
 
@@ -8112,88 +8195,5 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   </div>
 </div>
 
-<!-- CASH FLOW VIEW -->
-<div id="cashflow-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">
-  <div class="cf-view" id="cf-scroll">
-
-    <!-- Summary -->
-    <div class="cf-summary">
-      <div class="cf-card income">
-        <div class="cf-card-label">Thu nhập</div>
-        <div class="cf-card-value" id="cf-total-income">0</div>
-      </div>
-      <div class="cf-card expense">
-        <div class="cf-card-label">Chi tiêu</div>
-        <div class="cf-card-value" id="cf-total-expense">0</div>
-      </div>
-      <div class="cf-card balance" id="cf-balance-card">
-        <div class="cf-card-label">Số dư</div>
-        <div class="cf-card-value" id="cf-balance">0</div>
-      </div>
-    </div>
-
-    <!-- Add transaction -->
-    <div class="cf-form">
-      <div class="cf-form-title">➕ Thêm giao dịch</div>
-      <div class="cf-type-row">
-        <button class="cf-type-btn income active" id="cf-btn-income" onclick="setCfType('income')">💚 Thu nhập</button>
-        <button class="cf-type-btn expense" id="cf-btn-expense" onclick="setCfType('expense')">❤️ Chi tiêu</button>
-      </div>
-      <div class="cf-input-row">
-        <input class="cf-inp amount" id="cf-amount" type="number" placeholder="Số tiền (VNĐ)" min="0" step="1000">
-        <select class="cf-cat-select" id="cf-cat">
-          <option value="🍜 Ăn uống">🍜 Ăn uống</option>
-          <option value="🚗 Di chuyển">🚗 Di chuyển</option>
-          <option value="🛍 Mua sắm">🛍 Mua sắm</option>
-          <option value="🏠 Nhà ở">🏠 Nhà ở</option>
-          <option value="💊 Sức khỏe">💊 Sức khỏe</option>
-          <option value="📚 Học tập">📚 Học tập</option>
-          <option value="🎮 Giải trí">🎮 Giải trí</option>
-          <option value="💰 Lương">💰 Lương</option>
-          <option value="📈 Đầu tư">📈 Đầu tư</option>
-          <option value="🎁 Khác">🎁 Khác</option>
-        </select>
-      </div>
-      <div class="cf-input-row">
-        <input class="cf-inp" id="cf-desc" placeholder="Mô tả (tùy chọn)" style="flex:2">
-        <button class="cf-add-btn" onclick="addCfTransaction()">Thêm</button>
-      </div>
-    </div>
-
-    <!-- Save Money Calculator -->
-    <div class="cf-save-box">
-      <div class="cf-save-title">🐷 Tính tiết kiệm</div>
-      <div class="cf-save-rows">
-        <div class="cf-save-row">
-          <div class="cf-save-label">Không chi cho</div>
-          <input class="cf-save-inp" id="cf-save-desc" placeholder="Cà phê, trà sữa..." style="width:160px">
-        </div>
-        <div class="cf-save-row">
-          <div class="cf-save-label">Mỗi ngày tiết kiệm</div>
-          <input class="cf-save-inp" id="cf-save-daily" type="number" placeholder="35000" min="0" step="1000" oninput="calcSavings()">
-          <span style="font-size:11px;color:var(--tx3)">VNĐ</span>
-        </div>
-        <div class="cf-save-row">
-          <div class="cf-save-label">Trong</div>
-          <input class="cf-save-inp" id="cf-save-days" type="number" placeholder="30" min="1" step="1" oninput="calcSavings()" style="width:70px">
-          <span style="font-size:11px;color:var(--tx3)">ngày</span>
-        </div>
-      </div>
-      <div class="cf-save-result" id="cf-save-result" style="display:none"></div>
-    </div>
-
-    <!-- Transactions -->
-    <div class="cf-list-header">
-      <div class="cf-list-title">Lịch sử giao dịch</div>
-      <div class="cf-filter-row">
-        <button class="cf-filter-btn active" id="cf-f-all" onclick="setCfFilter('all')">Tất cả</button>
-        <button class="cf-filter-btn" id="cf-f-income" onclick="setCfFilter('income')">Thu</button>
-        <button class="cf-filter-btn" id="cf-f-expense" onclick="setCfFilter('expense')">Chi</button>
-      </div>
-    </div>
-    <div id="cf-tx-list" style="display:flex;flex-direction:column;gap:8px"></div>
-
-  </div>
-</div>
 </body>
 </html>
