@@ -961,7 +961,9 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   background:var(--s1);border:1px solid var(--bd);border-radius:11px;
   padding:10px 14px;transition:all .15s;
 }
-.reminder-item.overdue{border-color:rgba(255,79,109,.4);border-left:3px solid var(--er);background:rgba(255,79,109,.05)}
+.reminder-item.overdue{border-color:rgba(239,68,68,.5);border-left:4px solid #ef4444;background:rgba(239,68,68,.08)}
+.reminder-item.overdue .reminder-name{color:var(--tx)!important}
+.reminder-item.overdue .rstatus{color:#ef4444!important;font-weight:700!important}
 .reminder-item.today{border-color:rgba(251,191,36,.4);border-left:3px solid var(--wa);background:rgba(251,191,36,.05)}
 .reminder-item.upcoming{border-color:rgba(34,211,160,.35);border-left:3px solid var(--ok);background:rgba(34,211,160,.04)}
 .reminder-item.done-item{opacity:.4}
@@ -1306,6 +1308,66 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .rtl-dp-btn.goto-btn:hover{background:rgba(79,124,255,.1)}
 .rtl-dp-btn.cancel-btn{color:var(--tx3)}
 .rtl-dp-btn + .rtl-dp-btn{border-left:1px solid var(--bd)}
+
+/* ═══════ CASH FLOW TRACKING ═══════════════════════════ */
+.cf-view{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+
+/* Summary cards */
+.cf-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.cf-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:12px 10px;text-align:center}
+.cf-card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tx3);margin-bottom:4px}
+.cf-card-value{font-size:16px;font-weight:800;font-family:"Roboto Mono",monospace}
+.cf-card.income .cf-card-value{color:#16a34a}
+.cf-card.expense .cf-card-value{color:#ef4444}
+.cf-card.balance .cf-card-value{color:var(--ac)}
+.cf-card.balance.negative .cf-card-value{color:#ef4444}
+
+/* Add transaction form */
+.cf-form{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.cf-form-title{font-size:13px;font-weight:700;color:var(--tx)}
+.cf-type-row{display:flex;gap:6px}
+.cf-type-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.cf-type-btn.income.active{background:rgba(22,163,74,.15);border-color:#16a34a;color:#16a34a}
+.cf-type-btn.expense.active{background:rgba(239,68,68,.12);border-color:#ef4444;color:#ef4444}
+.cf-input-row{display:flex;gap:8px;flex-wrap:wrap}
+.cf-inp{flex:1;min-width:120px;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:13px;outline:none}
+.cf-inp:focus{border-color:var(--ac)}
+.cf-inp.amount{font-family:"Roboto Mono",monospace;font-weight:600}
+.cf-cat-select{padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:12px;outline:none;cursor:pointer}
+.cf-add-btn{padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* Transaction list */
+.cf-list-header{display:flex;align-items:center;justify-content:space-between}
+.cf-list-title{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px}
+.cf-filter-row{display:flex;gap:5px}
+.cf-filter-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:none;color:var(--tx3);font-size:11px;cursor:pointer}
+.cf-filter-btn.active{background:rgba(79,124,255,.15);border-color:var(--ac);color:var(--ac);font-weight:600}
+.cf-tx-item{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;position:relative}
+.cf-tx-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cf-tx-icon.income{background:rgba(22,163,74,.15)}
+.cf-tx-icon.expense{background:rgba(239,68,68,.1)}
+.cf-tx-info{flex:1;min-width:0}
+.cf-tx-desc{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-tx-meta{font-size:11px;color:var(--tx3);margin-top:2px}
+.cf-tx-amount{font-size:14px;font-weight:800;font-family:"Roboto Mono",monospace;flex-shrink:0}
+.cf-tx-amount.income{color:#16a34a}
+.cf-tx-amount.expense{color:#ef4444}
+.cf-tx-del{background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;font-size:14px;opacity:.5}
+.cf-tx-del:hover{opacity:1;color:var(--er)}
+
+/* Save money calculator */
+.cf-save-box{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.cf-save-title{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.cf-save-rows{display:flex;flex-direction:column;gap:8px}
+.cf-save-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cf-save-label{font-size:12px;color:var(--tx2);flex-shrink:0;min-width:80px}
+.cf-save-inp{padding:6px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:13px;font-weight:600;font-family:"Roboto Mono",monospace;outline:none;width:110px}
+.cf-save-inp:focus{border-color:var(--ac)}
+.cf-save-result{background:linear-gradient(135deg,rgba(79,124,255,.1),rgba(34,211,160,.1));border:1px solid rgba(79,124,255,.2);border-radius:10px;padding:12px 14px;margin-top:8px}
+.cf-save-result-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.cf-save-result-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.06)}
+.cf-save-result-label{font-size:11px;color:var(--tx3)}
+.cf-save-result-val{font-size:13px;font-weight:700;color:var(--ac);font-family:"Roboto Mono",monospace}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -7496,6 +7558,165 @@ async function restorePushSubscription() {
     }
   }
 }
+
+// ════════════════════════════════════════════════════════
+// CASH FLOW TRACKING
+// ════════════════════════════════════════════════════════
+const CF_KEY = 'tf_cashflow';
+let cfTransactions = [];
+let cfType = 'income';
+let cfFilter = 'all';
+let isCashFlowView = false;
+
+function loadCfData() {
+  try { cfTransactions = JSON.parse(localStorage.getItem(CF_KEY) || '[]'); } catch { cfTransactions = []; }
+}
+function saveCfData() {
+  localStorage.setItem(CF_KEY, JSON.stringify(cfTransactions));
+}
+
+function switchToCashFlowView() {
+  // Hide others
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('reminders-view').style.display = 'none';
+  document.querySelectorAll('.view-panel').forEach(v => v.style.display = 'none');
+
+  document.getElementById('cashflow-view').style.display = 'flex';
+  document.getElementById('topbar-task-row').style.display = 'none';
+  document.getElementById('topbar-view-row').style.display = '';
+  document.getElementById('page-title').textContent = '💰 Cash Flow';
+  document.getElementById('topbar-view-actions').innerHTML = '';
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-cashflow')?.classList.add('active');
+
+  isCashFlowView = true;
+  isRemindersView = false;
+  loadCfData();
+  renderCfView();
+  closeSidebar?.();
+}
+
+function setCfType(type) {
+  cfType = type;
+  document.getElementById('cf-btn-income').classList.toggle('active', type === 'income');
+  document.getElementById('cf-btn-expense').classList.toggle('active', type === 'expense');
+}
+
+function setCfFilter(f) {
+  cfFilter = f;
+  ['all','income','expense'].forEach(k => {
+    document.getElementById('cf-f-' + k)?.classList.toggle('active', k === f);
+  });
+  renderCfList();
+}
+
+function fmtMoney(n) {
+  if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(0) + 'K';
+  return n.toLocaleString('vi-VN');
+}
+function fmtMoneyFull(n) { return n.toLocaleString('vi-VN') + 'đ'; }
+
+function addCfTransaction() {
+  const amount = parseFloat(document.getElementById('cf-amount').value);
+  if (!amount || amount <= 0) { showNotif('nw','⚠️','Nhập số tiền hợp lệ'); return; }
+  const cat  = document.getElementById('cf-cat').value;
+  const desc = document.getElementById('cf-desc').value.trim() || cat;
+  const tx = {
+    id:     'cf_' + Date.now(),
+    type:   cfType,
+    amount: Math.round(amount),
+    cat, desc,
+    date:   new Date().toISOString(),
+  };
+  cfTransactions.unshift(tx);
+  saveCfData();
+  // Reset form
+  document.getElementById('cf-amount').value = '';
+  document.getElementById('cf-desc').value = '';
+  renderCfView();
+  showNotif('ns', cfType === 'income' ? '💚 Đã thêm thu nhập' : '❤️ Đã thêm chi tiêu', fmtMoneyFull(tx.amount));
+}
+
+function deleteCfTx(id) {
+  cfTransactions = cfTransactions.filter(t => t.id !== id);
+  saveCfData();
+  renderCfView();
+}
+
+function renderCfView() {
+  // Summary
+  const totalIncome  = cfTransactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const totalExpense = cfTransactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const balance      = totalIncome - totalExpense;
+  document.getElementById('cf-total-income').textContent  = fmtMoney(totalIncome);
+  document.getElementById('cf-total-expense').textContent = fmtMoney(totalExpense);
+  document.getElementById('cf-balance').textContent       = fmtMoney(balance);
+  const balCard = document.getElementById('cf-balance-card');
+  balCard?.classList.toggle('negative', balance < 0);
+  renderCfList();
+}
+
+function renderCfList() {
+  const list = document.getElementById('cf-tx-list');
+  if (!list) return;
+  const filtered = cfFilter === 'all' ? cfTransactions
+    : cfTransactions.filter(t => t.type === cfFilter);
+  if (!filtered.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--tx3);padding:24px;font-size:13px">Chưa có giao dịch nào</div>';
+    return;
+  }
+  // Group by date
+  const groups = {};
+  filtered.forEach(t => {
+    const d = new Date(t.date).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+    (groups[d] = groups[d] || []).push(t);
+  });
+  list.innerHTML = Object.entries(groups).map(([date, txs]) => `
+    <div style="font-size:11px;font-weight:700;color:var(--tx3);padding:4px 2px;text-transform:uppercase;letter-spacing:.5px">${date}</div>
+    ${txs.map(t => `
+    <div class="cf-tx-item">
+      <div class="cf-tx-icon ${t.type}">${t.type==='income'?'💚':'❤️'}</div>
+      <div class="cf-tx-info">
+        <div class="cf-tx-desc">${esc(t.desc)}</div>
+        <div class="cf-tx-meta">${t.cat} · ${new Date(t.date).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div class="cf-tx-amount ${t.type}">${t.type==='income'?'+':'-'}${fmtMoney(t.amount)}</div>
+      <button class="cf-tx-del" onclick="deleteCfTx('${t.id}')" title="Xóa">🗑</button>
+    </div>`).join('')}
+  `).join('');
+}
+
+function calcSavings() {
+  const daily = parseFloat(document.getElementById('cf-save-daily')?.value) || 0;
+  const days  = parseFloat(document.getElementById('cf-save-days')?.value)  || 0;
+  const desc  = document.getElementById('cf-save-desc')?.value || 'thói quen này';
+  const result = document.getElementById('cf-save-result');
+  if (!result) return;
+  if (!daily || !days) { result.style.display = 'none'; return; }
+  const total   = daily * days;
+  const monthly = daily * 30;
+  const yearly  = daily * 365;
+  result.style.display = 'block';
+  result.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:8px">
+      Nếu không chi cho <em>${esc(desc)}</em> trong <b>${days} ngày</b>:
+    </div>
+    <div class="cf-save-result-row">
+      <div class="cf-save-result-label">Tiết kiệm được</div>
+      <div class="cf-save-result-val">${fmtMoneyFull(total)}</div>
+    </div>
+    <div class="cf-save-result-row">
+      <div class="cf-save-result-label">Mỗi tháng (~30 ngày)</div>
+      <div class="cf-save-result-val">${fmtMoneyFull(monthly)}</div>
+    </div>
+    <div class="cf-save-result-row">
+      <div class="cf-save-result-label">Mỗi năm (365 ngày)</div>
+      <div class="cf-save-result-val">${fmtMoneyFull(yearly)}</div>
+    </div>`;
+}
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -7851,6 +8072,90 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
     <div class="notif-settings-footer">
       <button class="notif-save-btn" onclick="saveNotifSettings()">💾 Lưu cài đặt</button>
     </div>
+  </div>
+</div>
+
+<!-- CASH FLOW VIEW -->
+<div id="cashflow-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+  <div class="cf-view" id="cf-scroll">
+
+    <!-- Summary -->
+    <div class="cf-summary">
+      <div class="cf-card income">
+        <div class="cf-card-label">Thu nhập</div>
+        <div class="cf-card-value" id="cf-total-income">0</div>
+      </div>
+      <div class="cf-card expense">
+        <div class="cf-card-label">Chi tiêu</div>
+        <div class="cf-card-value" id="cf-total-expense">0</div>
+      </div>
+      <div class="cf-card balance" id="cf-balance-card">
+        <div class="cf-card-label">Số dư</div>
+        <div class="cf-card-value" id="cf-balance">0</div>
+      </div>
+    </div>
+
+    <!-- Add transaction -->
+    <div class="cf-form">
+      <div class="cf-form-title">➕ Thêm giao dịch</div>
+      <div class="cf-type-row">
+        <button class="cf-type-btn income active" id="cf-btn-income" onclick="setCfType('income')">💚 Thu nhập</button>
+        <button class="cf-type-btn expense" id="cf-btn-expense" onclick="setCfType('expense')">❤️ Chi tiêu</button>
+      </div>
+      <div class="cf-input-row">
+        <input class="cf-inp amount" id="cf-amount" type="number" placeholder="Số tiền (VNĐ)" min="0" step="1000">
+        <select class="cf-cat-select" id="cf-cat">
+          <option value="🍜 Ăn uống">🍜 Ăn uống</option>
+          <option value="🚗 Di chuyển">🚗 Di chuyển</option>
+          <option value="🛍 Mua sắm">🛍 Mua sắm</option>
+          <option value="🏠 Nhà ở">🏠 Nhà ở</option>
+          <option value="💊 Sức khỏe">💊 Sức khỏe</option>
+          <option value="📚 Học tập">📚 Học tập</option>
+          <option value="🎮 Giải trí">🎮 Giải trí</option>
+          <option value="💰 Lương">💰 Lương</option>
+          <option value="📈 Đầu tư">📈 Đầu tư</option>
+          <option value="🎁 Khác">🎁 Khác</option>
+        </select>
+      </div>
+      <div class="cf-input-row">
+        <input class="cf-inp" id="cf-desc" placeholder="Mô tả (tùy chọn)" style="flex:2">
+        <button class="cf-add-btn" onclick="addCfTransaction()">Thêm</button>
+      </div>
+    </div>
+
+    <!-- Save Money Calculator -->
+    <div class="cf-save-box">
+      <div class="cf-save-title">🐷 Tính tiết kiệm</div>
+      <div class="cf-save-rows">
+        <div class="cf-save-row">
+          <div class="cf-save-label">Không chi cho</div>
+          <input class="cf-save-inp" id="cf-save-desc" placeholder="Cà phê, trà sữa..." style="width:160px">
+        </div>
+        <div class="cf-save-row">
+          <div class="cf-save-label">Mỗi ngày tiết kiệm</div>
+          <input class="cf-save-inp" id="cf-save-daily" type="number" placeholder="35000" min="0" step="1000" oninput="calcSavings()">
+          <span style="font-size:11px;color:var(--tx3)">VNĐ</span>
+        </div>
+        <div class="cf-save-row">
+          <div class="cf-save-label">Trong</div>
+          <input class="cf-save-inp" id="cf-save-days" type="number" placeholder="30" min="1" step="1" oninput="calcSavings()" style="width:70px">
+          <span style="font-size:11px;color:var(--tx3)">ngày</span>
+        </div>
+      </div>
+      <div class="cf-save-result" id="cf-save-result" style="display:none"></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="cf-list-header">
+      <div class="cf-list-title">Lịch sử giao dịch</div>
+      <div class="cf-filter-row">
+        <button class="cf-filter-btn active" id="cf-f-all" onclick="setCfFilter('all')">Tất cả</button>
+        <button class="cf-filter-btn" id="cf-f-income" onclick="setCfFilter('income')">Thu</button>
+        <button class="cf-filter-btn" id="cf-f-expense" onclick="setCfFilter('expense')">Chi</button>
+      </div>
+    </div>
+    <div id="cf-tx-list" style="display:flex;flex-direction:column;gap:8px"></div>
+
   </div>
 </div>
 </body>
