@@ -1401,18 +1401,8 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   overflow:hidden!important;text-overflow:ellipsis;
   height:26px!important;max-height:26px!important;line-height:26px;
 }
-.cf-track-cell{
-  width:30px;height:26px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;cursor:pointer;box-sizing:border-box;
-  transition:background .1s;
-}
-.cf-track-cell:hover:not(.future){opacity:.8;background-color:rgba(255,255,255,.1)}
-.cf-track-cell.done  {background:rgba(22,163,74,.25);color:#16a34a}
-.cf-track-cell.skip  {background:rgba(239,68,68,.15);color:#ef4444}
-.cf-track-cell.empty {background:var(--s2);color:var(--tx3);font-size:10px}
-.cf-track-cell.future{background:none;color:var(--bd);cursor:default;font-size:9px}
 .cf-actual-row td{font-size:9px;font-weight:700;padding:0;color:var(--ac)}
+.cf-track-table td:hover:not([style*="cursor:default"]){filter:brightness(.9)}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -8105,12 +8095,22 @@ function renderTrackingGrid() {
       const isFuture  = d >= daysElapsed; // d=0-based, daysElapsed=1-based
       const val       = logs[d]; // true=done, false=skip, undefined=empty
       let cls, icon;
-      if (isFuture)       { cls='future'; icon='·'; }
-      else if (val===true) { cls='done';  icon='✓'; colTotals[d] += item.daily; }
-      else if (val===false){ cls='skip';  icon='✕'; }
-      else                 { cls='empty'; icon='?'; }
-      const clickFn = isFuture ? '' : `onclick="toggleTrackCell('${item.id}',${d})"`;
-      cells += `<td><div class="cf-track-cell ${cls}" ${clickFn}>${icon}</div></td>`;
+      let cBg, cColor, cIcon, cClick='';
+      if (isFuture) {
+        cBg=''; cColor='var(--bd)'; cIcon='·';
+      } else if (val===true) {
+        cBg='rgba(22,163,74,.2)'; cColor='#16a34a'; cIcon='✓';
+        colTotals[d] += item.daily;
+        cClick = `onclick="toggleTrackCell('${item.id}',${d})"`;
+      } else if (val===false) {
+        cBg='rgba(239,68,68,.12)'; cColor='#ef4444'; cIcon='✕';
+        cClick = `onclick="toggleTrackCell('${item.id}',${d})"`;
+      } else {
+        cBg='var(--s2)'; cColor='var(--tx3)'; cIcon='?';
+        cClick = `onclick="toggleTrackCell('${item.id}',${d})"`;
+      }
+      cells += `<td style="background:${cBg};cursor:${isFuture?'default':'pointer'};text-align:center;vertical-align:middle" ${cClick}>` +
+               `<span style="color:${cColor};font-size:12px">${cIcon}</span></td>`;
     }
     rows += `<tr>${cells}</tr>`;
   });
@@ -8120,8 +8120,10 @@ function renderTrackingGrid() {
   let totalActual = 0;
   colTotals.forEach((v, d) => {
     totalActual += v;
-    const isFuture = d >= daysElapsed;
-    actualCells += `<td style="color:${v>0?'#16a34a':isFuture?'var(--bd)':'#ef4444'};font-weight:700;font-size:10px">${v>0?fmtMoney(v):isFuture?'':'-'}</td>`;
+    const isFuture2 = d >= daysElapsed;
+    const av = v>0 ? fmtMoney(v) : isFuture2 ? '·' : '-';
+    const ac = v>0 ? '#16a34a'   : isFuture2 ? 'var(--bd)' : '#ef4444';
+    actualCells += `<td style="font-weight:700;font-size:9px;color:${ac};line-height:26px">${av}</td>`;
   });
 
   document.getElementById('cf-tracking-grid').innerHTML = `
