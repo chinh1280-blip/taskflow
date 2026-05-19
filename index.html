@@ -3671,6 +3671,7 @@ function renderDailyView() {
 // ── Switch views ───────────────────────────────────────────
 function switchToDailyView() {
   isDailyView = true;
+  hideCashFlowView();
   document.getElementById('content').style.display = 'none';
   document.getElementById('daily-view').style.display = 'block';
   // Update sidebar active
@@ -4321,6 +4322,7 @@ function updateNotesBadge() {
 // ── Switch view ───────────────────────────────────────────────
 function switchToNotesView() {
   isNotesView = true;
+  hideCashFlowView();
   if (isDailyView) switchToTaskView();
   document.getElementById('content').style.display = 'none';
   document.getElementById('daily-view').style.display = 'none';
@@ -5220,6 +5222,7 @@ function updateBoardsBadge() {
 // ── Switch view ───────────────────────────────────────────────
 function switchToBoardsView() {
   isBoardsView = true;
+  hideCashFlowView();
   if (isDailyView) switchToTaskView();
   if (isNotesView) switchFromNotesView();
   document.getElementById('content').style.display = 'none';
@@ -8037,18 +8040,19 @@ let cfTrackData = { startDate:'', targetName:'', targetAmount:0, logs:{} };
 
 
 function fmtSaveInp(inp) {
+  // Strip mọi ký tự không phải số
   const raw = inp.value.replace(/[^0-9]/g, '');
-  if (!raw) { inp.dataset.raw = ''; return; }
+  if (!raw) { inp.value = ''; return; }
   const num = parseInt(raw, 10);
-  inp.dataset.raw = raw;
-  // Dùng dấu , kiểu 30,000,000
+  // Format với dấu , (en-US style: 30,000,000)
   inp.value = num.toLocaleString('en-US');
 }
 
 function parseSaveInp(id) {
   const el = document.getElementById(id);
   if (!el) return 0;
-  const raw = el.dataset.raw || el.value.replace(/[^0-9]/g, '');
+  // Luôn strip từ value hiện tại (bỏ qua dataset.raw có thể stale)
+  const raw = el.value.replace(/[^0-9]/g, '');
   return parseInt(raw, 10) || 0;
 }
 function loadTrackData() {
@@ -8267,7 +8271,7 @@ function calcSavings() {
 }
 
 function targetProgressHTML() {
-  const target = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
+  const target = parseSaveInp('cf-target-amount');
   const name   = document.getElementById('cf-target-name')?.value || '';
   if (!target || !name || !cfSaveItems.length) return '';
   const totalDaily = cfSaveItems.reduce((s,i)=>s+i.daily, 0);
@@ -8304,7 +8308,7 @@ function targetProgressHTML() {
 function updateTargetProgress() {
   const prog = document.getElementById('cf-target-progress');
   if (!prog) return;
-  const target = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
+  const target = parseSaveInp('cf-target-amount');
   if (!target || !cfSaveItems.length) { prog.style.display='none'; return; }
 
   let actualSaved = 0;
