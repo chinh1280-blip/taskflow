@@ -1379,36 +1379,38 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .cf-edit-highlight{outline:2px solid var(--ac)!important}
 
 /* Daily tracking grid */
-.cf-track-table{border-collapse:collapse;font-size:11px;table-layout:fixed}
+.cf-track-table{border-collapse:collapse;font-size:11px;table-layout:fixed;width:max-content}
 .cf-track-table th{
   padding:3px 2px;background:var(--s2);color:var(--tx3);font-weight:700;
   text-align:center;white-space:nowrap;border:1px solid var(--bd);
-  width:28px;font-size:10px;
+  width:30px;min-width:30px;max-width:30px;font-size:10px;height:26px;
 }
-.cf-track-table th.row-label-th{width:120px;text-align:left;padding-left:6px}
+.cf-track-table th.row-label-th{width:110px;min-width:110px;max-width:110px;text-align:left;padding-left:6px}
+.cf-track-table tr{height:26px}
 .cf-track-table td{
-  padding:2px;border:1px solid var(--bd);
+  padding:0;border:1px solid var(--bd);
   text-align:center;vertical-align:middle;
-  width:28px;
+  width:30px;min-width:30px;max-width:30px;
+  height:26px;max-height:26px;overflow:hidden;
 }
 .cf-track-table td.row-label{
   text-align:left;font-weight:600;color:var(--tx);background:var(--s2);
-  width:120px;max-width:120px;overflow:hidden;text-overflow:ellipsis;
-  padding-left:6px;font-size:11px;white-space:nowrap;
+  width:110px;min-width:110px;max-width:110px;
+  padding:0 4px 0 6px;font-size:11px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;height:26px;
 }
 .cf-track-cell{
-  width:20px;height:20px;border-radius:3px;cursor:pointer;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:11px;transition:transform .1s;
-  box-sizing:border-box;flex-shrink:0;
+  width:26px;height:26px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;cursor:pointer;box-sizing:border-box;
+  transition:background .1s;
 }
-.cf-track-cell:hover:not(.future){transform:scale(1.2)}
-.cf-track-cell.done  {background:rgba(22,163,74,.25);color:#16a34a;font-size:13px}
-.cf-track-cell.skip  {background:rgba(239,68,68,.15);color:#ef4444;font-size:13px}
+.cf-track-cell:hover:not(.future){opacity:.8;background-color:rgba(255,255,255,.1)}
+.cf-track-cell.done  {background:rgba(22,163,74,.25);color:#16a34a}
+.cf-track-cell.skip  {background:rgba(239,68,68,.15);color:#ef4444}
 .cf-track-cell.empty {background:var(--s2);color:var(--tx3);font-size:10px}
 .cf-track-cell.future{background:none;color:var(--bd);cursor:default;font-size:9px}
-.cf-actual-row td{font-size:9px;color:var(--ac);font-weight:700;padding:1px}
-.cf-track-table td{padding:2px;text-align:center;height:26px;line-height:26px}
+.cf-actual-row td{font-size:9px;font-weight:700;padding:0;color:var(--ac)}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -7752,7 +7754,7 @@ let cfType         = 'income';
 let cfFilter       = 'all';
 let cfEditId       = null;
 let cfSaveItems    = [];  // [{desc, daily}]
-let cfSavePeriod   = 30;
+let cfSavePeriod   = 7;
 let isCashFlowView = false;
 
 function loadCfData() {
@@ -8077,7 +8079,7 @@ function renderTrackingGrid() {
   section.style.display = '';
 
   const daysElapsed = getDaysElapsed();
-  const showDays    = Math.max(daysElapsed, 7); // at least 7 days
+  const showDays    = Math.max(daysElapsed + 7, 14); // thêm 7 ngày tương lai
 
   // Build table header — days 1..N
   let headCells = '<th class="row-label-th">Mục</th>';
@@ -8161,6 +8163,9 @@ function setSavePeriod(d) {
 function calcSavings() {
   const result = document.getElementById('cf-save-result');
   if (!result) return;
+  // Sync period buttons with current cfSavePeriod
+  [7,30,90,180,365].forEach(v =>
+    document.getElementById('cf-period-'+v)?.classList.toggle('active', v===cfSavePeriod));
   if (!cfSaveItems.length) { result.style.display='none'; return; }
   const totalDaily = cfSaveItems.reduce((s,i)=>s+i.daily, 0);
   const p = cfSavePeriod;
