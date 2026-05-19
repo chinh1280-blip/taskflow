@@ -1386,21 +1386,23 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   width:30px;min-width:30px;max-width:30px;font-size:10px;height:26px;
 }
 .cf-track-table th.row-label-th{width:110px;min-width:110px;max-width:110px;text-align:left;padding-left:6px}
-.cf-track-table tr{height:26px}
+.cf-track-table tr{height:26px!important;max-height:26px!important}
 .cf-track-table td{
-  padding:0;border:1px solid var(--bd);
+  padding:0!important;border:1px solid var(--bd);
   text-align:center;vertical-align:middle;
   width:30px;min-width:30px;max-width:30px;
-  height:26px;max-height:26px;overflow:hidden;
+  height:26px!important;max-height:26px!important;overflow:hidden;
+  line-height:26px;
 }
 .cf-track-table td.row-label{
-  text-align:left;font-weight:600;color:var(--tx);background:var(--s2);
-  width:110px;min-width:110px;max-width:110px;
-  padding:0 4px 0 6px;font-size:11px;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;height:26px;
+  text-align:left!important;font-weight:600;color:var(--tx);background:var(--s2);
+  width:110px!important;min-width:110px!important;max-width:110px!important;
+  padding:0 4px 0 6px!important;font-size:11px;white-space:nowrap!important;
+  overflow:hidden!important;text-overflow:ellipsis;
+  height:26px!important;max-height:26px!important;line-height:26px;
 }
 .cf-track-cell{
-  width:26px;height:26px;
+  width:30px;height:26px;
   display:flex;align-items:center;justify-content:center;
   font-size:12px;cursor:pointer;box-sizing:border-box;
   transition:background .1s;
@@ -8082,7 +8084,7 @@ function renderTrackingGrid() {
   const showDays    = Math.max(daysElapsed + 7, 14); // thêm 7 ngày tương lai
 
   // Build table header — days 1..N
-  let headCells = '<th class="row-label-th">Mục</th>';
+  let headCells = '<th class="row-label-th" style="height:26px">Mục</th>';
   const startBase = new Date((cfTrackData.startDate || document.getElementById('cf-start-date')?.value) + 'T00:00:00');
   for (let d = 0; d < showDays; d++) {
     const date = new Date(startBase);
@@ -8114,7 +8116,7 @@ function renderTrackingGrid() {
   });
 
   // Actual saved row
-  let actualCells = '<td class="row-label" style="color:var(--ac)">💰 Thực tế tiết kiệm</td>';
+  let actualCells = '<td class="row-label" style="color:var(--ac);height:26px;max-height:26px;overflow:hidden;white-space:nowrap">💰 Thực tế</td>';
   let totalActual = 0;
   colTotals.forEach((v, d) => {
     totalActual += v;
