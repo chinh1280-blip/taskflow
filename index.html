@@ -6207,71 +6207,91 @@ function handleNotePaste(e) {
 }
 
 function cleanPastedHtml(html) {
-  // Parse and clean
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
 
-  // Remove Word/Excel specific tags and attributes
-  const removeEls = tmp.querySelectorAll('style,script,meta,link,[class^="Mso"],[class^="xl"],[id^="Mso"]');
-  removeEls.forEach(el => el.remove());
+  // 1. Remove noise tags
+  tmp.querySelectorAll('style,script,meta,link,head').forEach(el => el.remove());
+  tmp.querySelectorAll('[class^="Mso"],[class^="xl"],[id^="Mso"]').forEach(el => {
+    // Unwrap (keep children) instead of remove
+    el.replaceWith(...el.childNodes);
+  });
 
-  // Clean up attributes: keep only safe ones
-  const KEEP_ATTRS = ['href','src','style','colspan','rowspan','width','height','align','bgcolor','color','border'];
+  // 2. Process all elements
   tmp.querySelectorAll('*').forEach(el => {
-    const attrs = Array.from(el.attributes);
-    attrs.forEach(attr => {
-      if (!KEEP_ATTRS.includes(attr.name) && !attr.name.startsWith('data-')) {
-        el.removeAttribute(attr.name);
-      }
+    // Remove all attributes except style, href, colspan, rowspan
+    const keepAttrs = new Set(['style','href','colspan','rowspan']);
+    Array.from(el.attributes).forEach(a => {
+      if (!keepAttrs.has(a.name)) el.removeAttribute(a.name);
     });
-    // Clean style: keep only useful properties
-    if (el.style && el.style.cssText) {
-      const keepStyles = ['font-weight','font-style','text-decoration','color','background-color',
-        'font-size','text-align','border','padding','margin','width'];
-      const styleObj = {};
-      keepStyles.forEach(prop => {
-        let val = el.style.getPropertyValue(prop);
-        if (!val || val === 'initial' || val === 'normal' || val === 'none' || val === 'auto') return;
-        // Strip white/near-white backgrounds (from Word/web copy)
-        if (prop === 'background-color') {
-          const tmp2 = document.createElement('div');
-          tmp2.style.backgroundColor = val;
-          document.body.appendChild(tmp2);
-          const rgb = window.getComputedStyle(tmp2).backgroundColor;
-          document.body.removeChild(tmp2);
-          // Parse rgb and check if near white (all channels > 240)
-          const m = rgb.match(/\d+/g);
-          if (m && parseInt(m[0])>235 && parseInt(m[1])>235 && parseInt(m[2])>235) return; // skip white bg
-          if (val === 'transparent' || val === 'rgba(0, 0, 0, 0)') return;
+
+    // Clean inline styles
+    if (el.style?.cssText) {
+      const s = el.style;
+      const out = [];
+
+      // font-weight
+      if (s.fontWeight && s.fontWeight !== 'normal' && s.fontWeight !== '400')
+        out.push(`font-weight:${s.fontWeight}`);
+
+      // font-style
+      if (s.fontStyle && s.fontStyle !== 'normal')
+        out.push(`font-style:${s.fontStyle}`);
+
+      // text-decoration
+      if (s.textDecoration && s.textDecoration !== 'none')
+        out.push(`text-decoration:${s.textDecoration}`);
+
+      // color — keep if not black/inherit
+      if (s.color && s.color !== 'rgb(0, 0, 0)' && s.color !== 'black' && s.color !== 'inherit') {
+        out.push(`color:${s.color}`);
+      }
+
+      // background-color — SKIP white/near-white/transparent
+      if (s.backgroundColor) {
+        const bg = s.backgroundColor;
+        const isTransparent = bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)';
+        const m = bg.match(/(\d+),\s*(\d+),\s*(\d+)/);
+        const isWhite = m && +m[1]>230 && +m[2]>230 && +m[3]>230;
+        if (!isTransparent && !isWhite) {
+          out.push(`background-color:${bg}`);
         }
-        // Normalize font-size: convert pt to px
-        if (prop === 'font-size' && val.endsWith('pt')) {
-          val = Math.round(parseFloat(val) * 1.333) + 'px';
-        }
-        styleObj[prop] = val;
-      });
-      el.style.cssText = Object.entries(styleObj).map(([k,v])=>`${k}:${v}`).join(';');
-    }
-    // Convert bgcolor attr to style
-    if (el.getAttribute('bgcolor')) {
-      el.style.backgroundColor = el.getAttribute('bgcolor');
-      el.removeAttribute('bgcolor');
+        // Always clear the style so it doesn't persist
+        el.style.backgroundColor = '';
+      }
+
+      // font-size — convert pt→px, keep px, ignore small diffs
+      if (s.fontSize) {
+        let fs = s.fontSize;
+        if (fs.endsWith('pt')) fs = Math.round(parseFloat(fs)*1.333) + 'px';
+        // Only keep if not default (16px)
+        if (fs !== '16px' && fs !== '1em' && fs !== '100%') out.push(`font-size:${fs}`);
+      }
+
+      // text-align
+      if (s.textAlign && s.textAlign !== 'start' && s.textAlign !== 'left')
+        out.push(`text-align:${s.textAlign}`);
+
+      el.style.cssText = out.join(';');
     }
   });
 
-  // Convert Excel table styles
-  tmp.querySelectorAll('table').forEach(tbl => {
-    tbl.style.borderCollapse = 'collapse';
-    tbl.style.width = 'auto';
-    tbl.removeAttribute('width');
+  // 3. Table cleanup
+  tmp.querySelectorAll('table').forEach(t => {
+    t.style.cssText = 'border-collapse:collapse;width:auto';
   });
   tmp.querySelectorAll('td,th').forEach(cell => {
-    if (!cell.style.border) cell.style.border = '1px solid var(--bd)';
-    if (!cell.style.padding) cell.style.padding = '6px 10px';
+    const border = cell.style.border || '1px solid var(--bd)';
+    const pad    = cell.style.padding || '6px 10px';
+    cell.style.cssText = `border:${border};padding:${pad}`;
   });
 
-  // Remove empty spans/divs
-  tmp.querySelectorAll('span:empty, div:empty').forEach(el => el.remove());
+  // 4. Remove empty spans that carry no meaning
+  tmp.querySelectorAll('span').forEach(span => {
+    if (!span.style.cssText && !span.children.length) {
+      span.replaceWith(span.textContent);
+    }
+  });
 
   return tmp.innerHTML;
 }
@@ -8018,13 +8038,11 @@ let cfTrackData = { startDate:'', targetName:'', targetAmount:0, logs:{} };
 
 function fmtSaveInp(inp) {
   const raw = inp.value.replace(/[^0-9]/g, '');
-  if (!raw) return;
+  if (!raw) { inp.dataset.raw = ''; return; }
   const num = parseInt(raw, 10);
-  // Store raw value as data attr
   inp.dataset.raw = raw;
-  // Format with commas
-  const pos = inp.selectionStart;
-  inp.value = num.toLocaleString('vi-VN');
+  // Dùng dấu , kiểu 30,000,000
+  inp.value = num.toLocaleString('en-US');
 }
 
 function parseSaveInp(id) {
@@ -8039,7 +8057,13 @@ function loadTrackData() {
     cfTrackData = { startDate:'', targetName:'', targetAmount:0, logs:{}, ...d };
     // Restore inputs
     if (cfTrackData.targetName)   { const el=document.getElementById('cf-target-name');   if(el) el.value=cfTrackData.targetName; }
-    if (cfTrackData.targetAmount) { const el=document.getElementById('cf-target-amount'); if(el) el.value=cfTrackData.targetAmount; }
+    if (cfTrackData.targetAmount) {
+      const el=document.getElementById('cf-target-amount');
+      if(el) {
+        el.dataset.raw = String(cfTrackData.targetAmount);
+        el.value = cfTrackData.targetAmount.toLocaleString('en-US');
+      }
+    }
     if (cfTrackData.startDate)    { const el=document.getElementById('cf-start-date');    if(el) el.value=cfTrackData.startDate; }
   } catch {}
   // Render sau khi load
