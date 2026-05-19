@@ -1404,6 +1404,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .cf-actual-row td{font-size:9px;font-weight:700;padding:0;color:var(--ac)}
 .cf-track-table td:hover:not([style*="cursor:default"]){filter:brightness(.9)}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
 <body>
@@ -1645,7 +1646,8 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
         <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎯 Mục tiêu</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
           <input class="cf-save-inp" id="cf-target-name" placeholder="Tên mục tiêu (VD: Mua laptop)" oninput="savePlanMeta()" style="flex:2;min-width:140px">
-          <input class="cf-save-inp" id="cf-target-amount" type="number" placeholder="Số tiền cần đạt" oninput="savePlanMeta();calcSavings()" style="flex:1.2;min-width:110px">
+          <input class="cf-save-inp" id="cf-target-amount" type="text" inputmode="numeric" placeholder="25,000,000" 
+  oninput="fmtSaveInp(this);savePlanMeta();calcSavings()" style="flex:1.2;min-width:110px;font-family:'Roboto Mono',monospace">
           <span style="font-size:11px;color:var(--tx3)">VNĐ</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1671,7 +1673,8 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
       <!-- Add saving item -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:var(--s2);border-radius:8px;padding:8px">
         <input class="cf-save-inp" id="cf-save-desc" placeholder="VD: Không mua cà phê" style="flex:2;min-width:120px">
-        <input class="cf-save-inp" id="cf-save-daily" type="number" placeholder="VNĐ/ngày" min="0" step="1000" style="flex:1;min-width:90px">
+        <input class="cf-save-inp" id="cf-save-daily" type="text" inputmode="numeric" placeholder="50,000"
+  oninput="fmtSaveInp(this)" style="flex:1;min-width:90px;font-family:'Roboto Mono',monospace">
         <button onclick="addSaveItem()" style="padding:6px 14px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:700;cursor:pointer">+ Thêm</button>
       </div>
 
@@ -6227,10 +6230,25 @@ function cleanPastedHtml(html) {
         'font-size','text-align','border','padding','margin','width'];
       const styleObj = {};
       keepStyles.forEach(prop => {
-        const val = el.style.getPropertyValue(prop);
-        if (val && val !== 'initial' && val !== 'normal' && val !== 'none' && val !== 'auto') {
-          styleObj[prop] = val;
+        let val = el.style.getPropertyValue(prop);
+        if (!val || val === 'initial' || val === 'normal' || val === 'none' || val === 'auto') return;
+        // Strip white/near-white backgrounds (from Word/web copy)
+        if (prop === 'background-color') {
+          const tmp2 = document.createElement('div');
+          tmp2.style.backgroundColor = val;
+          document.body.appendChild(tmp2);
+          const rgb = window.getComputedStyle(tmp2).backgroundColor;
+          document.body.removeChild(tmp2);
+          // Parse rgb and check if near white (all channels > 240)
+          const m = rgb.match(/\d+/g);
+          if (m && parseInt(m[0])>235 && parseInt(m[1])>235 && parseInt(m[2])>235) return; // skip white bg
+          if (val === 'transparent' || val === 'rgba(0, 0, 0, 0)') return;
         }
+        // Normalize font-size: convert pt to px
+        if (prop === 'font-size' && val.endsWith('pt')) {
+          val = Math.round(parseFloat(val) * 1.333) + 'px';
+        }
+        styleObj[prop] = val;
       });
       el.style.cssText = Object.entries(styleObj).map(([k,v])=>`${k}:${v}`).join(';');
     }
@@ -6973,9 +6991,9 @@ function dismissAllReminders() {
 
 // ── View ───────────────────────────────────────────────
 function hideCashFlowView() {
-  if (!isCashFlowView) return;
   isCashFlowView = false;
-  document.getElementById('cashflow-view').style.display = 'none';
+  const el = document.getElementById('cashflow-view');
+  if (el) el.style.display = 'none';
 }
 
 function switchToRemindersView() {
@@ -7758,20 +7776,29 @@ function loadCfData() {
   try { cfSaveItems = JSON.parse(localStorage.getItem(CF_SAVE_KEY) || '[]'); } catch {}
   loadTrackData();
   loadSavePlanFromSupabase();
-  // Fetch Supabase
-  dbCashflow.getAll().then(fresh => {
-    if (!fresh) return;
-    cfTransactions = fresh.map(t => ({
-      id:     t.id,
-      type:   t.type,
-      amount: t.amount,
-      cat:    t.cat,
-      desc:   t.description || t.cat,
-      date:   t.tx_date || t.created_at,
-    }));
-    localStorage.setItem(CF_KEY, JSON.stringify(cfTransactions));
-    renderCfView();
-  }).catch(e => console.warn('loadCfData:', e));
+  // Fetch Supabase — retry once if SB_URL not ready
+  const doFetch = () => {
+    if (!SB_URL || !SB_KEY) {
+      console.warn('[CF] Supabase not configured yet, retrying in 1s...');
+      setTimeout(doFetch, 1000);
+      return;
+    }
+    dbCashflow.getAll().then(fresh => {
+      if (!fresh || !Array.isArray(fresh)) return;
+      cfTransactions = fresh.map(t => ({
+        id:     t.id,
+        type:   t.type,
+        amount: t.amount,
+        cat:    t.cat,
+        desc:   t.description || t.cat,
+        date:   t.tx_date || t.created_at,
+      }));
+      localStorage.setItem(CF_KEY, JSON.stringify(cfTransactions));
+      renderCfView();
+      console.log('[CF] Loaded', cfTransactions.length, 'transactions from Supabase');
+    }).catch(e => console.warn('[CF] loadCfData error:', e));
+  };
+  doFetch();
 }
 
 function saveCfLocal() { localStorage.setItem(CF_KEY, JSON.stringify(cfTransactions)); }
@@ -7779,9 +7806,15 @@ function saveSaveItems() { localStorage.setItem(CF_SAVE_KEY, JSON.stringify(cfSa
 
 // ── Switch view ─────────────────────────────────────────
 function switchToCashFlowView() {
-  document.getElementById('content').style.display = 'none';
-  document.getElementById('reminders-view').style.display = 'none';
+  // Hide ALL views explicitly
+  ['content','reminders-view','cashflow-view',
+   'daily-routines-view','notes-view','boards-view'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
   document.querySelectorAll('.view-panel').forEach(v => v.style.display = 'none');
+  // Reset all view flags
+  isDailyView = false; isNotesView = false; isBoardsView = false; isRemindersView = false;
   document.getElementById('cashflow-view').style.display = 'flex';
   document.getElementById('topbar-task-row').style.display = 'none';
   document.getElementById('topbar-view-row').style.display = '';
@@ -7982,6 +8015,24 @@ function renderCfList() {
 const CF_TRACK_KEY = 'tf_cf_track';
 let cfTrackData = { startDate:'', targetName:'', targetAmount:0, logs:{} };
 
+
+function fmtSaveInp(inp) {
+  const raw = inp.value.replace(/[^0-9]/g, '');
+  if (!raw) return;
+  const num = parseInt(raw, 10);
+  // Store raw value as data attr
+  inp.dataset.raw = raw;
+  // Format with commas
+  const pos = inp.selectionStart;
+  inp.value = num.toLocaleString('vi-VN');
+}
+
+function parseSaveInp(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const raw = el.dataset.raw || el.value.replace(/[^0-9]/g, '');
+  return parseInt(raw, 10) || 0;
+}
 function loadTrackData() {
   try {
     const d = JSON.parse(localStorage.getItem(CF_TRACK_KEY)||'{}');
@@ -7997,7 +8048,7 @@ function loadTrackData() {
 
 function saveTrackData() {
   cfTrackData.targetName   = document.getElementById('cf-target-name')?.value  || '';
-  cfTrackData.targetAmount = parseFloat(document.getElementById('cf-target-amount')?.value) || 0;
+  cfTrackData.targetAmount = parseSaveInp('cf-target-amount') || 0;
   cfTrackData.startDate    = document.getElementById('cf-start-date')?.value   || '';
   localStorage.setItem(CF_TRACK_KEY, JSON.stringify(cfTrackData));
   // Debounced Supabase sync
@@ -8021,7 +8072,7 @@ function getDaysElapsed() {
 // ── Add/Delete saving item ────────────────────────────────
 function addSaveItem() {
   const desc  = document.getElementById('cf-save-desc')?.value.trim();
-  const daily = parseFloat(document.getElementById('cf-save-daily')?.value);
+  const daily = parseSaveInp('cf-save-daily');
   if (!desc || !daily || daily <= 0) { showNotif('nw','⚠️','Nhập đủ tên và số tiền/ngày'); return; }
   cfSaveItems.push({ id: 'sv_'+Date.now(), desc, daily });
   saveSaveItems();
