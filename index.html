@@ -1397,16 +1397,18 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   padding-left:6px;font-size:11px;white-space:nowrap;
 }
 .cf-track-cell{
-  width:22px;height:22px;border-radius:4px;cursor:pointer;
+  width:20px;height:20px;border-radius:3px;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:11px;transition:transform .1s;margin:auto;
+  font-size:11px;transition:transform .1s;
+  box-sizing:border-box;flex-shrink:0;
 }
-.cf-track-cell:hover{transform:scale(1.25)}
-.cf-track-cell.done  {background:rgba(22,163,74,.2);color:#16a34a}
-.cf-track-cell.skip  {background:rgba(239,68,68,.12);color:#ef4444}
-.cf-track-cell.empty {background:var(--s2);color:var(--tx3);opacity:.5}
+.cf-track-cell:hover:not(.future){transform:scale(1.2)}
+.cf-track-cell.done  {background:rgba(22,163,74,.25);color:#16a34a;font-size:13px}
+.cf-track-cell.skip  {background:rgba(239,68,68,.15);color:#ef4444;font-size:13px}
+.cf-track-cell.empty {background:var(--s2);color:var(--tx3);font-size:10px}
 .cf-track-cell.future{background:none;color:var(--bd);cursor:default;font-size:9px}
-.cf-actual-row td{font-size:9px;color:var(--ac);font-weight:700;padding:2px 1px}
+.cf-actual-row td{font-size:9px;color:var(--ac);font-weight:700;padding:1px}
+.cf-track-table td{padding:2px;text-align:center;height:26px;line-height:26px}
 </style>
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhc2tGbG93IiwKICAic2hvcnRfbmFtZSI6ICJUYXNrRmxvdyIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBkMGYxNCIsCiAgInRoZW1lX2NvbG9yIjogIiM0ZjdjZmYiLAogICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjM0ZjdjZmYnLz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzgwJz7imqE8L3RleHQ+PC9zdmc+IiwgInNpemVzIjogImFueSIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifV0KfQ==">
 </head>
@@ -8014,8 +8016,12 @@ function savePlanMeta() { saveTrackData(); renderTrackingGrid(); calcSavings(); 
 function getDaysElapsed() {
   const start = cfTrackData.startDate || document.getElementById('cf-start-date')?.value;
   if (!start) return 0;
-  const ms = Date.now() - new Date(start).getTime();
-  return Math.max(0, Math.floor(ms / 86400000));
+  // Tính số ngày đã qua (ngày bắt đầu = ngày 1)
+  // startDate="2026-05-19", hôm nay="2026-05-19" → 1 ngày
+  const startMs = new Date(start + 'T00:00:00').getTime();
+  const todayMs = new Date(new Date().toDateString()).getTime();
+  const days = Math.floor((todayMs - startMs) / 86400000);
+  return Math.max(0, days + 1); // +1 vì ngày bắt đầu tính là ngày 1
 }
 
 // ── Add/Delete saving item ────────────────────────────────
@@ -8071,15 +8077,17 @@ function renderTrackingGrid() {
   section.style.display = '';
 
   const daysElapsed = getDaysElapsed();
-  const showDays    = Math.max(daysElapsed + 1, 7); // show at least 7 days
+  const showDays    = Math.max(daysElapsed, 7); // at least 7 days
 
   // Build table header — days 1..N
   let headCells = '<th class="row-label-th">Mục</th>';
-  for (let d = 1; d <= showDays; d++) {
-    const date = new Date(cfTrackData.startDate);
-    date.setDate(date.getDate() + d - 1);
+  const startBase = new Date((cfTrackData.startDate || document.getElementById('cf-start-date')?.value) + 'T00:00:00');
+  for (let d = 0; d < showDays; d++) {
+    const date = new Date(startBase);
+    date.setDate(date.getDate() + d);
     const dd = date.getDate() + '/' + (date.getMonth()+1);
-    headCells += `<th title="${dd}">N${d}</th>`;
+    const isToday = date.toDateString() === new Date().toDateString();
+    headCells += `<th title="${dd}" style="${isToday?'background:rgba(79,124,255,.2);color:var(--ac)':''}">${dd}</th>`;
   }
 
   // Build rows per item
@@ -8090,7 +8098,7 @@ function renderTrackingGrid() {
     const logs = cfTrackData.logs[item.id] || {};
     let cells = `<td class="row-label" title="${esc(item.desc)}">${esc(item.desc)}</td>`;
     for (let d = 0; d < showDays; d++) {
-      const isFuture  = d >= daysElapsed + 1;
+      const isFuture  = d >= daysElapsed; // d=0-based, daysElapsed=1-based
       const val       = logs[d]; // true=done, false=skip, undefined=empty
       let cls, icon;
       if (isFuture)       { cls='future'; icon='·'; }
@@ -8108,7 +8116,7 @@ function renderTrackingGrid() {
   let totalActual = 0;
   colTotals.forEach((v, d) => {
     totalActual += v;
-    const isFuture = d >= daysElapsed + 1;
+    const isFuture = d >= daysElapsed;
     actualCells += `<td style="color:${v>0?'#16a34a':isFuture?'var(--bd)':'#ef4444'};font-weight:700;font-size:10px">${v>0?fmtMoney(v):isFuture?'':'-'}</td>`;
   });
 
@@ -8164,9 +8172,10 @@ function calcSavings() {
     </div>
     ${[7,30,90,180,365].map(days => {
       const lbl = days===7?'1 tuần':days===30?'1 tháng':days===90?'1 quý':days===180?'6 tháng':'1 năm';
-      return `<div class="cf-save-result-row" style="${days===p?'font-weight:800':''}" >
-        <div class="cf-save-result-label">${lbl}</div>
-        <div class="cf-save-result-val" style="${days===p?'color:var(--ok);font-size:14px':''}">${fmtMoneyFull(totalDaily*days)}</div>
+      const isActive = days === cfSavePeriod;
+      return `<div class="cf-save-result-row" style="${isActive?'background:rgba(79,124,255,.08);border-radius:6px;margin:0 -4px;padding:4px':''}">
+        <div class="cf-save-result-label" style="${isActive?'font-weight:700;color:var(--tx)':''}">${lbl} ${isActive?'◀':''}</div>
+        <div class="cf-save-result-val" style="${isActive?'color:var(--ok);font-size:15px;font-weight:800':''}">${fmtMoneyFull(totalDaily*days)}</div>
       </div>`;
     }).join('')}
     ${targetProgressHTML()}`;
