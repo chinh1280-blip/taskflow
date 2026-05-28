@@ -9100,7 +9100,7 @@ function pfRenderNode(node) {
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
     <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}">
-      ${node.imageUrl?`<img class="pf-node-img" src="${node.imageUrl}" style="max-height:${node.h-30}px" onmousedown="pfImgResizeStart(event,'${node.id}')">`:``}
+      ${node.imageUrl?`<img class="pf-node-img" src="${node.imageUrl}" style="max-height:${Math.max(30,node.h-30)}px;display:block;pointer-events:auto" ondblclick="pfUploadImage()" title="Double-click để đổi ảnh">`:``}
       <div class="pf-node-text"
         id="pft_${node.id}"
         style="font-size:${fs};font-weight:${fw};color:${fc}"
@@ -9261,8 +9261,28 @@ function pfCanvasMouseMove(e) {
     const pos=pfGetCanvasPos(e);
     const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
     if(node){
-      node.x=Math.round(pos.x-pfDragging.ox);
-      node.y=Math.round(pos.y-pfDragging.oy);
+      let nx=Math.round(pos.x-pfDragging.ox);
+      let ny=Math.round(pos.y-pfDragging.oy);
+      // Snap to grid (20px)
+      const GRID=20;
+      nx=Math.round(nx/GRID)*GRID;
+      ny=Math.round(ny/GRID)*GRID;
+      // Snap to other nodes edges (within 12px)
+      const SNAP=12;
+      pfNodes.filter(n=>n.id!==node.id).forEach(other=>{
+        // Snap left/right edge
+        if(Math.abs(nx - other.x)<SNAP) nx=other.x;
+        if(Math.abs(nx+node.w - (other.x+other.w))<SNAP) nx=other.x+other.w-node.w;
+        if(Math.abs(nx - (other.x+other.w))<SNAP) nx=other.x+other.w;
+        // Snap top/bottom edge
+        if(Math.abs(ny - other.y)<SNAP) ny=other.y;
+        if(Math.abs(ny+node.h - (other.y+other.h))<SNAP) ny=other.y+other.h-node.h;
+        if(Math.abs(ny - (other.y+other.h))<SNAP) ny=other.y+other.h;
+        // Snap center
+        if(Math.abs((nx+node.w/2)-(other.x+other.w/2))<SNAP) nx=other.x+other.w/2-node.w/2;
+        if(Math.abs((ny+node.h/2)-(other.y+other.h/2))<SNAP) ny=other.y+other.h/2-node.h/2;
+      });
+      node.x=Math.round(nx); node.y=Math.round(ny);
       const el=document.getElementById('pfn_'+node.id);
       if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
       pfUpdateSVG();
@@ -9407,26 +9427,74 @@ function pfShowFmtBar(nodeId) {
   const bar=document.createElement('div');
   bar.id='pf-fmt-bar';
   bar.className='pf-fmt-bar';
-  bar.style.left=(rect.left)+'px';
-  bar.style.top=(rect.top-44)+'px';
+  const barLeft = Math.max(8, Math.min(rect.left, window.innerWidth-430));
+  const barTop  = rect.top > 60 ? rect.top-48 : rect.bottom+6;
+  bar.style.left=barLeft+'px';
+  bar.style.top=barTop+'px';
+  const node = pfNodes.find(n=>n.id===nodeId);
+  const curFs = node?.style?.fontSize||'12px';
+  const curFc = node?.style?.color||'#333333';
+  const curBg = node?.style?.background||'#ffffff';
+  const curAl = node?.style?.textAlign||'center';
+  // 10 preset colors
+  const presets = ['#000000','#ef4444','#f97316','#eab308','#16a34a','#2563eb','#7c3aed','#ec4899','#ffffff','#64748b'];
+
   bar.innerHTML=`
-    <button class="pf-fmt-btn" onclick="pfFmt('${nodeId}','bold')" title="Bold"><b>B</b></button>
-    <button class="pf-fmt-btn" onclick="pfFmt('${nodeId}','italic')" title="Italic"><i>I</i></button>
-    <button class="pf-fmt-btn" onclick="pfFmt('${nodeId}','underline')" title="Underline"><u>U</u></button>
-    <div style="width:1px;height:18px;background:var(--bd);margin:0 3px"></div>
-    <select onchange="pfFmtSize('${nodeId}',this.value)" style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px;color:var(--tx);cursor:pointer">
-      ${[10,11,12,13,14,16,18,20].map(s=>`<option value="${s}px"${(pfNodes.find(n=>n.id===nodeId)?.style?.fontSize||'12px')===s+'px'?' selected':''}>${s}</option>`).join('')}
-    </select>
-    <div style="width:1px;height:18px;background:var(--bd);margin:0 3px"></div>
-    <input type="color" value="#000000" onchange="pfFmtColor('${nodeId}',this.value)" title="Màu chữ" style="width:24px;height:24px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;padding:0">
-    <input type="color" value="#ffffff" onchange="pfFmtBg('${nodeId}',this.value)" title="Màu nền" style="width:24px;height:24px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;padding:0">
+    <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;max-width:420px">
+      <!-- Bold/Italic/Underline/Strikethrough -->
+      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('bold')" title="Bold"><b>B</b></button>
+      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('italic')" title="Italic"><i>I</i></button>
+      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('underline')" title="Gạch dưới"><u>U</u></button>
+      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+      <!-- Font size -->
+      <select onmousedown="event.stopPropagation()" onchange="pfFmtSize('${nodeId}',this.value)"
+        style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);cursor:pointer;height:26px">
+        ${[9,10,11,12,13,14,16,18,20,24,28,32].map(s=>`<option value="${s}px"${curFs===s+'px'?' selected':''}>${s}</option>`).join('')}
+      </select>
+      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+      <!-- Text align 9 kiểu -->
+      <select onmousedown="event.stopPropagation()" onchange="pfFmtAlign('${nodeId}',this.value)"
+        style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);cursor:pointer;height:26px">
+        <option value="left"   ${curAl==='left'   ?'selected':''}>⬅ Trái</option>
+        <option value="center" ${curAl==='center' ?'selected':''}>↔ Giữa</option>
+        <option value="right"  ${curAl==='right'  ?'selected':''}>➡ Phải</option>
+        <option value="justify"${curAl==='justify'?'selected':''}>☰ Đều</option>
+      </select>
+      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+      <!-- Color presets + picker -->
+      <div style="display:flex;gap:2px;align-items:center">
+        ${presets.map(clr=>`<div onmousedown="event.preventDefault();pfFmtColor('${nodeId}','${clr}')"
+          style="width:16px;height:16px;border-radius:3px;background:${clr};border:1px solid var(--bd);cursor:pointer;flex-shrink:0"
+          title="${clr}"></div>`).join('')}
+        <label title="Màu chữ tuỳ chọn" style="cursor:pointer">
+          <div style="width:20px;height:20px;border-radius:3px;border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--ac)">A</div>
+          <input type="color" value="${curFc}" onmousedown="event.stopPropagation()" onchange="pfFmtColor('${nodeId}',this.value)" style="display:none">
+        </label>
+      </div>
+      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+      <!-- BG color -->
+      <label title="Màu nền" style="cursor:pointer;display:flex;align-items:center;gap:2px;font-size:10px;color:var(--tx3)">
+        <div style="width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);background:${curBg==='transparent'?'transparent':curBg}"></div>
+        Nền
+        <input type="color" value="${curBg==='transparent'?'#ffffff':curBg}" onmousedown="event.stopPropagation()" onchange="pfFmtBg('${nodeId}',this.value)" style="display:none">
+      </label>
+      <!-- Hex input -->
+      <input type="text" placeholder="#HEX or rgb()" value="${curFc}"
+        onmousedown="event.stopPropagation()"
+        onkeydown="event.stopPropagation()"
+        onchange="pfFmtHex('${nodeId}',this.value)"
+        style="width:90px;font-size:10px;padding:3px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:monospace"
+        title="Nhập mã HEX hoặc rgb()">
+    </div>
   `;
+  document.body.appendChild(bar);
   document.body.appendChild(bar);
 }
 
 function pfHideFmtBar() { document.getElementById('pf-fmt-bar')?.remove(); }
 
-function pfFmt(nodeId, cmd) { document.execCommand(cmd); }
+function pfFmt(cmd) { document.execCommand(cmd,false,null); }
 
 function pfFmtSize(nodeId, size) {
   const node=pfNodes.find(n=>n.id===nodeId);
@@ -9438,12 +9506,28 @@ function pfFmtSize(nodeId, size) {
 }
 
 function pfFmtColor(nodeId, color) {
+  document.execCommand('foreColor', false, color);
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   node.style={...(node.style||{}),color};
-  const el=document.getElementById('pft_'+nodeId);
-  if(el) el.style.color=color;
   pfSyncNode(node);
+}
+
+function pfFmtAlign(nodeId, align) {
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  node.style={...(node.style||{}),textAlign:align};
+  const el=document.getElementById('pft_'+nodeId);
+  if(el) el.style.textAlign=align;
+  pfSyncNode(node);
+}
+
+function pfFmtHex(nodeId, val) {
+  const v=val.trim();
+  if(!v) return;
+  if(v.startsWith('#')||v.startsWith('rgb')) {
+    pfFmtColor(nodeId, v);
+  }
 }
 
 function pfFmtBg(nodeId, color) {
@@ -9471,9 +9555,11 @@ function pfHandleImageUpload(e) {
     const node=pfNodes.find(n=>n.id===pfSelected);
     if(!node)return;
     node.imageUrl=ev.target.result;
-    node.h=Math.max(node.h,100);
-    pfSyncNode(node);
-    pfRenderCanvas();
+    node.h=Math.max(node.h,120);
+    node.w=Math.max(node.w,180);
+    pfSaveLocal();
+    pfRenderCanvas();  // Re-render first to show image
+    pfSyncNode(node);  // Then sync
   };
   reader.readAsDataURL(file);
   e.target.value='';
