@@ -8836,14 +8836,13 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   border-radius:0;padding:8px 20px;
 }
 .pf-node.type-arrow .pf-node-text{font-size:10px}
-.pf-node.type-arrow .pf-node-rotate{
-  position:absolute;top:-24px;left:50%;transform:translateX(-50%);
-  background:var(--ac);color:#fff;border:none;border-radius:50%;
-  width:20px;height:20px;cursor:grab;font-size:12px;
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity .15s;
+.pf-node-rotate{
+  position:absolute;top:-26px;left:50%;transform:translateX(-50%);
+  background:var(--ac);color:#fff;border-radius:50%;
+  width:22px;height:22px;cursor:grab;font-size:13px;line-height:22px;text-align:center;
+  display:none;user-select:none;z-index:10;
 }
-.pf-node.selected .pf-node-rotate{opacity:1}
+.pf-node.selected .pf-node-rotate{display:block}
 .pf-node.type-note .pf-node-inner{
   background:rgba(250,204,21,.12);border-color:#eab308;
   border-radius:2px 8px 8px 8px;font-style:italic;
@@ -9108,62 +9107,61 @@ function pfRenderNode(node) {
   const sel = pfSelected===node.id;
   const rot = node.rotation||0;
   const fs  = node.style?.fontSize||'12px';
-  const fw  = node.style?.fontWeight||'600';
-  const fc  = node.style?.color||'var(--tx)';
+  const fc  = node.style?.color||'';
   const bg  = node.style?.background||'';
   const bc  = node.style?.borderColor||'';
-  const bs  = node.style?.borderStyle||'';
-  const bw  = node.style?.borderWidth||'';
+  const bs  = node.style?.borderStyle||'solid';
+  const bw  = node.style?.borderWidth||'2px';
+  const ta  = node.style?.textAlign||'center';
+
+  // Image layout
+  const pos = node.imagePosition||'top';
+  const iw  = node.imageWidth||80;
+  const ih  = node.imageHeight||60;
+  const flexMap = {top:'column',bottom:'column-reverse',left:'row',right:'row-reverse'};
+  const imgFlex = node.imageUrl ? flexMap[pos] : '';
+
+  const imgHtml = node.imageUrl ? `
+    <div style="position:relative;flex-shrink:0;line-height:0">
+      <img src="${node.imageUrl}"
+        style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px;pointer-events:none"
+        draggable="false">
+      <div onmousedown="pfImgResizeStart(event,'${node.id}')"
+        style="position:absolute;bottom:0;right:0;width:12px;height:12px;background:var(--ac);
+               border-radius:2px;cursor:nwse-resize;${sel?'display:block':'display:none'}"></div>
+    </div>` : '';
+
+  const innerStyle = [
+    bg   ? `background:${bg}`   : '',
+    bc   ? `border-color:${bc}` : '',
+    bs   ? `border-style:${bs}` : '',
+    bw   ? `border-width:${bw}` : '',
+    imgFlex ? `flex-direction:${imgFlex};display:flex;align-items:center;gap:6px` : '',
+  ].filter(Boolean).join(';');
+
   return `<div class="pf-node type-${node.type}${sel?' selected':''}"
     id="pfn_${node.id}"
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
-    <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}${bs?`border-style:${bs};`:''}${bw?`border-width:${bw};`:''}">
-      ${node.imageUrl ? (() => {
-        const pos = node.imagePosition||'top';
-        const iw  = node.imageWidth||80;
-        const ih  = node.imageHeight||60;
-        const isHoriz = pos==='left'||pos==='right';
-        const imgHtml = `<div class="pf-img-wrap" style="position:relative;display:inline-flex;flex-shrink:0">
-          <img class="pf-node-img" src="${node.imageUrl}"
-            style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px"
-            title="Double-click để đổi ảnh" ondblclick="event.stopPropagation();pfUploadImage()">
-          <div class="pf-img-resize-handle" onmousedown="pfImgResizeStart(event,'${node.id}')"
-            style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--ac);border-radius:2px;cursor:nwse-resize;opacity:${pfSelected===node.id?1:0}"></div>
-        </div>`;
-        if(pos==='left')  return `<div style="display:flex;align-items:center;gap:6px;width:100%">${imgHtml}<div style="flex:1">`;
-        if(pos==='right') return `<div style="display:flex;align-items:center;gap:6px;width:100%;flex-direction:row-reverse">${imgHtml}<div style="flex:1">`;
-        if(pos==='bottom')return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%"><div style="flex:1;width:100%">`;
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%">${imgHtml}<div style="flex:1;width:100%">`;
-      })() : ''}
+    <div class="pf-node-inner" style="${innerStyle}">
+      ${imgHtml}
       <div class="pf-node-text"
         id="pft_${node.id}"
-        style="font-size:${fs};font-weight:${fw};color:${fc}"
+        style="font-size:${fs};${fc?`color:${fc}`:''}text-align:${ta};flex:1;min-width:0"
         contenteditable="false"
         ondblclick="pfStartEdit(event,'${node.id}')"
         onblur="pfEndEdit('${node.id}',event)"
         onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
         >${node.label||''}</div>
-      ${node.imageUrl ? (()=>{
-        const pos=node.imagePosition||'top';
-        if(pos==='right') return '</div></div>';
-        if(pos==='bottom'){
-          const iw=node.imageWidth||80; const ih=node.imageHeight||60;
-          return `</div><div style="position:relative;display:inline-flex"><img class="pf-node-img" src="${node.imageUrl}" style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px"><div class="pf-img-resize-handle" onmousedown="pfImgResizeStart(event,'${node.id}')" style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--ac);border-radius:2px;cursor:nwse-resize;opacity:${pfSelected===node.id?1:0}"></div></div></div>`;
-        }
-        if(pos==='left') return '</div></div>';
-        return '</div></div>';
-      })() : ''}
-      ${node.type==='arrow'?`<button class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay">↻</button>`:''}
+      ${node.type==='arrow'?`<div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay (kéo)">↻</div>`:''}
       <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>
     </div>
-    <div class="pf-port top"    data-node="${node.id}" data-port="top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
-    <div class="pf-port bottom" data-node="${node.id}" data-port="bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
-    <div class="pf-port left"   data-node="${node.id}" data-port="left"   onmousedown="pfPortMouseDown(event,'${node.id}','left')"></div>
-    <div class="pf-port right"  data-node="${node.id}" data-port="right"  onmousedown="pfPortMouseDown(event,'${node.id}','right')"></div>
+    <div class="pf-port top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
+    <div class="pf-port bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
+    <div class="pf-port left"   onmousedown="pfPortMouseDown(event,'${node.id}','left')"></div>
+    <div class="pf-port right"  onmousedown="pfPortMouseDown(event,'${node.id}','right')"></div>
   </div>`;
 }
-
 function pfRenderEdgesSVG() {
   return pfEdges.map(edge => {
     const from = pfNodes.find(n=>n.id===edge.from_id);
@@ -9440,17 +9438,21 @@ function pfCanvasDblClick(e) {
 
 function pfNodeMouseDown(e, nodeId) {
   e.stopPropagation();
-  if(e.target.classList.contains('pf-port')) return;
-  if(e.target.classList.contains('pf-node-resize')) return;
-  if(e.target.classList.contains('pf-node-text')) return;
+  if(e.target.classList.contains('pf-port'))             return;
+  if(e.target.classList.contains('pf-node-resize'))      return;
+  if(e.target.classList.contains('pf-node-rotate'))      return;
+  if(e.target.classList.contains('pf-img-resize-handle'))return;
   if(pfTool==='connect') return;
+  // Don't drag when inside editing text
+  const textEl=document.getElementById('pft_'+nodeId);
+  if(textEl?.contentEditable==='true') return;
+  if(e.target.closest('.pf-node-text')) return;
   pfSelected=nodeId;
   const pos=pfGetCanvasPos(e);
   const node=pfNodes.find(n=>n.id===nodeId);
   if(node) pfDragging={nodeId,ox:pos.x-node.x,oy:pos.y-node.y};
   pfRenderCanvas();
 }
-
 function pfPortMouseDown(e, nodeId, port) {
   e.stopPropagation();
   pfConnecting={fromId:nodeId, fromPort:port};
@@ -9513,141 +9515,151 @@ function pfStartEdit(e, nodeId) {
 }
 
 function pfEndEdit(nodeId, e) {
-  // Don't close if focus moved to the format bar or its children
-  const bar = document.getElementById('pf-fmt-bar');
+  const bar=document.getElementById('pf-fmt-bar');
   if(bar && e?.relatedTarget && bar.contains(e.relatedTarget)) return;
-  if(bar && e?.relatedTarget === bar) return;
   const el=document.getElementById('pft_'+nodeId);
-  if(!el)return;
+  if(!el) return;
   el.contentEditable='false';
   const node=pfNodes.find(n=>n.id===nodeId);
-  if(node){node.label=el.innerHTML||''; pfSyncNode(node);}
-  // Delay hide to allow button clicks to register
+  if(node){ node.label=el.innerHTML||''; pfSyncNode(node); }
   setTimeout(()=>{
-    const bar2=document.getElementById('pf-fmt-bar');
-    if(bar2 && document.activeElement && bar2.contains(document.activeElement)) return;
-    pfHideFmtBar();
-  }, 200);
+    if(!document.getElementById('pf-fmt-bar')?.contains(document.activeElement))
+      pfHideFmtBar();
+  }, 250);
 }
-
 // ── Format bar ───────────────────────────────────────────
 function pfShowFmtBar(nodeId) {
   pfHideFmtBar();
-  const el=document.getElementById('pfn_'+nodeId);
-  if(!el)return;
-  const rect=el.getBoundingClientRect();
-  const bar=document.createElement('div');
-  bar.id='pf-fmt-bar';
-  bar.className='pf-fmt-bar';
-  bar.tabIndex=-1;
-  // Prevent blur when interacting with format bar
-  bar.addEventListener('mousedown', e=>e.preventDefault());
-  const barLeft = Math.max(8, Math.min(rect.left, window.innerWidth-430));
-  const barTop  = rect.top > 60 ? rect.top-48 : rect.bottom+6;
-  bar.style.left=barLeft+'px';
-  bar.style.top=barTop+'px';
   const node = pfNodes.find(n=>n.id===nodeId);
-  const curFs = node?.style?.fontSize||'12px';
-  const curFc = node?.style?.color||'#333333';
-  const curBg = node?.style?.background||'#ffffff';
-  const curAl = node?.style?.textAlign||'center';
-  // 10 preset colors
-  const presets = ['#000000','#ef4444','#f97316','#eab308','#16a34a','#2563eb','#7c3aed','#ec4899','#ffffff','#64748b'];
+  const el   = document.getElementById('pfn_'+nodeId);
+  if(!el) return;
+
+  const rect = el.getBoundingClientRect();
+  const bar  = document.createElement('div');
+  bar.id     = 'pf-fmt-bar';
+  bar.className = 'pf-fmt-bar';
+  bar.tabIndex  = -1;
+  // Critical: prevent mousedown from stealing focus/selection
+  bar.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); });
+
+  const fs  = node?.style?.fontSize||'12px';
+  const fc  = node?.style?.color||'#333333';
+  const bg  = node?.style?.background||'#ffffff';
+  const bc  = node?.style?.borderColor||'#888888';
+  const ta  = node?.style?.textAlign||'center';
+  const bs  = node?.style?.borderStyle||'solid';
+  const bw  = node?.style?.borderWidth||'2px';
+
+  const presets=['#000000','#ef4444','#f97316','#eab308','#16a34a','#2563eb','#7c3aed','#ec4899','#ffffff','#64748b'];
 
   bar.innerHTML=`
-    <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;max-width:420px">
-      <!-- Bold/Italic/Underline/Strikethrough -->
-      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('bold')" title="Bold"><b>B</b></button>
-      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('italic')" title="Italic"><i>I</i></button>
-      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('underline')" title="Gạch dưới"><u>U</u></button>
-      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('strikeThrough')" title="Gạch chữ"><s>S</s></button>
-      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfInsertDivider('${nodeId}')" title="Gạch phân cách dòng">━</button>
-      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-      <!-- Font size -->
-      <select onmousedown="event.stopPropagation()" onchange="pfFmtSize('${nodeId}',this.value)"
-        style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);cursor:pointer;height:26px">
-        ${[9,10,11,12,13,14,16,18,20,24,28,32].map(s=>`<option value="${s}px"${curFs===s+'px'?' selected':''}>${s}</option>`).join('')}
-      </select>
-      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-      <!-- Text align 9 kiểu -->
-      <select onmousedown="event.stopPropagation()" onchange="pfFmtAlign('${nodeId}',this.value)"
-        style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);cursor:pointer;height:26px">
-        <option value="left"   ${curAl==='left'   ?'selected':''}>⬅ Trái</option>
-        <option value="center" ${curAl==='center' ?'selected':''}>↔ Giữa</option>
-        <option value="right"  ${curAl==='right'  ?'selected':''}>➡ Phải</option>
-        <option value="justify"${curAl==='justify'?'selected':''}>☰ Đều</option>
-      </select>
-      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-      <!-- Color presets + picker -->
-      <div style="display:flex;gap:2px;align-items:center">
-        ${presets.map(clr=>`<div onmousedown="event.preventDefault();pfFmtColor('${nodeId}','${clr}')"
-          style="width:16px;height:16px;border-radius:3px;background:${clr};border:1px solid var(--bd);cursor:pointer;flex-shrink:0"
-          title="${clr}"></div>`).join('')}
-        <label title="Màu chữ tuỳ chọn" style="cursor:pointer">
-          <div style="width:20px;height:20px;border-radius:3px;border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--ac)">A</div>
-          <input type="color" value="${curFc}" onmousedown="event.stopPropagation()" onchange="pfFmtColor('${nodeId}',this.value)" style="display:none">
-        </label>
-      </div>
-      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-      <!-- BG color -->
-      <label title="Màu nền" style="cursor:pointer;display:flex;align-items:center;gap:2px;font-size:10px;color:var(--tx3)">
-        <div style="width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);background:${curBg==='transparent'?'transparent':curBg}"></div>
-        Nền
-        <input type="color" value="${curBg==='transparent'?'#ffffff':curBg}" onmousedown="event.stopPropagation()" onchange="pfFmtBg('${nodeId}',this.value)" style="display:none">
-      </label>
-      ${node?.imageUrl ? `
-      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-      <select onmousedown="event.stopPropagation()" onchange="pfFmtImgPos('${nodeId}',this.value)"
-        style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);cursor:pointer;height:26px" title="Vị trí ảnh">
-        <option value="top"   ${(node?.imagePosition||'top')==='top'   ?'selected':''}>🔼 Ảnh trên</option>
-        <option value="bottom"${(node?.imagePosition||'top')==='bottom'?'selected':''}>🔽 Ảnh dưới</option>
-        <option value="left"  ${(node?.imagePosition||'top')==='left'  ?'selected':''}>◀ Ảnh trái</option>
-        <option value="right" ${(node?.imagePosition||'top')==='right' ?'selected':''}>▶ Ảnh phải</option>
-      </select>` : ''}
-      <!-- Hex input -->
-      <input type="text" placeholder="#HEX or rgb()" value="${curFc}"
-        onmousedown="event.stopPropagation()"
-        onkeydown="event.stopPropagation()"
-        onchange="pfFmtHex('${nodeId}',this.value)"
-        style="width:90px;font-size:10px;padding:3px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:monospace"
-        title="Nhập mã HEX hoặc rgb()">
-    </div>
-  `;
-  document.body.appendChild(bar);
+  <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;max-width:520px;padding:2px">
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('bold')"         title="Bold"><b>B</b></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('italic')"       title="Nghiêng"><i>I</i></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('underline')"    title="Gạch dưới"><u>U</u></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('strikeThrough')" title="Gạch chữ"><s>S</s></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfInsertDivider('${nodeId}')" title="Gạch phân cách" style="font-size:14px;line-height:1">━</button>
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+    <select onmousedown="event.stopPropagation()"
+      onchange="pfFmtSize('${nodeId}',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer"
+      title="Font size">
+      ${[9,10,11,12,13,14,16,18,20,24,28].map(s=>`<option value="${s}px"${fs===s+'px'?' selected':''}>${s}</option>`).join('')}
+    </select>
+    <select onmousedown="event.stopPropagation()"
+      onchange="pfFmtAlign('${nodeId}',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer"
+      title="Căn lề">
+      <option value="left"    ${ta==='left'   ?'selected':''}>⬅ Trái</option>
+      <option value="center"  ${ta==='center' ?'selected':''}>↔ Giữa</option>
+      <option value="right"   ${ta==='right'  ?'selected':''}>➡ Phải</option>
+      <option value="justify" ${ta==='justify'?'selected':''}>☰ Đều</option>
+    </select>
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+    ${presets.map(clr=>`<div onmousedown="event.preventDefault()" onclick="pfFmtColor('${nodeId}','${clr}')"
+      style="width:16px;height:16px;border-radius:3px;background:${clr};border:1px solid var(--bd);cursor:pointer;flex-shrink:0" title="${clr}"></div>`).join('')}
+    <label title="Màu chữ" style="cursor:pointer;position:relative">
+      <div style="width:22px;height:22px;border-radius:3px;border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ac)">A</div>
+      <input type="color" value="${fc}" onmousedown="event.stopPropagation()"
+        onchange="pfFmtColor('${nodeId}',this.value)"
+        style="position:absolute;opacity:0;width:22px;height:22px;top:0;left:0;cursor:pointer">
+    </label>
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+    <label title="Màu nền" style="cursor:pointer;position:relative;display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)">
+      <div style="width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);background:${bg}"></div>Nền
+      <input type="color" value="${bg==='transparent'?'#ffffff':bg}" onmousedown="event.stopPropagation()"
+        onchange="pfFmtBg('${nodeId}',this.value)"
+        style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
+    </label>
+    <input type="text" placeholder="#HEX hoặc rgb()" id="pf-hex-inp"
+      onmousedown="event.stopPropagation()" onkeydown="event.stopPropagation()"
+      onchange="pfFmtHex('${nodeId}',this.value)"
+      style="width:100px;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:monospace"
+      title="Nhập #HEX hoặc rgb()">
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+    <select onmousedown="event.stopPropagation()"
+      onchange="pfFmtBorder('${nodeId}','style',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Kiểu viền">
+      <option value="solid"  ${bs==='solid' ?'selected':''}>━ Liền</option>
+      <option value="dashed" ${bs==='dashed'?'selected':''}>╌ Nét đứt</option>
+      <option value="dotted" ${bs==='dotted'?'selected':''}>··· Chấm</option>
+      <option value="double" ${bs==='double'?'selected':''}>═ Đôi</option>
+    </select>
+    <select onmousedown="event.stopPropagation()"
+      onchange="pfFmtBorder('${nodeId}','width',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Độ dày viền">
+      <option value="1px" ${bw==='1px'?'selected':''}>1px</option>
+      <option value="2px" ${bw==='2px'?'selected':''}>2px</option>
+      <option value="3px" ${bw==='3px'?'selected':''}>3px</option>
+      <option value="4px" ${bw==='4px'?'selected':''}>4px</option>
+    </select>
+    <label title="Màu viền" style="cursor:pointer;position:relative;display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)">
+      <div style="width:16px;height:16px;border-radius:3px;border:2px solid ${bc}"></div>Viền
+      <input type="color" value="${bc}" onmousedown="event.stopPropagation()"
+        onchange="pfFmtBorder('${nodeId}','color',this.value)"
+        style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
+    </label>
+    ${node?.imageUrl ? `
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+    <select onmousedown="event.stopPropagation()"
+      onchange="pfFmtImgPos('${nodeId}',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Vị trí ảnh">
+      <option value="top"    ${(node?.imagePosition||'top')==='top'   ?'selected':''}>🔼 Ảnh trên</option>
+      <option value="bottom" ${(node?.imagePosition||'top')==='bottom'?'selected':''}>🔽 Ảnh dưới</option>
+      <option value="left"   ${(node?.imagePosition||'top')==='left'  ?'selected':''}>◀ Ảnh trái</option>
+      <option value="right"  ${(node?.imagePosition||'top')==='right' ?'selected':''}>▶ Ảnh phải</option>
+    </select>` : ''}
+  </div>`;
+
+  const barLeft = Math.max(8, Math.min(rect.left, window.innerWidth-530));
+  const barTop  = rect.top > 60 ? rect.top-52 : rect.bottom+6;
+  bar.style.left = barLeft+'px';
+  bar.style.top  = barTop+'px';
   document.body.appendChild(bar);
 }
-
 function pfHideFmtBar() { document.getElementById('pf-fmt-bar')?.remove(); }
 
 function pfFmt(cmd) { document.execCommand(cmd,false,null); }
 
 function pfFmtSize(nodeId, size) {
-  const el=document.getElementById('pft_'+nodeId);
-  if(el && el.contentEditable==='true') {
-    // Wrap selected text in span with font-size
+  const textEl=document.getElementById('pft_'+nodeId);
+  if(textEl?.contentEditable==='true') {
     const sel=window.getSelection();
-    if(sel && sel.rangeCount>0 && !sel.isCollapsed) {
-      // Use execCommand with fontSize (requires font-size mapping)
-      document.execCommand('fontSize', false, '7');
-      // Then override the size with our exact px value
-      const spans=el.querySelectorAll('font[size="7"]');
-      spans.forEach(span=>{
-        const rep=document.createElement('span');
-        rep.style.fontSize=size;
-        rep.innerHTML=span.innerHTML;
-        span.replaceWith(rep);
+    if(sel?.rangeCount>0 && !sel.isCollapsed) {
+      document.execCommand('fontSize',false,'7');
+      textEl.querySelectorAll('font[size="7"]').forEach(f=>{
+        const s=document.createElement('span');
+        s.style.fontSize=size; s.innerHTML=f.innerHTML; f.replaceWith(s);
       });
-      return;
+      textEl.focus(); return;
     }
   }
-  // No selection: apply to whole node
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   node.style={...(node.style||{}),fontSize:size};
-  if(el) el.style.fontSize=size;
+  if(textEl) textEl.style.fontSize=size;
   pfSyncNode(node);
 }
-
 function pfFmtColor(nodeId, color) {
   // Apply to selection if active, else apply to whole text
   const el=document.getElementById('pft_'+nodeId);
@@ -9681,10 +9693,9 @@ function pfFmtAlign(nodeId, align) {
 function pfInsertDivider(nodeId) {
   const el=document.getElementById('pft_'+nodeId);
   if(!el||el.contentEditable!=='true') return;
-  document.execCommand('insertHTML', false,
-    '<div style="border-top:1.5px solid currentColor;margin:4px 0;opacity:.4"></div>');
+  document.execCommand('insertHTML',false,
+    '<hr style="border:none;border-top:1.5px solid #aaaaaa;margin:4px 0;display:block">');
 }
-
 function pfFmtHex(nodeId, val) {
   const v=val.trim();
   if(!v) return;
@@ -9716,22 +9727,26 @@ function pfUploadImage() {
 
 function pfHandleImageUpload(e) {
   const file=e.target.files?.[0];
-  if(!file||!pfSelected)return;
+  if(!file||!pfSelected) return;
   const reader=new FileReader();
   reader.onload=ev=>{
     const node=pfNodes.find(n=>n.id===pfSelected);
     if(!node)return;
     node.imageUrl=ev.target.result;
-    node.h=Math.max(node.h,140);
-    node.w=Math.max(node.w,200);
+    node.imagePosition=node.imagePosition||'top';
+    node.imageWidth=node.imageWidth||100;
+    node.imageHeight=node.imageHeight||80;
+    node.h=Math.max(node.h, node.imageHeight+50);
+    node.w=Math.max(node.w, node.imageWidth+20);
+    pfSaveImage(node.id, ev.target.result);
     pfSaveLocal();
-    pfRenderAll(); // Full re-render to ensure img src is set
-    pfSyncNode({...node, imageUrl: ev.target.result});
+    pfRenderAll();
+    const nodeForDb={...node, imageUrl:'__local__'};
+    dbPF.upsertNode(nodeForDb).catch(e=>console.warn(e));
   };
   reader.readAsDataURL(file);
   e.target.value='';
 }
-
 // ── Zoom ─────────────────────────────────────────────────
 function pfZoomIn()  { pfZoom=Math.min(3,pfZoom*1.2); pfApplyZoom(); }
 function pfZoomOut() { pfZoom=Math.max(0.2,pfZoom/1.2); pfApplyZoom(); }
