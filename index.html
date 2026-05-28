@@ -9118,9 +9118,12 @@ function pfRenderAll() {
 function pfRenderToolbar() {
   return `<div class="pf-toolbar">
     <div class="pf-tool-group">
-      <button class="pf-tool-btn${pfTool==='select'?' active':''}" onclick="pfSetTool('select')" title="Chọn (V)">↖ Chọn</button>
-      <button class="pf-tool-btn${pfTool==='connect'?' active':''}" onclick="pfSetTool('connect')" title="Nối (C)">↔ Nối</button>
-      <button class="pf-tool-btn${pfTool==='pan'?' active':''}" onclick="pfSetTool('pan')" title="Di chuyển (Space)">✋ Pan</button>
+      <button class="pf-tool-btn${pfTool==='select'?' active':''}" onclick="pfSetTool('select')"
+        title="Chọn: click chọn shape, kéo di chuyển, double-click sửa text [V]">↖ Chọn</button>
+      <button class="pf-tool-btn${pfTool==='connect'?' active':''}" onclick="pfSetTool('connect')"
+        title="Nối: kéo từ điểm ● trên shape tới shape khác để tạo mũi tên [C]">⤳ Nối</button>
+      <button class="pf-tool-btn${pfTool==='pan'?' active':''}" onclick="pfSetTool('pan')"
+        title="Pan: kéo để cuộn canvas, không tương tác với shape [Space]">✋ Pan</button>
     </div>
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
@@ -9211,17 +9214,35 @@ function pfRenderNode(node) {
     <div class="pf-port right"  onmousedown="pfPortMouseDown(event,'${node.id}','right')"></div>
   </div>`;
 }
+function pfPortPoint(node, port) {
+  const mx=node.x+node.w/2, my=node.y+node.h/2;
+  if(port==='top')    return {x:mx,        y:node.y};
+  if(port==='bottom') return {x:mx,        y:node.y+node.h};
+  if(port==='left')   return {x:node.x,    y:my};
+  if(port==='right')  return {x:node.x+node.w, y:my};
+  return {x:mx, y:node.y+node.h}; // default bottom
+}
+
+function pfEdgePath(fx,fy,tx,ty,fromPort,toPort) {
+  // Control point offset based on port direction
+  const dist = Math.max(50, Math.abs(ty-fy)/2, Math.abs(tx-fx)/2);
+  const fDir = fromPort==='top'?{dx:0,dy:-1}:fromPort==='left'?{dx:-1,dy:0}:fromPort==='right'?{dx:1,dy:0}:{dx:0,dy:1};
+  const tDir = toPort==='bottom'?{dx:0,dy:1}:toPort==='right'?{dx:1,dy:0}:toPort==='left'?{dx:-1,dy:0}:{dx:0,dy:-1};
+  const c1x=fx+fDir.dx*dist, c1y=fy+fDir.dy*dist;
+  const c2x=tx+tDir.dx*dist, c2y=ty+tDir.dy*dist;
+  return `M${fx},${fy} C${c1x},${c1y} ${c2x},${c2y} ${tx},${ty}`;
+}
+
 function pfRenderEdgesSVG() {
   return pfEdges.map(edge => {
     const from = pfNodes.find(n=>n.id===edge.from_id);
     const to   = pfNodes.find(n=>n.id===edge.to_id);
     if(!from||!to) return '';
-    const fx = from.x + from.w/2, fy = from.y + from.h;
-    const tx = to.x   + to.w/2,   ty = to.y;
-    const mid = (fy + ty) / 2;
-    const path = `M${fx},${fy} C${fx},${mid} ${tx},${mid} ${tx},${ty}`;
+    const fp = pfPortPoint(from, edge.from_port||'bottom');
+    const tp = pfPortPoint(to,   edge.to_port||'top');
+    const path = pfEdgePath(fp.x,fp.y,tp.x,tp.y,edge.from_port||'bottom',edge.to_port||'top');
     const sel = pfSelected===edge.id;
-    const mx  = (fx+tx)/2, my = (fy+ty)/2;
+    const mx=(fp.x+tp.x)/2, my=(fp.y+tp.y)/2;
     return `
       <path class="pf-edge${edge.style==='dashed'?' dashed':''}${sel?' selected':''}"
         d="${path}" marker-end="url(#${sel?'pf-arrow-sel':'pf-arrow'})"
@@ -9334,13 +9355,18 @@ function pfGetCanvasPos(e) {
 }
 
 function pfCanvasMouseDown(e) {
-  if(e.target===document.getElementById('pf-canvas-outer')||e.target===document.getElementById('pf-canvas')) {
-    pfSelected=null;
-    if(pfTool==='pan'||e.button===1||(e.button===0&&e.altKey)) {
-      pfPanning={sx:e.clientX-pfPan.x, sy:e.clientY-pfPan.y};
-    }
-    pfRenderCanvas();
+  const onCanvas = e.target===document.getElementById('pf-canvas-outer')
+                || e.target===document.getElementById('pf-canvas')
+                || e.target===document.getElementById('pf-svg');
+  if(!onCanvas) return;
+  pfSelected=null;
+  // Pan: only in pan mode or middle button or alt+drag
+  if(pfTool==='pan' || e.button===1 || (e.button===0&&e.altKey)) {
+    pfPanning={sx:e.clientX-pfPan.x, sy:e.clientY-pfPan.y};
+    e.preventDefault();
   }
+  // Select/Connect: deselect, no pan
+  pfRenderCanvas();
 }
 
 function pfCanvasMouseMove(e) {
@@ -9464,14 +9490,20 @@ function pfCanvasMouseUp(e) {
   }
   if(pfPanning) pfPanning=null;
   if(pfConnecting && pfConnecting.mx!==undefined) {
-    // Check if dropped on a node
     const pos=pfGetCanvasPos(e);
+    // Check if dropped on a port
+    let toPort=null;
+    const portEl=document.elementFromPoint(e.clientX, e.clientY);
+    if(portEl?.classList.contains('pf-port')) {
+      toPort=portEl.dataset.port;
+    }
+    // Check if dropped on a node
     const target=pfNodes.find(n=>
       n.id!==pfConnecting.fromId &&
       pos.x>=n.x && pos.x<=n.x+n.w &&
       pos.y>=n.y && pos.y<=n.y+n.h
     );
-    if(target) pfCreateEdge(pfConnecting.fromId, target.id);
+    if(target) pfCreateEdge(pfConnecting.fromId, target.id, pfConnecting.fromPort, toPort);
     pfConnecting=null;
     pfUpdateSVG();
   }
@@ -9518,7 +9550,9 @@ function pfNodeMouseDown(e, nodeId) {
 }
 function pfPortMouseDown(e, nodeId, port) {
   e.stopPropagation();
-  pfConnecting={fromId:nodeId, fromPort:port};
+  e.preventDefault();
+  pfConnecting={fromId:nodeId, fromPort:port, mx:undefined, my:undefined};
+  pfSetTool('connect'); // auto switch to connect mode
 }
 
 function pfResizeStart(e, nodeId) {
@@ -9557,9 +9591,21 @@ function pfSelectEdge(id) {
 }
 
 // ── Edge management ──────────────────────────────────────
-async function pfCreateEdge(fromId, toId) {
+async function pfCreateEdge(fromId, toId, fromPort, toPort) {
   if(pfEdges.find(e=>e.from_id===fromId&&e.to_id===toId)) return;
-  const edge={id:'pfedge_'+Date.now(), process_id:pfCurrentId, from_id:fromId, to_id:toId, label:'', style:'solid'};
+  // Auto-detect best toPort based on relative position
+  if(!toPort) {
+    const f=pfNodes.find(n=>n.id===fromId), t=pfNodes.find(n=>n.id===toId);
+    if(f&&t) {
+      const dx=(t.x+t.w/2)-(f.x+f.w/2), dy=(t.y+t.h/2)-(f.y+f.h/2);
+      if(Math.abs(dy)>Math.abs(dx)) toPort=dy>0?'top':'bottom';
+      else toPort=dx>0?'left':'right';
+    }
+  }
+  const edge={id:'pfedge_'+Date.now(), process_id:pfCurrentId,
+    from_id:fromId, to_id:toId,
+    from_port:fromPort||'bottom', to_port:toPort||'top',
+    label:'', style:'solid'};
   pfEdges.push(edge);
   pfSelected=edge.id;
   pfSaveLocal(); pfRenderCanvas();
@@ -9570,14 +9616,32 @@ async function pfCreateEdge(fromId, toId) {
 function pfStartEdit(e, nodeId) {
   e.stopPropagation();
   const el=document.getElementById('pft_'+nodeId);
-  if(!el)return;
+  if(!el) return;
+  if(el.contentEditable==='true') return; // already editing
   el.contentEditable='true';
   el.focus();
-  const range=document.createRange();
-  range.selectNodeContents(el);
-  window.getSelection()?.removeAllRanges();
-  window.getSelection()?.addRange(range);
+  // Place cursor at click position (not select all)
+  if(document.caretRangeFromPoint) {
+    const range=document.caretRangeFromPoint(e.clientX, e.clientY);
+    if(range) { window.getSelection()?.removeAllRanges(); window.getSelection()?.addRange(range); }
+  } else {
+    // Fallback: place at end
+    const range=document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+  }
   pfShowFmtBar(nodeId);
+}
+
+function pfNodeClick(e, nodeId) {
+  // Single click on already-editing node: just place cursor, no drag
+  const el=document.getElementById('pft_'+nodeId);
+  if(el?.contentEditable==='true') {
+    e.stopPropagation();
+    return;
+  }
 }
 
 function pfEndEdit(nodeId, e) {
