@@ -3696,6 +3696,7 @@ function switchToDailyView() {
 
 function switchToTaskView() {
   hideCashFlowView();
+  switchFromProcessFlowView();
   isDailyView = false;
   document.getElementById('content').style.display = '';
   document.getElementById('daily-view').style.display = 'none';
@@ -7043,6 +7044,7 @@ function hideCashFlowView() {
 
 function switchToRemindersView() {
   hideCashFlowView();
+  switchFromProcessFlowView();
   isRemindersView = true;
   if (isDailyView) switchToTaskView();
   if (isNotesView) switchFromNotesView();
@@ -9060,6 +9062,66 @@ async function pfSyncEdge(edge) {
 }
 
 // ── Render all ──────────────────────────────────────────
+
+// ── Undo/Redo ─────────────────────────────────────────────
+let pfUndoStack = [];
+let pfRedoStack = [];
+const PF_MAX_UNDO = 50;
+
+function pfSnapshot() {
+  pfUndoStack.push(JSON.stringify({nodes:pfNodes, edges:pfEdges}));
+  if(pfUndoStack.length > PF_MAX_UNDO) pfUndoStack.shift();
+  pfRedoStack = []; // clear redo on new action
+}
+
+function pfUndo() {
+  if(!pfUndoStack.length) return;
+  pfRedoStack.push(JSON.stringify({nodes:pfNodes, edges:pfEdges}));
+  const prev = JSON.parse(pfUndoStack.pop());
+  pfNodes = pfRestoreImages(prev.nodes||[]);
+  pfEdges = prev.edges||[];
+  pfSelected=null; pfSaveLocal(); pfRenderAll();
+}
+
+function pfRedo() {
+  if(!pfRedoStack.length) return;
+  pfUndoStack.push(JSON.stringify({nodes:pfNodes, edges:pfEdges}));
+  const next = JSON.parse(pfRedoStack.pop());
+  pfNodes = pfRestoreImages(next.nodes||[]);
+  pfEdges = next.edges||[];
+  pfSelected=null; pfSaveLocal(); pfRenderAll();
+}
+
+// ── Copy/Paste ────────────────────────────────────────────
+let pfClipboard = null;
+
+function pfCopySelected() {
+  if(!pfSelected) return;
+  const node = pfNodes.find(n=>n.id===pfSelected);
+  if(!node) return;
+  pfClipboard = JSON.parse(JSON.stringify(node));
+  showNotif('ns','📋 Đã copy', esc(node.label||'Shape'));
+}
+
+function pfPasteNode() {
+  if(!pfClipboard || !pfCurrentId) return;
+  const node = JSON.parse(JSON.stringify(pfClipboard));
+  node.id = 'pfnode_'+Date.now();
+  node.x += 20; node.y += 20; // offset so it doesn't overlap
+  node.process_id = pfCurrentId;
+  node.created_at = new Date().toISOString();
+  // Copy image if any
+  const imgData = pfGetImage(pfClipboard.id);
+  if(imgData) {
+    node.imageUrl = imgData;
+    pfSaveImage(node.id, imgData);
+  }
+  pfSnapshot();
+  pfNodes.push(node);
+  pfSelected = node.id;
+  pfSaveLocal(); pfRenderAll();
+  pfSyncNode(node);
+}
 function pfRenderAll() {
   const view = document.getElementById('processflow-view');
   if(!view) return;
@@ -9143,7 +9205,11 @@ function pfRenderToolbar() {
     </div>
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
-      <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa đã chọn">🗑 Xóa</button>
+      <button class="pf-tool-btn" onclick="pfUndo()"          title="Undo (Ctrl+Z)">↩ Undo</button>
+      <button class="pf-tool-btn" onclick="pfRedo()"          title="Redo (Ctrl+Y)">↪ Redo</button>
+      <button class="pf-tool-btn" onclick="pfCopySelected()"  title="Copy shape (Ctrl+C)">⎘ Copy</button>
+      <button class="pf-tool-btn" onclick="pfPasteNode()"     title="Paste (Ctrl+V)">⎘ Paste</button>
+      <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa (Del)">🗑 Xóa</button>
     </div>
     <input type="file" id="pf-img-input" accept="image/*" style="display:none" onchange="pfHandleImageUpload(event)">
   </div>`;
@@ -9306,6 +9372,7 @@ function pfAddNode(type) {
     label:defaultLabels[type]||'', style:{},
     created_at:new Date().toISOString()
   };
+  pfSnapshot();
   pfNodes.push(node);
   pfSelected=node.id;
   pfSaveLocal(); pfRenderCanvas();
@@ -9314,6 +9381,7 @@ function pfAddNode(type) {
 
 async function pfDeleteSelected() {
   if(!pfSelected) return;
+  pfSnapshot();
   const nodeIdx = pfNodes.findIndex(n=>n.id===pfSelected);
   if(nodeIdx>=0) {
     const id=pfSelected;
@@ -9475,7 +9543,16 @@ function pfCanvasMouseUp(e) {
   }
   if(pfImgResizing){
     const node=pfNodes.find(n=>n.id===pfImgResizing.nodeId);
-    if(node) { pfSyncNode(node); pfRenderAll(); }
+    if(node) {
+      pfSaveLocal();
+      pfSyncNode(node);
+      // Only update the specific img element, no full re-render
+      const img=document.querySelector('#pfn_'+node.id+' .pf-node-img');
+      if(img){img.style.width=Math.round(node.imageWidth)+'px';img.style.height=Math.round(node.imageHeight)+'px';}
+      // Show resize handle again
+      const handle=document.querySelector('#pfn_'+node.id+' [onmousedown*="pfImgResizeStart"]');
+      if(handle) handle.style.display='block';
+    }
     pfImgResizing=null;
   }
   if(pfRotating){
@@ -9602,6 +9679,7 @@ async function pfCreateEdge(fromId, toId, fromPort, toPort) {
       else toPort=dx>0?'left':'right';
     }
   }
+  pfSnapshot();
   const edge={id:'pfedge_'+Date.now(), process_id:pfCurrentId,
     from_id:fromId, to_id:toId,
     from_port:fromPort||'bottom', to_port:toPort||'top',
@@ -9984,13 +10062,45 @@ function pfTouchEnd(e) {
 // ── Keyboard shortcuts ────────────────────────────────────
 document.addEventListener('keydown', e => {
   if(!isProcessFlowView) return;
-  if(e.key==='Delete'||e.key==='Backspace') {
-    const active=document.activeElement;
-    if(active&&(active.contentEditable==='true'||active.tagName==='INPUT'||active.tagName==='TEXTAREA')) return;
-    pfDeleteSelected();
+  const active = document.activeElement;
+  const isEditing = active&&(active.contentEditable==='true'||active.tagName==='INPUT'||active.tagName==='TEXTAREA');
+
+  // Undo/Redo
+  if((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); if(e.shiftKey) pfRedo(); else pfUndo(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='y') { e.preventDefault(); pfRedo(); return; }
+
+  // Copy/Paste
+  if((e.ctrlKey||e.metaKey) && e.key==='c' && !isEditing) { e.preventDefault(); pfCopySelected(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='v' && !isEditing) { e.preventDefault(); pfPasteNode(); return; }
+
+  // Delete
+  if((e.key==='Delete'||e.key==='Backspace') && !isEditing) { pfDeleteSelected(); return; }
+
+  // Arrow key move
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && pfSelected && !isEditing) {
+    e.preventDefault();
+    const node=pfNodes.find(n=>n.id===pfSelected);
+    if(node){
+      const step = e.shiftKey ? 10 : 2;
+      if(e.key==='ArrowUp')    node.y -= step;
+      if(e.key==='ArrowDown')  node.y += step;
+      if(e.key==='ArrowLeft')  node.x -= step;
+      if(e.key==='ArrowRight') node.x += step;
+      const el=document.getElementById('pfn_'+node.id);
+      if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
+      pfUpdateSVG();
+      clearTimeout(window._pfArrowSyncTimer);
+      window._pfArrowSyncTimer=setTimeout(()=>pfSyncNode(node),400);
+    }
+    return;
   }
-  if(e.key==='v'&&!e.ctrlKey&&!e.metaKey) pfSetTool('select');
-  if(e.key==='c'&&!e.ctrlKey&&!e.metaKey) pfSetTool('connect');
+
+  // Tool shortcuts (not editing)
+  if(!isEditing) {
+    if(e.key==='v' && !e.ctrlKey && !e.metaKey) pfSetTool('select');
+    if(e.key==='c' && !e.ctrlKey && !e.metaKey) pfSetTool('connect');
+    if(e.key==='h') pfSetTool('pan');
+  }
   if(e.key==='Escape') { pfHideFmtBar(); pfSelected=null; pfRenderCanvas(); }
 });
 </script>
