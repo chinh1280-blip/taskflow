@@ -1537,6 +1537,9 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
       <button class="nav-item" id="nav-cashflow" onclick="switchToCashFlowView()" style="width:100%;text-align:left">
         <span class="ni">💰</span><span class="nlabel">Cash Flow</span>
       </button>
+      <button class="nav-item" id="nav-processflow" onclick="switchToProcessFlowView()" style="width:100%;text-align:left">
+        <span class="ni">🔀</span><span class="nlabel">Process Flow</span>
+      </button>
     <div style="display:none"><!-- placeholder-->
 
     </div><!-- /sidebar-scroll -->
@@ -1719,7 +1722,9 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   </div>
 </div>
 
-  </main>
+  
+    <div id="processflow-view" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+</main>
 </div>
 
 <!-- DRAWER -->
@@ -3672,6 +3677,7 @@ function renderDailyView() {
 function switchToDailyView() {
   isDailyView = true;
   hideCashFlowView();
+  switchFromProcessFlowView();
   document.getElementById('content').style.display = 'none';
   document.getElementById('daily-view').style.display = 'block';
   // Update sidebar active
@@ -4323,6 +4329,7 @@ function updateNotesBadge() {
 function switchToNotesView() {
   isNotesView = true;
   hideCashFlowView();
+  switchFromProcessFlowView();
   if (isDailyView) switchToTaskView();
   document.getElementById('content').style.display = 'none';
   document.getElementById('daily-view').style.display = 'none';
@@ -4347,6 +4354,7 @@ function switchFromNotesView() {
   isNotesView = false;
   document.getElementById('notes-view').style.display = 'none';
   document.getElementById('nav-notes')?.classList.remove('active');
+  switchFromProcessFlowView();
   document.getElementById('content').style.display = '';
   document.getElementById('topbar-task-row').style.display = '';
   document.getElementById('topbar-view-row').style.display = 'none';
@@ -5223,6 +5231,7 @@ function updateBoardsBadge() {
 function switchToBoardsView() {
   isBoardsView = true;
   hideCashFlowView();
+  switchFromProcessFlowView();
   if (isDailyView) switchToTaskView();
   if (isNotesView) switchFromNotesView();
   document.getElementById('content').style.display = 'none';
@@ -5249,6 +5258,7 @@ function switchFromBoardsView() {
   isBoardsView = false;
   document.getElementById('boards-view').style.display = 'none';
   document.getElementById('nav-boards')?.classList.remove('active');
+  switchFromProcessFlowView();
   document.getElementById('content').style.display = '';
   document.getElementById('topbar-task-row').style.display = '';
   document.getElementById('topbar-view-row').style.display = 'none';
@@ -6459,6 +6469,18 @@ const dbReminders = {
   delete: id => sbFetch(`reminders?id=eq.${id}`, {method:'DELETE', prefer:''}),
 };
 
+const dbCashflow = {
+  getAll: () => sbFetch('cashflow?order=tx_date.desc&limit=500'),
+  insert: t  => sbFetch('cashflow', {method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(t)}),
+  update: (id,d) => sbFetch(`cashflow?id=eq.${id}`, {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(d)}),
+  delete: id => sbFetch(`cashflow?id=eq.${id}`, {method:'DELETE', prefer:''}),
+};
+
+const dbSavePlan = {
+  get: () => sbFetch('cf_save_plan?id=eq.default'),
+  upsert: d => sbFetch('cf_save_plan', {method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify(d)}),
+};
+
 async function loadReminders() {
   // Load từ localStorage ngay
   try {
@@ -7047,6 +7069,7 @@ function switchFromRemindersView() {
   stopRtlTimer();
   document.getElementById('reminders-view').style.display = 'none';
   document.getElementById('nav-reminders')?.classList.remove('active');
+  switchFromProcessFlowView();
   document.getElementById('content').style.display = '';
   document.getElementById('topbar-task-row').style.display = '';
   document.getElementById('topbar-view-row').style.display = 'none';
@@ -8361,17 +8384,13 @@ async function syncSavePlanToSupabase() {
       track_logs:    cfTrackData.logs,
       updated_at:    new Date().toISOString(),
     };
-    await sbFetch('cf_save_plan', {
-      method: 'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify(payload),
-    });
+    await dbSavePlan.upsert(payload);
   } catch(e) { console.warn('syncSavePlan error:', e); }
 }
 
 async function loadSavePlanFromSupabase() {
   try {
-    const data = await sbFetch('cf_save_plan?id=eq.default');
+    const data = await dbSavePlan.get();
     if (data?.length) {
       const p = data[0];
       if (p.save_items)   cfSaveItems          = p.save_items;
@@ -8749,3 +8768,830 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 
 </body>
 </html>
+
+<!-- PROCESS FLOW CSS & ENGINE (injected before </body>) -->
+<style>
+/* ═══ PROCESS FLOW ═══════════════════════════════════════ */
+.pf-layout{display:flex;height:100%;overflow:hidden}
+.pf-sidebar{width:220px;min-width:220px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.pf-sidebar-header{padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+.pf-sidebar-title{font-size:13px;font-weight:700;color:var(--tx);flex:1}
+.pf-new-btn{padding:5px 10px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pf-process-list{flex:1;overflow-y:auto;padding:6px}
+.pf-process-item{padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px;margin-bottom:3px;transition:background .15s}
+.pf-process-item:hover{background:var(--s2)}
+.pf-process-item.active{background:rgba(79,124,255,.15);color:var(--ac)}
+.pf-process-name{font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-process-del{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 5px;font-size:11px;opacity:0}
+.pf-process-item:hover .pf-process-del{opacity:1}
+
+/* Canvas area */
+.pf-canvas-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.pf-toolbar{padding:8px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--s1)}
+.pf-tool-group{display:flex;gap:4px;align-items:center}
+.pf-tool-sep{width:1px;height:20px;background:var(--bd);margin:0 4px}
+.pf-tool-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:4px}
+.pf-tool-btn:hover{background:var(--s2);border-color:var(--ac);color:var(--ac)}
+.pf-tool-btn.active{background:rgba(79,124,255,.15);border-color:var(--ac);color:var(--ac)}
+.pf-tool-btn.danger:hover{background:rgba(255,79,109,.1);border-color:var(--er);color:var(--er)}
+.pf-canvas-outer{flex:1;overflow:hidden;position:relative;background:var(--bg);cursor:default}
+.pf-canvas-outer.panning{cursor:grab}
+.pf-canvas-outer.panning:active{cursor:grabbing}
+.pf-canvas-outer.connecting{cursor:crosshair}
+/* Grid background */
+.pf-canvas-outer::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(var(--bd) 1px,transparent 1px),
+    linear-gradient(90deg,var(--bd) 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:.35;pointer-events:none;
+}
+.pf-canvas{position:absolute;top:0;left:0;transform-origin:0 0}
+
+/* Nodes */
+.pf-node{
+  position:absolute;cursor:move;user-select:none;
+  display:flex;flex-direction:column;
+}
+.pf-node-inner{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--bd);background:var(--s1);border-radius:8px;
+  padding:6px 10px;box-sizing:border-box;position:relative;
+  transition:border-color .15s,box-shadow .15s;overflow:hidden;
+}
+.pf-node.selected .pf-node-inner{border-color:var(--ac);box-shadow:0 0 0 3px rgba(79,124,255,.2)}
+.pf-node-inner:hover{border-color:var(--ac)}
+.pf-node.type-start .pf-node-inner{border-radius:30px;background:rgba(22,163,74,.12);border-color:#16a34a}
+.pf-node.type-end   .pf-node-inner{border-radius:30px;background:rgba(239,68,68,.1);border-color:#ef4444}
+.pf-node.type-decision .pf-node-inner{
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+  background:rgba(245,158,11,.12);border-color:#f59e0b;border-radius:0;
+  padding:10px 20px;
+}
+.pf-node.type-note .pf-node-inner{
+  background:rgba(250,204,21,.12);border-color:#eab308;
+  border-radius:2px 8px 8px 8px;font-style:italic;
+}
+.pf-node-text{
+  font-size:12px;font-weight:600;color:var(--tx);text-align:center;
+  width:100%;word-break:break-word;outline:none;
+  min-height:16px;cursor:text;
+}
+.pf-node-text[contenteditable=true]{
+  cursor:text;
+  background:rgba(79,124,255,.05);border-radius:3px;
+}
+.pf-node-img{
+  width:100%;object-fit:contain;border-radius:4px;margin-bottom:4px;
+  cursor:nwse-resize;
+}
+.pf-node-resize{
+  position:absolute;bottom:2px;right:2px;width:12px;height:12px;
+  background:var(--ac);border-radius:2px;cursor:nwse-resize;
+  opacity:0;transition:opacity .15s;
+}
+.pf-node.selected .pf-node-resize{opacity:1}
+
+/* Connection points */
+.pf-port{
+  position:absolute;width:10px;height:10px;border-radius:50%;
+  background:var(--ac);border:2px solid var(--bg);
+  cursor:crosshair;opacity:0;transition:opacity .15s;z-index:10;
+}
+.pf-node:hover .pf-port,.pf-node.selected .pf-port{opacity:1}
+.pf-port.top   {top:-5px;left:50%;transform:translateX(-50%)}
+.pf-port.bottom{bottom:-5px;left:50%;transform:translateX(-50%)}
+.pf-port.left  {left:-5px;top:50%;transform:translateY(-50%)}
+.pf-port.right {right:-5px;top:50%;transform:translateY(-50%)}
+
+/* SVG edges */
+.pf-svg{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.pf-edge{stroke:var(--tx2);stroke-width:2;fill:none;cursor:pointer;pointer-events:stroke}
+.pf-edge:hover{stroke:var(--ac);stroke-width:2.5}
+.pf-edge.selected{stroke:var(--ac)}
+.pf-edge.dashed{stroke-dasharray:6,4}
+.pf-edge-label{font-size:10px;fill:var(--tx2);font-family:sans-serif}
+.pf-edge-arrow{fill:var(--tx2)}
+.pf-edge.selected + .pf-edge-arrow,.pf-edge:hover + .pf-edge-arrow{fill:var(--ac)}
+
+/* Node format toolbar */
+.pf-fmt-bar{
+  position:fixed;background:var(--s1);border:1px solid var(--bd);
+  border-radius:10px;padding:5px 8px;display:flex;gap:4px;align-items:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);z-index:500;
+}
+.pf-fmt-btn{padding:4px 7px;border-radius:5px;border:none;background:none;color:var(--tx2);font-size:12px;cursor:pointer;font-weight:600;min-width:26px}
+.pf-fmt-btn:hover{background:var(--s2)}
+.pf-fmt-btn.active{background:rgba(79,124,255,.15);color:var(--ac)}
+
+/* Empty state */
+.pf-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--tx3)}
+.pf-empty-icon{font-size:48px;opacity:.4}
+.pf-zoom-indicator{position:absolute;bottom:10px;right:10px;background:var(--s1);border:1px solid var(--bd);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--tx3);font-family:monospace}
+</style>
+<script>
+// ════════════════════════════════════════════════════════
+// PROCESS FLOW ENGINE
+// ════════════════════════════════════════════════════════
+const PF_KEY = 'tf_processflow';
+let pfProcesses   = [];   // [{id,name}]
+let pfCurrentId   = null;
+let pfNodes       = [];   // [{id,type,x,y,w,h,label,style,imageUrl}]
+let pfEdges       = [];   // [{id,fromId,toId,label,style}]
+let pfSelected    = null; // selected node/edge id
+let pfTool        = 'select'; // select|connect|pan
+let pfZoom        = 1;
+let pfPan         = {x:0,y:0};
+let pfDragging    = null; // {nodeId,ox,oy,startX,startY}
+let pfResizing    = null;
+let pfConnecting  = null; // {fromId, fromPort}
+let pfPanning     = null;
+let isProcessFlowView = false;
+
+const PF_SBKEY = 'tf_pf';
+
+// ── DB helpers ─────────────────────────────────────────
+const dbPF = {
+  getProcesses: () => sbFetch('pf_processes?order=created_at.asc'),
+  insertProcess: p => sbFetch('pf_processes',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(p)}),
+  deleteProcess: id => sbFetch(`pf_processes?id=eq.${id}`,{method:'DELETE',prefer:''}),
+  updateProcess: (id,d) => sbFetch(`pf_processes?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(d)}),
+  getNodes: pid => sbFetch(`pf_nodes?process_id=eq.${pid}&order=created_at.asc`),
+  upsertNode: n => sbFetch('pf_nodes',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(n)}),
+  deleteNode: id => sbFetch(`pf_nodes?id=eq.${id}`,{method:'DELETE',prefer:''}),
+  getEdges: pid => sbFetch(`pf_edges?process_id=eq.${pid}`),
+  upsertEdge: e => sbFetch('pf_edges',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(e)}),
+  deleteEdge: id => sbFetch(`pf_edges?id=eq.${id}`,{method:'DELETE',prefer:''}),
+};
+
+// ── Local storage ───────────────────────────────────────
+function pfSaveLocal() {
+  localStorage.setItem(PF_KEY, JSON.stringify({processes:pfProcesses, nodes:pfNodes, edges:pfEdges, currentId:pfCurrentId}));
+}
+function pfLoadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem(PF_KEY)||'{}');
+    pfProcesses = d.processes||[];
+    pfCurrentId = d.currentId||null;
+    pfNodes = (d.nodes||[]).filter(n=>n.process_id===pfCurrentId);
+    pfEdges = (d.edges||[]).filter(e=>e.process_id===pfCurrentId);
+  } catch {}
+}
+
+// ── View switch ─────────────────────────────────────────
+function switchToProcessFlowView() {
+  ['content','reminders-view','cashflow-view','daily-routines-view','notes-view','boards-view']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  document.querySelectorAll('.view-panel').forEach(v=>v.style.display='none');
+  hideCashFlowView();
+  isDailyView=false;isNotesView=false;isBoardsView=false;isRemindersView=false;
+  const view = document.getElementById('processflow-view');
+  view.style.display='flex';
+  document.getElementById('topbar-task-row').style.display='none';
+  document.getElementById('topbar-view-row').style.display='';
+  document.getElementById('page-title').textContent='🔀 Process Flow';
+  document.getElementById('topbar-view-actions').innerHTML='';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-processflow')?.classList.add('active');
+  isProcessFlowView=true;
+  pfLoadLocal();
+  pfRenderAll();
+  pfLoadFromSupabase();
+  closeSidebar?.();
+}
+
+function switchFromProcessFlowView() {
+  isProcessFlowView=false;
+  const v=document.getElementById('processflow-view');
+  if(v)v.style.display='none';
+}
+
+// ── Supabase sync ───────────────────────────────────────
+async function pfLoadFromSupabase() {
+  if(!SB_URL||!SB_KEY) return;
+  try {
+    const procs = await dbPF.getProcesses();
+    if(!procs?.length) return;
+    pfProcesses = procs;
+    if(!pfCurrentId || !pfProcesses.find(p=>p.id===pfCurrentId)) {
+      pfCurrentId = pfProcesses[0].id;
+    }
+    await pfLoadProcessData(pfCurrentId);
+    pfRenderAll();
+  } catch(e){console.warn('[PF] load error:',e);}
+}
+
+async function pfLoadProcessData(pid) {
+  try {
+    const [nodes, edges] = await Promise.all([dbPF.getNodes(pid), dbPF.getEdges(pid)]);
+    pfNodes = nodes||[];
+    pfEdges = edges||[];
+    pfCurrentId = pid;
+    pfSaveLocal();
+  } catch(e){console.warn('[PF] load process:',e);}
+}
+
+async function pfSyncNode(node) {
+  pfSaveLocal();
+  try { await dbPF.upsertNode(node); } catch(e){console.warn('[PF] sync node:',e);}
+}
+async function pfSyncEdge(edge) {
+  pfSaveLocal();
+  try { await dbPF.upsertEdge(edge); } catch(e){console.warn('[PF] sync edge:',e);}
+}
+
+// ── Render all ──────────────────────────────────────────
+function pfRenderAll() {
+  const view = document.getElementById('processflow-view');
+  if(!view) return;
+  view.innerHTML = `
+  <div class="pf-layout">
+    <div class="pf-sidebar">
+      <div class="pf-sidebar-header">
+        <div class="pf-sidebar-title">📋 Processes</div>
+        <button class="pf-new-btn" onclick="pfCreateProcess()">+ New</button>
+      </div>
+      <div class="pf-process-list" id="pf-process-list">
+        ${pfProcesses.map(p=>`
+          <div class="pf-process-item${p.id===pfCurrentId?' active':''}" onclick="pfSelectProcess('${p.id}')">
+            <span style="font-size:14px">🔀</span>
+            <div class="pf-process-name" id="pf-pname-${p.id}" 
+              ondblclick="pfRenameProcess('${p.id}')">${esc(p.name)}</div>
+            <button class="pf-process-del" onclick="event.stopPropagation();pfDeleteProcess('${p.id}')" title="Xóa">🗑</button>
+          </div>`).join('')}
+        ${!pfProcesses.length?'<div style="padding:20px;text-align:center;font-size:12px;color:var(--tx3)">Chưa có process nào</div>':''}
+      </div>
+    </div>
+    <div class="pf-canvas-wrap">
+      ${pfCurrentId ? pfRenderToolbar() : ''}
+      <div class="pf-canvas-outer" id="pf-canvas-outer"
+        onmousedown="pfCanvasMouseDown(event)"
+        onmousemove="pfCanvasMouseMove(event)"
+        onmouseup="pfCanvasMouseUp(event)"
+        onwheel="pfCanvasWheel(event)"
+        ontouchstart="pfTouchStart(event)"
+        ontouchmove="pfTouchMove(event)"
+        ontouchend="pfTouchEnd(event)"
+        ondblclick="pfCanvasDblClick(event)">
+        ${pfCurrentId ? `
+        <div class="pf-canvas" id="pf-canvas" style="transform:translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})">
+          <svg class="pf-svg" id="pf-svg" style="width:4000px;height:4000px">
+            <defs>
+              <marker id="pf-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0,10 3.5,0 7" fill="var(--tx2)" id="pf-arrow-fill"/>
+              </marker>
+              <marker id="pf-arrow-sel" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0,10 3.5,0 7" fill="var(--ac)"/>
+              </marker>
+            </defs>
+            ${pfRenderEdgesSVG()}
+          </svg>
+          ${pfNodes.map(pfRenderNode).join('')}
+        </div>
+        <div class="pf-zoom-indicator">${Math.round(pfZoom*100)}%</div>
+        ` : '<div class="pf-empty"><div class="pf-empty-icon">🔀</div><div style="font-size:14px;font-weight:600">Chọn hoặc tạo process</div></div>'}
+      </div>
+    </div>
+  </div>`;
+  pfBindEvents();
+}
+
+function pfRenderToolbar() {
+  return `<div class="pf-toolbar">
+    <div class="pf-tool-group">
+      <button class="pf-tool-btn${pfTool==='select'?' active':''}" onclick="pfSetTool('select')" title="Chọn (V)">↖ Chọn</button>
+      <button class="pf-tool-btn${pfTool==='connect'?' active':''}" onclick="pfSetTool('connect')" title="Nối (C)">↔ Nối</button>
+      <button class="pf-tool-btn${pfTool==='pan'?' active':''}" onclick="pfSetTool('pan')" title="Di chuyển (Space)">✋ Pan</button>
+    </div>
+    <div class="pf-tool-sep"></div>
+    <div class="pf-tool-group">
+      <button class="pf-tool-btn" onclick="pfAddNode('step')"      title="Thêm bước">⬜ Bước</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('decision')"  title="Quyết định">◇ Quyết định</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('start')"     title="Bắt đầu">⬤ Bắt đầu</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('end')"       title="Kết thúc">⬤ Kết thúc</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('note')"      title="Ghi chú">📝 Ghi chú</button>
+    </div>
+    <div class="pf-tool-sep"></div>
+    <div class="pf-tool-group">
+      <button class="pf-tool-btn" onclick="pfUploadImage()" title="Chèn ảnh">🖼 Ảnh</button>
+      <button class="pf-tool-btn" onclick="pfZoomIn()">＋</button>
+      <button class="pf-tool-btn" onclick="pfZoomOut()">－</button>
+      <button class="pf-tool-btn" onclick="pfZoomFit()">⊡ Fit</button>
+    </div>
+    <div class="pf-tool-sep"></div>
+    <div class="pf-tool-group">
+      <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa đã chọn">🗑 Xóa</button>
+    </div>
+    <input type="file" id="pf-img-input" accept="image/*" style="display:none" onchange="pfHandleImageUpload(event)">
+  </div>`;
+}
+
+function pfRenderNode(node) {
+  const sel = pfSelected===node.id;
+  const fs  = node.style?.fontSize||'12px';
+  const fw  = node.style?.fontWeight||'600';
+  const fc  = node.style?.color||'var(--tx)';
+  const bg  = node.style?.background||'';
+  const bc  = node.style?.borderColor||'';
+  return `<div class="pf-node type-${node.type}${sel?' selected':''}"
+    id="pfn_${node.id}"
+    style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px"
+    onmousedown="pfNodeMouseDown(event,'${node.id}')">
+    <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}">
+      ${node.imageUrl?`<img class="pf-node-img" src="${node.imageUrl}" style="max-height:${node.h-30}px" onmousedown="pfImgResizeStart(event,'${node.id}')">`:``}
+      <div class="pf-node-text"
+        id="pft_${node.id}"
+        style="font-size:${fs};font-weight:${fw};color:${fc}"
+        contenteditable="false"
+        ondblclick="pfStartEdit(event,'${node.id}')"
+        onblur="pfEndEdit('${node.id}')"
+        onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
+        >${esc(node.label||'')}</div>
+      <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>
+    </div>
+    <div class="pf-port top"    data-node="${node.id}" data-port="top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
+    <div class="pf-port bottom" data-node="${node.id}" data-port="bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
+    <div class="pf-port left"   data-node="${node.id}" data-port="left"   onmousedown="pfPortMouseDown(event,'${node.id}','left')"></div>
+    <div class="pf-port right"  data-node="${node.id}" data-port="right"  onmousedown="pfPortMouseDown(event,'${node.id}','right')"></div>
+  </div>`;
+}
+
+function pfRenderEdgesSVG() {
+  return pfEdges.map(edge => {
+    const from = pfNodes.find(n=>n.id===edge.from_id);
+    const to   = pfNodes.find(n=>n.id===edge.to_id);
+    if(!from||!to) return '';
+    const fx = from.x + from.w/2, fy = from.y + from.h;
+    const tx = to.x   + to.w/2,   ty = to.y;
+    const mid = (fy + ty) / 2;
+    const path = `M${fx},${fy} C${fx},${mid} ${tx},${mid} ${tx},${ty}`;
+    const sel = pfSelected===edge.id;
+    const mx  = (fx+tx)/2, my = (fy+ty)/2;
+    return `
+      <path class="pf-edge${edge.style==='dashed'?' dashed':''}${sel?' selected':''}"
+        d="${path}" marker-end="url(#${sel?'pf-arrow-sel':'pf-arrow'})"
+        onclick="pfSelectEdge('${edge.id}')" style="pointer-events:stroke"/>
+      ${edge.label?`<text class="pf-edge-label" x="${mx}" y="${my-6}" text-anchor="middle">${esc(edge.label)}</text>`:''}`;
+  }).join('');
+}
+
+// ── Process management ───────────────────────────────────
+async function pfCreateProcess() {
+  const name = prompt('Tên process:','New Process');
+  if(!name?.trim()) return;
+  const p = {id:'pf_'+Date.now(), name:name.trim(), created_at:new Date().toISOString(), updated_at:new Date().toISOString()};
+  pfProcesses.push(p);
+  pfCurrentId=p.id; pfNodes=[]; pfEdges=[];
+  pfSaveLocal(); pfRenderAll();
+  try{await dbPF.insertProcess(p);}catch(e){console.warn(e);}
+}
+
+async function pfDeleteProcess(id) {
+  if(!confirm('Xóa process này?')) return;
+  pfProcesses=pfProcesses.filter(p=>p.id!==id);
+  if(pfCurrentId===id){
+    pfCurrentId=pfProcesses[0]?.id||null;
+    pfNodes=[]; pfEdges=[];
+    if(pfCurrentId) await pfLoadProcessData(pfCurrentId);
+  }
+  pfSaveLocal(); pfRenderAll();
+  try{await dbPF.deleteProcess(id);}catch(e){console.warn(e);}
+}
+
+async function pfSelectProcess(id) {
+  if(pfCurrentId===id) return;
+  pfCurrentId=id; pfSelected=null;
+  pfNodes=[]; pfEdges=[];
+  pfRenderAll();
+  await pfLoadProcessData(id);
+  pfRenderAll();
+}
+
+function pfRenameProcess(id) {
+  const p=pfProcesses.find(x=>x.id===id);
+  if(!p)return;
+  const name=prompt('Đổi tên:',p.name);
+  if(!name?.trim())return;
+  p.name=name.trim(); pfSaveLocal(); pfRenderAll();
+  try{dbPF.updateProcess(id,{name:p.name,updated_at:new Date().toISOString()});}catch{}
+}
+
+// ── Node management ─────────────────────────────────────
+function pfAddNode(type) {
+  if(!pfCurrentId){showNotif('nw','⚠️','Chọn hoặc tạo process trước');return;}
+  const cx = (400 - pfPan.x)/pfZoom + Math.random()*80;
+  const cy = (200 - pfPan.y)/pfZoom + Math.random()*60;
+  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú'};
+  const w = type==='decision'?120:type==='start'||type==='end'?120:160;
+  const h = type==='decision'?80:60;
+  const node = {
+    id:'pfnode_'+Date.now(), process_id:pfCurrentId,
+    type, x:Math.round(cx), y:Math.round(cy), w, h,
+    label:defaultLabels[type]||'', style:{},
+    created_at:new Date().toISOString()
+  };
+  pfNodes.push(node);
+  pfSelected=node.id;
+  pfSaveLocal(); pfRenderCanvas();
+  pfSyncNode(node);
+}
+
+async function pfDeleteSelected() {
+  if(!pfSelected) return;
+  const nodeIdx = pfNodes.findIndex(n=>n.id===pfSelected);
+  if(nodeIdx>=0) {
+    const id=pfSelected;
+    // Also delete connected edges
+    const toDelete=pfEdges.filter(e=>e.from_id===id||e.to_id===id);
+    pfEdges=pfEdges.filter(e=>e.from_id!==id&&e.to_id!==id);
+    pfNodes.splice(nodeIdx,1);
+    pfSelected=null; pfSaveLocal(); pfRenderCanvas();
+    try{await dbPF.deleteNode(id);}catch{}
+    for(const e of toDelete){try{await dbPF.deleteEdge(e.id);}catch{}}
+    return;
+  }
+  const edgeIdx=pfEdges.findIndex(e=>e.id===pfSelected);
+  if(edgeIdx>=0){
+    const id=pfSelected;
+    pfEdges.splice(edgeIdx,1);
+    pfSelected=null; pfSaveLocal(); pfRenderCanvas();
+    try{await dbPF.deleteEdge(id);}catch{}
+  }
+}
+
+// ── Canvas interaction ───────────────────────────────────
+function pfSetTool(t){
+  pfTool=t;
+  document.querySelectorAll('.pf-tool-btn').forEach(b=>{
+    if(b.textContent.includes(t==='select'?'Chọn':t==='connect'?'Nối':'Pan'))b.classList.add('active');
+    else b.classList.remove('active');
+  });
+  const outer=document.getElementById('pf-canvas-outer');
+  if(outer) outer.className='pf-canvas-outer'+(t==='pan'?' panning':t==='connect'?' connecting':'');
+}
+
+function pfGetCanvasPos(e) {
+  const outer=document.getElementById('pf-canvas-outer');
+  if(!outer)return{x:0,y:0};
+  const rect=outer.getBoundingClientRect();
+  const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+  return {x:(cx-pfPan.x)/pfZoom, y:(cy-pfPan.y)/pfZoom};
+}
+
+function pfCanvasMouseDown(e) {
+  if(e.target===document.getElementById('pf-canvas-outer')||e.target===document.getElementById('pf-canvas')) {
+    pfSelected=null;
+    if(pfTool==='pan'||e.button===1||(e.button===0&&e.altKey)) {
+      pfPanning={sx:e.clientX-pfPan.x, sy:e.clientY-pfPan.y};
+    }
+    pfRenderCanvas();
+  }
+}
+
+function pfCanvasMouseMove(e) {
+  if(pfPanning) {
+    pfPan.x=e.clientX-pfPanning.sx; pfPan.y=e.clientY-pfPanning.sy;
+    const canvas=document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+    return;
+  }
+  if(pfDragging) {
+    const pos=pfGetCanvasPos(e);
+    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
+    if(node){
+      node.x=Math.round(pos.x-pfDragging.ox);
+      node.y=Math.round(pos.y-pfDragging.oy);
+      const el=document.getElementById('pfn_'+node.id);
+      if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
+      pfUpdateSVG();
+    }
+    return;
+  }
+  if(pfResizing) {
+    const pos=pfGetCanvasPos(e);
+    const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
+    if(node){
+      node.w=Math.max(60,Math.round(pos.x-node.x));
+      node.h=Math.max(40,Math.round(pos.y-node.y));
+      const el=document.getElementById('pfn_'+node.id);
+      if(el){el.style.width=node.w+'px';el.style.height=node.h+'px';}
+      pfUpdateSVG();
+    }
+    return;
+  }
+  if(pfConnecting) {
+    // Draw temp line
+    const pos=pfGetCanvasPos(e);
+    pfConnecting.mx=pos.x; pfConnecting.my=pos.y;
+    pfUpdateSVG(true);
+  }
+}
+
+function pfCanvasMouseUp(e) {
+  if(pfDragging){
+    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
+    if(node) pfSyncNode(node);
+    pfDragging=null;
+  }
+  if(pfResizing){
+    const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
+    if(node) pfSyncNode(node);
+    pfResizing=null;
+  }
+  if(pfPanning) pfPanning=null;
+  if(pfConnecting && pfConnecting.mx!==undefined) {
+    // Check if dropped on a node
+    const pos=pfGetCanvasPos(e);
+    const target=pfNodes.find(n=>
+      n.id!==pfConnecting.fromId &&
+      pos.x>=n.x && pos.x<=n.x+n.w &&
+      pos.y>=n.y && pos.y<=n.y+n.h
+    );
+    if(target) pfCreateEdge(pfConnecting.fromId, target.id);
+    pfConnecting=null;
+    pfUpdateSVG();
+  }
+}
+
+function pfCanvasWheel(e) {
+  e.preventDefault();
+  const factor=e.deltaY<0?1.1:0.9;
+  const outer=document.getElementById('pf-canvas-outer');
+  if(!outer)return;
+  const rect=outer.getBoundingClientRect();
+  const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+  pfPan.x = cx - (cx-pfPan.x)*factor;
+  pfPan.y = cy - (cy-pfPan.y)*factor;
+  pfZoom = Math.max(0.2, Math.min(3, pfZoom*factor));
+  const canvas=document.getElementById('pf-canvas');
+  if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+  const zi=document.querySelector('.pf-zoom-indicator');
+  if(zi) zi.textContent=Math.round(pfZoom*100)+'%';
+}
+
+function pfCanvasDblClick(e) {
+  if(pfTool==='select' && (e.target===document.getElementById('pf-canvas-outer')||e.target===document.getElementById('pf-canvas'))) {
+    pfAddNode('step');
+  }
+}
+
+function pfNodeMouseDown(e, nodeId) {
+  e.stopPropagation();
+  if(e.target.classList.contains('pf-port')) return;
+  if(e.target.classList.contains('pf-node-resize')) return;
+  if(e.target.classList.contains('pf-node-text')) return;
+  if(pfTool==='connect') return;
+  pfSelected=nodeId;
+  const pos=pfGetCanvasPos(e);
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(node) pfDragging={nodeId,ox:pos.x-node.x,oy:pos.y-node.y};
+  pfRenderCanvas();
+}
+
+function pfPortMouseDown(e, nodeId, port) {
+  e.stopPropagation();
+  pfConnecting={fromId:nodeId, fromPort:port};
+}
+
+function pfResizeStart(e, nodeId) {
+  e.stopPropagation();
+  pfResizing={nodeId};
+}
+
+function pfSelectEdge(id) {
+  pfSelected=id;
+  pfRenderCanvas();
+}
+
+// ── Edge management ──────────────────────────────────────
+async function pfCreateEdge(fromId, toId) {
+  if(pfEdges.find(e=>e.from_id===fromId&&e.to_id===toId)) return;
+  const edge={id:'pfedge_'+Date.now(), process_id:pfCurrentId, from_id:fromId, to_id:toId, label:'', style:'solid'};
+  pfEdges.push(edge);
+  pfSelected=edge.id;
+  pfSaveLocal(); pfRenderCanvas();
+  try{await dbPF.upsertEdge(edge);}catch(e){console.warn(e);}
+}
+
+// ── Node editing ─────────────────────────────────────────
+function pfStartEdit(e, nodeId) {
+  e.stopPropagation();
+  const el=document.getElementById('pft_'+nodeId);
+  if(!el)return;
+  el.contentEditable='true';
+  el.focus();
+  const range=document.createRange();
+  range.selectNodeContents(el);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+  pfShowFmtBar(nodeId);
+}
+
+function pfEndEdit(nodeId) {
+  const el=document.getElementById('pft_'+nodeId);
+  if(!el)return;
+  el.contentEditable='false';
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(node){node.label=el.textContent||''; pfSyncNode(node);}
+  pfHideFmtBar();
+}
+
+// ── Format bar ───────────────────────────────────────────
+function pfShowFmtBar(nodeId) {
+  pfHideFmtBar();
+  const el=document.getElementById('pfn_'+nodeId);
+  if(!el)return;
+  const rect=el.getBoundingClientRect();
+  const bar=document.createElement('div');
+  bar.id='pf-fmt-bar';
+  bar.className='pf-fmt-bar';
+  bar.style.left=(rect.left)+'px';
+  bar.style.top=(rect.top-44)+'px';
+  bar.innerHTML=`
+    <button class="pf-fmt-btn" onclick="pfFmt('${nodeId}','bold')" title="Bold"><b>B</b></button>
+    <button class="pf-fmt-btn" onclick="pfFmt('${nodeId}','italic')" title="Italic"><i>I</i></button>
+    <button class="pf-fmt-btn" onclick="pfFmt('${nodeId}','underline')" title="Underline"><u>U</u></button>
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 3px"></div>
+    <select onchange="pfFmtSize('${nodeId}',this.value)" style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px;color:var(--tx);cursor:pointer">
+      ${[10,11,12,13,14,16,18,20].map(s=>`<option value="${s}px"${(pfNodes.find(n=>n.id===nodeId)?.style?.fontSize||'12px')===s+'px'?' selected':''}>${s}</option>`).join('')}
+    </select>
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 3px"></div>
+    <input type="color" value="#000000" onchange="pfFmtColor('${nodeId}',this.value)" title="Màu chữ" style="width:24px;height:24px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;padding:0">
+    <input type="color" value="#ffffff" onchange="pfFmtBg('${nodeId}',this.value)" title="Màu nền" style="width:24px;height:24px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;padding:0">
+  `;
+  document.body.appendChild(bar);
+}
+
+function pfHideFmtBar() { document.getElementById('pf-fmt-bar')?.remove(); }
+
+function pfFmt(nodeId, cmd) { document.execCommand(cmd); }
+
+function pfFmtSize(nodeId, size) {
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  node.style={...(node.style||{}),fontSize:size};
+  const el=document.getElementById('pft_'+nodeId);
+  if(el) el.style.fontSize=size;
+  pfSyncNode(node);
+}
+
+function pfFmtColor(nodeId, color) {
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  node.style={...(node.style||{}),color};
+  const el=document.getElementById('pft_'+nodeId);
+  if(el) el.style.color=color;
+  pfSyncNode(node);
+}
+
+function pfFmtBg(nodeId, color) {
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  node.style={...(node.style||{}),background:color};
+  const inner=document.querySelector(`#pfn_${nodeId} .pf-node-inner`);
+  if(inner) inner.style.background=color;
+  pfSyncNode(node);
+}
+
+// ── Image upload ─────────────────────────────────────────
+function pfUploadImage() {
+  if(!pfSelected||!pfNodes.find(n=>n.id===pfSelected)){
+    showNotif('nw','⚠️','Chọn ô trước khi chèn ảnh');return;
+  }
+  document.getElementById('pf-img-input')?.click();
+}
+
+function pfHandleImageUpload(e) {
+  const file=e.target.files?.[0];
+  if(!file||!pfSelected)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const node=pfNodes.find(n=>n.id===pfSelected);
+    if(!node)return;
+    node.imageUrl=ev.target.result;
+    node.h=Math.max(node.h,100);
+    pfSyncNode(node);
+    pfRenderCanvas();
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+
+// ── Zoom ─────────────────────────────────────────────────
+function pfZoomIn()  { pfZoom=Math.min(3,pfZoom*1.2); pfApplyZoom(); }
+function pfZoomOut() { pfZoom=Math.max(0.2,pfZoom/1.2); pfApplyZoom(); }
+function pfZoomFit() {
+  if(!pfNodes.length){pfZoom=1;pfPan={x:100,y:100};pfApplyZoom();return;}
+  const xs=pfNodes.map(n=>n.x), ys=pfNodes.map(n=>n.y);
+  const x2=pfNodes.map(n=>n.x+n.w), y2=pfNodes.map(n=>n.y+n.h);
+  const minX=Math.min(...xs)-40, minY=Math.min(...ys)-40;
+  const maxX=Math.max(...x2)+40, maxY=Math.max(...y2)+40;
+  const outer=document.getElementById('pf-canvas-outer');
+  if(!outer)return;
+  const rect=outer.getBoundingClientRect();
+  pfZoom=Math.min(3,Math.min(rect.width/(maxX-minX),rect.height/(maxY-minY)),1);
+  pfPan={x:-minX*pfZoom+20,y:-minY*pfZoom+20};
+  pfApplyZoom();
+}
+function pfApplyZoom() {
+  const canvas=document.getElementById('pf-canvas');
+  if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+  const zi=document.querySelector('.pf-zoom-indicator');
+  if(zi) zi.textContent=Math.round(pfZoom*100)+'%';
+}
+
+// ── Partial re-render (fast) ─────────────────────────────
+function pfRenderCanvas() {
+  const canvas=document.getElementById('pf-canvas');
+  if(!canvas){pfRenderAll();return;}
+  // Update nodes
+  pfNodes.forEach(node=>{
+    let el=document.getElementById('pfn_'+node.id);
+    if(!el){
+      const tmp=document.createElement('div');
+      tmp.innerHTML=pfRenderNode(node);
+      canvas.appendChild(tmp.firstChild);
+      pfBindNodeEvents(node.id);
+    } else {
+      el.className=`pf-node type-${node.type}${pfSelected===node.id?' selected':''}`;
+      el.style.left=node.x+'px'; el.style.top=node.y+'px';
+      el.style.width=node.w+'px'; el.style.height=node.h+'px';
+    }
+  });
+  // Remove deleted
+  canvas.querySelectorAll('.pf-node').forEach(el=>{
+    const id=el.id.replace('pfn_','');
+    if(!pfNodes.find(n=>n.id===id)) el.remove();
+  });
+  pfUpdateSVG();
+}
+
+function pfUpdateSVG(withTemp) {
+  const svg=document.getElementById('pf-svg');
+  if(!svg)return;
+  // Re-render all paths
+  const paths=svg.querySelectorAll('.pf-edge,.pf-edge-label');
+  paths.forEach(p=>p.remove());
+  const newPaths=document.createElementNS('http://www.w3.org/2000/svg','g');
+  newPaths.innerHTML=pfRenderEdgesSVG();
+  while(newPaths.firstChild) svg.appendChild(newPaths.firstChild);
+  // Temp connecting line
+  svg.querySelector('#pf-tmp-line')?.remove();
+  if(withTemp&&pfConnecting?.mx!==undefined) {
+    const from=pfNodes.find(n=>n.id===pfConnecting.fromId);
+    if(from){
+      const fx=from.x+from.w/2, fy=from.y+from.h;
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('id','pf-tmp-line');
+      line.setAttribute('x1',fx);line.setAttribute('y1',fy);
+      line.setAttribute('x2',pfConnecting.mx);line.setAttribute('y2',pfConnecting.my);
+      line.setAttribute('stroke','var(--ac)');line.setAttribute('stroke-width','2');
+      line.setAttribute('stroke-dasharray','6,3');
+      svg.appendChild(line);
+    }
+  }
+}
+
+function pfBindEvents() {
+  pfNodes.forEach(n=>pfBindNodeEvents(n.id));
+}
+
+function pfBindNodeEvents(nodeId) {
+  // Already bound via inline handlers
+}
+
+// ── Touch support ─────────────────────────────────────────
+let pfLastTouch=null;
+function pfTouchStart(e) {
+  if(e.touches.length===1){
+    const t=e.touches[0];
+    pfCanvasMouseDown({target:e.target,clientX:t.clientX,clientY:t.clientY,button:0,altKey:pfTool==='pan'});
+    pfLastTouch={x:t.clientX,y:t.clientY};
+  }
+}
+function pfTouchMove(e) {
+  e.preventDefault();
+  if(e.touches.length===1){
+    const t=e.touches[0];
+    pfCanvasMouseMove({clientX:t.clientX,clientY:t.clientY});
+  }
+}
+function pfTouchEnd(e) {
+  pfCanvasMouseUp({clientX:pfLastTouch?.x||0,clientY:pfLastTouch?.y||0});
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if(!isProcessFlowView) return;
+  if(e.key==='Delete'||e.key==='Backspace') {
+    const active=document.activeElement;
+    if(active&&(active.contentEditable==='true'||active.tagName==='INPUT'||active.tagName==='TEXTAREA')) return;
+    pfDeleteSelected();
+  }
+  if(e.key==='v'&&!e.ctrlKey&&!e.metaKey) pfSetTool('select');
+  if(e.key==='c'&&!e.ctrlKey&&!e.metaKey) pfSetTool('connect');
+  if(e.key==='Escape') { pfHideFmtBar(); pfSelected=null; pfRenderCanvas(); }
+});
+</script>
