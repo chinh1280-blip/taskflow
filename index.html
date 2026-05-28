@@ -9530,26 +9530,7 @@ function pfCanvasMouseMove(e) {
     if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
     return;
   }
-  if(pfImgResizing) {
-    const {nodeId,startX,startY,startW,startH}=pfImgResizing;
-    const dx=(e.clientX-startX)/pfZoom, dy=(e.clientY-startY)/pfZoom;
-    const node=pfNodes.find(n=>n.id===nodeId);
-    if(node){
-      if(e.shiftKey) {
-        // Shift: keep aspect ratio
-        const ratio=startW/startH;
-        const d=Math.max(dx,dy);
-        node.imageWidth=Math.max(20,startW+d);
-        node.imageHeight=Math.max(20,startW+d)/ratio;
-      } else {
-        node.imageWidth=Math.max(20,startW+dx);
-        node.imageHeight=Math.max(20,startH+dy);
-      }
-      const img=document.querySelector('#pfimg_'+nodeId+' img');
-      if(img){img.style.width=Math.round(node.imageWidth)+'px';img.style.height=Math.round(node.imageHeight)+'px';}
-    }
-    return;
-  }
+  // pfImgResizing handled by document listeners in pfImgResizeStart
 
   if(pfDragging) {
     const pos=pfGetCanvasPos(e);
@@ -9628,16 +9609,7 @@ function pfCanvasMouseUp(e) {
     if(node) pfSyncNode(node);
     pfDragging=null;
   }
-  if(pfImgResizing){
-    const node=pfNodes.find(n=>n.id===pfImgResizing.nodeId);
-    if(node){
-      pfSaveLocal();
-      pfSyncNode(node);
-      const handle=document.getElementById('pfimgr_'+node.id);
-      if(handle) handle.style.display='block';
-    }
-    pfImgResizing=null;
-  }
+  // pfImgResizing handled by document listeners in pfImgResizeStart
   if(pfRotating){
     const node=pfNodes.find(n=>n.id===pfRotating.nodeId);
     if(node) pfSyncNode(node);
@@ -9725,16 +9697,53 @@ let pfImgResizing = null;
 function pfImgResizeStart(e, nodeId) {
   e.stopPropagation();
   e.preventDefault();
-  pfDragging = null;   // cancel any drag
-  pfRotating = null;   // cancel any rotation
+  pfDragging = null;
+  pfRotating = null;
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
-  pfImgResizing = {
-    nodeId,
-    startX: e.clientX, startY: e.clientY,
-    startW: node.imageWidth  || 80,
-    startH: node.imageHeight || 60,
-  };
+  const startW = node.imageWidth  || 80;
+  const startH = node.imageHeight || 60;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  pfImgResizing = {nodeId, startX, startY, startW, startH};
+
+  // Use document-level listeners for reliable drag outside canvas
+  function onMove(ev) {
+    ev.preventDefault();
+    const dx = (ev.clientX - startX) / pfZoom;
+    const dy = (ev.clientY - startY) / pfZoom;
+    const n  = pfNodes.find(n=>n.id===nodeId);
+    if(!n) return;
+    if(ev.shiftKey) {
+      const ratio = startW / (startH||1);
+      const d = Math.max(dx, dy);
+      n.imageWidth  = Math.max(20, startW + d);
+      n.imageHeight = Math.max(20, n.imageWidth / ratio);
+    } else {
+      n.imageWidth  = Math.max(20, startW + dx);
+      n.imageHeight = Math.max(20, startH + dy);
+    }
+    const img = document.getElementById('pfimgel_'+nodeId);
+    if(img) {
+      img.style.width  = Math.round(n.imageWidth)  + 'px';
+      img.style.height = Math.round(n.imageHeight) + 'px';
+    }
+  }
+
+  function onUp(ev) {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    pfImgResizing = null;
+    const n = pfNodes.find(n=>n.id===nodeId);
+    if(n) {
+      pfSaveLocal();
+      pfMarkDirty?.();
+      pfSyncNode(n);
+    }
+  }
+
+  document.addEventListener('mousemove', onMove, {passive:false});
+  document.addEventListener('mouseup',   onUp);
 }
 
 function pfRotateStart(e, nodeId) {
