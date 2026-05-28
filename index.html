@@ -9196,9 +9196,15 @@ function pfRenderNode(node) {
         onblur="pfEndEdit('${node.id}',event)"
         onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
         >${node.label||''}</div>
-      <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>
+      ${node.type!=='arrow'?`<div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>`:''}
     </div>
-    ${node.type==='arrow'?`<div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay: kéo nút này">↻</div>`:''}
+    ${node.type==='arrow'?`
+      <div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay">↻</div>
+      <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"
+        style="position:absolute;bottom:-6px;right:-6px;width:14px;height:14px;background:var(--ac);
+               border:2px solid #fff;border-radius:3px;cursor:nwse-resize;z-index:20;
+               display:${sel?'block':'none'}"></div>
+    `:''}
     <div class="pf-port top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
     <div class="pf-port bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
     <div class="pf-port left"   onmousedown="pfPortMouseDown(event,'${node.id}','left')"></div>
@@ -9378,14 +9384,21 @@ function pfCanvasMouseMove(e) {
   }
   if(pfImgResizing) {
     const {nodeId,startX,startY,startW,startH}=pfImgResizing;
-    const dx=e.clientX-startX, dy=e.clientY-startY;
+    const dx=(e.clientX-startX)/pfZoom, dy=(e.clientY-startY)/pfZoom;
     const node=pfNodes.find(n=>n.id===nodeId);
     if(node){
-      node.imageWidth=Math.max(20,startW+dx/pfZoom);
-      node.imageHeight=Math.max(20,startH+dy/pfZoom);
-      // Live update img element
-      const img=document.querySelector(`#pfn_${nodeId} .pf-node-img`);
-      if(img){img.style.width=node.imageWidth+'px';img.style.height=node.imageHeight+'px';}
+      if(e.shiftKey) {
+        // Shift: keep aspect ratio
+        const ratio=startW/startH;
+        const d=Math.max(dx,dy);
+        node.imageWidth=Math.max(20,startW+d);
+        node.imageHeight=Math.max(20,startW+d)/ratio;
+      } else {
+        node.imageWidth=Math.max(20,startW+dx);
+        node.imageHeight=Math.max(20,startH+dy);
+      }
+      const img=document.querySelector('#pfn_'+nodeId+' .pf-node-img');
+      if(img){img.style.width=Math.round(node.imageWidth)+'px';img.style.height=Math.round(node.imageHeight)+'px';}
     }
     return;
   }
@@ -9436,7 +9449,7 @@ function pfCanvasMouseUp(e) {
   }
   if(pfImgResizing){
     const node=pfNodes.find(n=>n.id===pfImgResizing.nodeId);
-    if(node) pfSyncNode(node);
+    if(node) { pfSyncNode(node); pfRenderAll(); }
     pfImgResizing=null;
   }
   if(pfRotating){
@@ -9730,8 +9743,9 @@ function pfFmtImgPos(nodeId, pos) {
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   node.imagePosition=pos;
+  pfSaveLocal();
+  pfRenderAll(); // Must re-render fully to update flex-direction on node-inner
   pfSyncNode(node);
-  pfRenderCanvas();
 }
 
 function pfFmtAlign(nodeId, align) {
