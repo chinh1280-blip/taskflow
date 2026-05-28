@@ -9091,7 +9091,12 @@ async function pfSyncNode(node) {
     },
     image_url: node.imageUrl ? '__local__' : null,
   };
-  try { await dbPF.upsertNode(nodeDb); } catch(e){console.warn('[PF] sync node:',e);}
+  try {
+    await dbPF.upsertNode(nodeDb);
+  } catch(err) {
+    console.warn('[PF] sync node error:', err?.message||err);
+    pfMarkDirty?.(); // Mark dirty so user knows to save manually
+  }
 }
 
 function pfSaveImage(nodeId, dataUrl) {
@@ -10036,8 +10041,11 @@ function pfHandleImageUpload(e) {
     // Persist image in localStorage
     pfSaveImage(node.id, ev.target.result);
     pfSaveLocal();
+    pfMarkDirty?.();
     // Full re-render so img src is set
     pfRenderAll();
+    // Sync to DB after render
+    pfSyncNode(node);
   };
   reader.readAsDataURL(file);
   e.target.value='';
@@ -10081,6 +10089,19 @@ function pfRenderCanvas() {
       el.className=`pf-node type-${node.type}${pfSelected===node.id?' selected':''}`;
       el.style.left=node.x+'px'; el.style.top=node.y+'px';
       el.style.width=node.w+'px'; el.style.height=node.h+'px';
+      // If node has image, rebuild inner HTML to ensure img src is set
+      const imgWrap = document.getElementById('pfimg_'+node.id);
+      const hasImgInDom = !!imgWrap;
+      if(node.imageUrl && !hasImgInDom) {
+        // Image added but not in DOM → full rebuild
+        el.outerHTML = pfRenderNode(node);
+      } else if(!node.imageUrl && hasImgInDom) {
+        // Image removed
+        imgWrap.remove();
+      }
+      // Update resize handle visibility
+      const h = document.getElementById('pfimgr_'+node.id);
+      if(h) h.style.display = (pfSelected===node.id) ? 'block' : 'none';
     }
   });
   // Remove deleted
