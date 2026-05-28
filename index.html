@@ -8944,6 +8944,39 @@ const dbPF = {
 };
 
 // ── Local storage ───────────────────────────────────────
+
+// ── Save state tracking ────────────────────────────────────
+let pfUnsaved = false;
+let pfAutoSaveTimer = null;
+
+function pfMarkDirty() {
+  pfUnsaved = true;
+  const btn = document.getElementById('pf-save-btn');
+  if(btn) { btn.textContent='💾 Lưu*'; btn.style.background='#f59e0b'; btn.style.color='#fff'; }
+  // Auto-save after 3s idle
+  clearTimeout(pfAutoSaveTimer);
+  pfAutoSaveTimer = setTimeout(pfSaveAll, 3000);
+}
+
+async function pfSaveAll() {
+  if(!pfCurrentId) return;
+  const btn = document.getElementById('pf-save-btn');
+  if(btn) { btn.textContent='⏳ Đang lưu...'; btn.disabled=true; }
+  try {
+    // Save all nodes and edges
+    await Promise.all([
+      ...pfNodes.map(n => dbPF.upsertNode({...n, imageUrl: n.imageUrl?'__local__':null})),
+      ...pfEdges.map(e => dbPF.upsertEdge(e)),
+    ]);
+    pfSaveLocal();
+    pfUnsaved = false;
+    if(btn) { btn.textContent='✅ Đã lưu'; btn.style.background=''; btn.style.color=''; btn.disabled=false; }
+    setTimeout(()=>{ const b=document.getElementById('pf-save-btn'); if(b&&!pfUnsaved){b.textContent='💾 Lưu';b.style.background='';} }, 2000);
+  } catch(e) {
+    console.warn('[PF] save error:', e);
+    if(btn) { btn.textContent='❌ Lỗi lưu'; btn.style.background='var(--er)'; btn.disabled=false; }
+  }
+}
 function pfSaveLocal() {
   localStorage.setItem(PF_KEY, JSON.stringify({processes:pfProcesses, nodes:pfNodes, edges:pfEdges, currentId:pfCurrentId}));
 }
@@ -8980,7 +9013,14 @@ function switchToProcessFlowView() {
 }
 
 function switchFromProcessFlowView() {
+  if(!isProcessFlowView) return;
+  if(pfUnsaved) {
+    const choice = confirm('Process Flow có thay đổi chưa lưu. Lưu trước khi rời không?');
+    if(choice) pfSaveAll();
+  }
+  clearTimeout(pfAutoSaveTimer);
   isProcessFlowView=false;
+  pfHideFmtBar();
   const v=document.getElementById('processflow-view');
   if(v)v.style.display='none';
 }
@@ -9011,11 +9051,9 @@ async function pfLoadProcessData(pid) {
 }
 
 async function pfSyncNode(node) {
-  // Save image separately - base64 too large for Supabase
-  if(node.imageUrl?.startsWith('data:')) {
-    pfSaveImage(node.id, node.imageUrl);
-  }
+  if(node.imageUrl?.startsWith('data:')) pfSaveImage(node.id, node.imageUrl);
   pfSaveLocal();
+  pfMarkDirty?.();
   const nodeDb = {...node, imageUrl: node.imageUrl ? '__local__' : null};
   try { await dbPF.upsertNode(nodeDb); } catch(e){console.warn('[PF] sync node:',e);}
 }
@@ -9210,6 +9248,9 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfCopySelected()"  title="Copy shape (Ctrl+C)">⎘ Copy</button>
       <button class="pf-tool-btn" onclick="pfPasteNode()"     title="Paste (Ctrl+V)">⎘ Paste</button>
       <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa (Del)">🗑 Xóa</button>
+      <div class="pf-tool-sep"></div>
+      <button id="pf-save-btn" class="pf-tool-btn" onclick="pfSaveAll()" title="Lưu tất cả (Ctrl+S)"
+        style="font-weight:700">💾 Lưu</button>
     </div>
     <input type="file" id="pf-img-input" accept="image/*" style="display:none" onchange="pfHandleImageUpload(event)">
   </div>`;
@@ -9376,6 +9417,7 @@ function pfAddNode(type) {
   pfNodes.push(node);
   pfSelected=node.id;
   pfSaveLocal(); pfRenderCanvas();
+  pfMarkDirty();
   pfSyncNode(node);
 }
 
@@ -9491,7 +9533,7 @@ function pfCanvasMouseMove(e) {
         node.imageWidth=Math.max(20,startW+dx);
         node.imageHeight=Math.max(20,startH+dy);
       }
-      const img=document.querySelector('#pfn_'+nodeId+' .pf-node-img');
+      const img=document.querySelector('#pfimg_'+nodeId+' img');
       if(img){img.style.width=Math.round(node.imageWidth)+'px';img.style.height=Math.round(node.imageHeight)+'px';}
     }
     return;
@@ -9543,14 +9585,10 @@ function pfCanvasMouseUp(e) {
   }
   if(pfImgResizing){
     const node=pfNodes.find(n=>n.id===pfImgResizing.nodeId);
-    if(node) {
+    if(node){
       pfSaveLocal();
       pfSyncNode(node);
-      // Only update the specific img element, no full re-render
-      const img=document.querySelector('#pfn_'+node.id+' .pf-node-img');
-      if(img){img.style.width=Math.round(node.imageWidth)+'px';img.style.height=Math.round(node.imageHeight)+'px';}
-      // Show resize handle again
-      const handle=document.querySelector('#pfn_'+node.id+' [onmousedown*="pfImgResizeStart"]');
+      const handle=document.getElementById('pfimgr_'+node.id);
       if(handle) handle.style.display='block';
     }
     pfImgResizing=null;
@@ -9686,7 +9724,8 @@ async function pfCreateEdge(fromId, toId, fromPort, toPort) {
     label:'', style:'solid'};
   pfEdges.push(edge);
   pfSelected=edge.id;
-  pfSaveLocal(); pfRenderCanvas();
+  pfSaveLocal(); pfMarkDirty();
+  pfRenderCanvas();
   try{await dbPF.upsertEdge(edge);}catch(e){console.warn(e);}
 }
 
@@ -10101,6 +10140,7 @@ document.addEventListener('keydown', e => {
     if(e.key==='c' && !e.ctrlKey && !e.metaKey) pfSetTool('connect');
     if(e.key==='h') pfSetTool('pan');
   }
+  if((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); pfSaveAll(); return; }
   if(e.key==='Escape') { pfHideFmtBar(); pfSelected=null; pfRenderCanvas(); }
 });
 </script>
