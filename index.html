@@ -9112,11 +9112,13 @@ function pfRenderNode(node) {
   const fc  = node.style?.color||'var(--tx)';
   const bg  = node.style?.background||'';
   const bc  = node.style?.borderColor||'';
+  const bs  = node.style?.borderStyle||'';
+  const bw  = node.style?.borderWidth||'';
   return `<div class="pf-node type-${node.type}${sel?' selected':''}"
     id="pfn_${node.id}"
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
-    <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}">
+    <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}${bs?`border-style:${bs};`:''}${bw?`border-width:${bw};`:''}">
       ${node.imageUrl ? (() => {
         const pos = node.imagePosition||'top';
         const iw  = node.imageWidth||80;
