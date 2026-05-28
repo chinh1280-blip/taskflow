@@ -9117,7 +9117,23 @@ function pfRenderNode(node) {
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
     <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}">
-      ${node.imageUrl?`<img class="pf-node-img" src="${node.imageUrl}" style="max-height:${Math.max(30,node.h-30)}px;display:block;pointer-events:auto" ondblclick="pfUploadImage()" title="Double-click để đổi ảnh">`:``}
+      ${node.imageUrl ? (() => {
+        const pos = node.imagePosition||'top';
+        const iw  = node.imageWidth||80;
+        const ih  = node.imageHeight||60;
+        const isHoriz = pos==='left'||pos==='right';
+        const imgHtml = `<div class="pf-img-wrap" style="position:relative;display:inline-flex;flex-shrink:0">
+          <img class="pf-node-img" src="${node.imageUrl}"
+            style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px"
+            title="Double-click để đổi ảnh" ondblclick="event.stopPropagation();pfUploadImage()">
+          <div class="pf-img-resize-handle" onmousedown="pfImgResizeStart(event,'${node.id}')"
+            style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--ac);border-radius:2px;cursor:nwse-resize;opacity:${pfSelected===node.id?1:0}"></div>
+        </div>`;
+        if(pos==='left')  return `<div style="display:flex;align-items:center;gap:6px;width:100%">${imgHtml}<div style="flex:1">`;
+        if(pos==='right') return `<div style="display:flex;align-items:center;gap:6px;width:100%;flex-direction:row-reverse">${imgHtml}<div style="flex:1">`;
+        if(pos==='bottom')return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%"><div style="flex:1;width:100%">`;
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%">${imgHtml}<div style="flex:1;width:100%">`;
+      })() : ''}
       <div class="pf-node-text"
         id="pft_${node.id}"
         style="font-size:${fs};font-weight:${fw};color:${fc}"
@@ -9125,7 +9141,17 @@ function pfRenderNode(node) {
         ondblclick="pfStartEdit(event,'${node.id}')"
         onblur="pfEndEdit('${node.id}',event)"
         onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
-        >${esc(node.label||'')}</div>
+        >${node.label||''}</div>
+      ${node.imageUrl ? (()=>{
+        const pos=node.imagePosition||'top';
+        if(pos==='right') return '</div></div>';
+        if(pos==='bottom'){
+          const iw=node.imageWidth||80; const ih=node.imageHeight||60;
+          return `</div><div style="position:relative;display:inline-flex"><img class="pf-node-img" src="${node.imageUrl}" style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px"><div class="pf-img-resize-handle" onmousedown="pfImgResizeStart(event,'${node.id}')" style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--ac);border-radius:2px;cursor:nwse-resize;opacity:${pfSelected===node.id?1:0}"></div></div></div>`;
+        }
+        if(pos==='left') return '</div></div>';
+        return '</div></div>';
+      })() : ''}
       ${node.type==='arrow'?`<button class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay">↻</button>`:''}
       <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>
     </div>
@@ -9307,6 +9333,19 @@ function pfCanvasMouseMove(e) {
     }
     return;
   }
+  if(pfImgResizing) {
+    const {nodeId,startX,startY,startW,startH}=pfImgResizing;
+    const dx=e.clientX-startX, dy=e.clientY-startY;
+    const node=pfNodes.find(n=>n.id===nodeId);
+    if(node){
+      node.imageWidth=Math.max(20,startW+dx/pfZoom);
+      node.imageHeight=Math.max(20,startH+dy/pfZoom);
+      // Live update img element
+      const img=document.querySelector(`#pfn_${nodeId} .pf-node-img`);
+      if(img){img.style.width=node.imageWidth+'px';img.style.height=node.imageHeight+'px';}
+    }
+    return;
+  }
   if(pfRotating) {
     const {nodeId,startAngle,startRot,cx,cy}=pfRotating;
     const angle=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI;
@@ -9344,6 +9383,11 @@ function pfCanvasMouseUp(e) {
     const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
     if(node) pfSyncNode(node);
     pfDragging=null;
+  }
+  if(pfImgResizing){
+    const node=pfNodes.find(n=>n.id===pfImgResizing.nodeId);
+    if(node) pfSyncNode(node);
+    pfImgResizing=null;
   }
   if(pfRotating){
     const node=pfNodes.find(n=>n.id===pfRotating.nodeId);
@@ -9413,6 +9457,17 @@ function pfPortMouseDown(e, nodeId, port) {
 function pfResizeStart(e, nodeId) {
   e.stopPropagation();
   pfResizing={nodeId};
+}
+
+let pfImgResizing = null;
+
+function pfImgResizeStart(e, nodeId) {
+  e.stopPropagation();
+  e.preventDefault();
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  pfImgResizing={nodeId, startX:e.clientX, startY:e.clientY,
+    startW:node.imageWidth||80, startH:node.imageHeight||60};
 }
 
 function pfRotateStart(e, nodeId) {
@@ -9503,7 +9558,8 @@ function pfShowFmtBar(nodeId) {
       <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('bold')" title="Bold"><b>B</b></button>
       <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('italic')" title="Italic"><i>I</i></button>
       <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('underline')" title="Gạch dưới"><u>U</u></button>
-      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfFmt('strikeThrough')" title="Gạch chữ"><s>S</s></button>
+      <button class="pf-fmt-btn" onmousedown="event.preventDefault();pfInsertDivider('${nodeId}')" title="Gạch phân cách dòng">━</button>
       <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
       <!-- Font size -->
       <select onmousedown="event.stopPropagation()" onchange="pfFmtSize('${nodeId}',this.value)"
@@ -9537,6 +9593,15 @@ function pfShowFmtBar(nodeId) {
         Nền
         <input type="color" value="${curBg==='transparent'?'#ffffff':curBg}" onmousedown="event.stopPropagation()" onchange="pfFmtBg('${nodeId}',this.value)" style="display:none">
       </label>
+      ${node?.imageUrl ? `
+      <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+      <select onmousedown="event.stopPropagation()" onchange="pfFmtImgPos('${nodeId}',this.value)"
+        style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);cursor:pointer;height:26px" title="Vị trí ảnh">
+        <option value="top"   ${(node?.imagePosition||'top')==='top'   ?'selected':''}>🔼 Ảnh trên</option>
+        <option value="bottom"${(node?.imagePosition||'top')==='bottom'?'selected':''}>🔽 Ảnh dưới</option>
+        <option value="left"  ${(node?.imagePosition||'top')==='left'  ?'selected':''}>◀ Ảnh trái</option>
+        <option value="right" ${(node?.imagePosition||'top')==='right' ?'selected':''}>▶ Ảnh phải</option>
+      </select>` : ''}
       <!-- Hex input -->
       <input type="text" placeholder="#HEX or rgb()" value="${curFc}"
         onmousedown="event.stopPropagation()"
@@ -9555,11 +9620,29 @@ function pfHideFmtBar() { document.getElementById('pf-fmt-bar')?.remove(); }
 function pfFmt(cmd) { document.execCommand(cmd,false,null); }
 
 function pfFmtSize(nodeId, size) {
+  const el=document.getElementById('pft_'+nodeId);
+  if(el && el.contentEditable==='true') {
+    // Wrap selected text in span with font-size
+    const sel=window.getSelection();
+    if(sel && sel.rangeCount>0 && !sel.isCollapsed) {
+      // Use execCommand with fontSize (requires font-size mapping)
+      document.execCommand('fontSize', false, '7');
+      // Then override the size with our exact px value
+      const spans=el.querySelectorAll('font[size="7"]');
+      spans.forEach(span=>{
+        const rep=document.createElement('span');
+        rep.style.fontSize=size;
+        rep.innerHTML=span.innerHTML;
+        span.replaceWith(rep);
+      });
+      return;
+    }
+  }
+  // No selection: apply to whole node
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   node.style={...(node.style||{}),fontSize:size};
-  const el=document.getElementById('pft_'+nodeId);
-  if(el) { el.style.fontSize=size; el.focus(); }
+  if(el) el.style.fontSize=size;
   pfSyncNode(node);
 }
 
@@ -9576,6 +9659,14 @@ function pfFmtColor(nodeId, color) {
   pfSyncNode(node);
 }
 
+function pfFmtImgPos(nodeId, pos) {
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  node.imagePosition=pos;
+  pfSyncNode(node);
+  pfRenderCanvas();
+}
+
 function pfFmtAlign(nodeId, align) {
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
@@ -9583,6 +9674,13 @@ function pfFmtAlign(nodeId, align) {
   const el=document.getElementById('pft_'+nodeId);
   if(el) el.style.textAlign=align;
   pfSyncNode(node);
+}
+
+function pfInsertDivider(nodeId) {
+  const el=document.getElementById('pft_'+nodeId);
+  if(!el||el.contentEditable!=='true') return;
+  document.execCommand('insertHTML', false,
+    '<div style="border-top:1.5px solid currentColor;margin:4px 0;opacity:.4"></div>');
 }
 
 function pfFmtHex(nodeId, val) {
