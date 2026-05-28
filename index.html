@@ -8837,12 +8837,13 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 }
 .pf-node.type-arrow .pf-node-text{font-size:10px}
 .pf-node-rotate{
-  position:absolute;top:-26px;left:50%;transform:translateX(-50%);
+  position:absolute;top:-28px;left:50%;transform:translateX(-50%);
   background:var(--ac);color:#fff;border-radius:50%;
-  width:22px;height:22px;cursor:grab;font-size:13px;line-height:22px;text-align:center;
-  display:none;user-select:none;z-index:10;
+  width:22px;height:22px;cursor:grab;font-size:13px;line-height:22px;
+  text-align:center;display:none;user-select:none;z-index:20;
+  box-shadow:0 2px 6px rgba(0,0,0,.3);
 }
-.pf-node.selected .pf-node-rotate{display:block}
+.pf-node.selected .pf-node-rotate{display:flex;align-items:center;justify-content:center}
 .pf-node.type-note .pf-node-inner{
   background:rgba(250,204,21,.12);border-color:#eab308;
   border-radius:2px 8px 8px 8px;font-style:italic;
@@ -8949,7 +8950,7 @@ function pfLoadLocal() {
     const d = JSON.parse(localStorage.getItem(PF_KEY)||'{}');
     pfProcesses = d.processes||[];
     pfCurrentId = d.currentId||null;
-    pfNodes = (d.nodes||[]).filter(n=>n.process_id===pfCurrentId);
+    pfNodes = pfRestoreImages((d.nodes||[]).filter(n=>n.process_id===pfCurrentId));
     pfEdges = (d.edges||[]).filter(e=>e.process_id===pfCurrentId);
   } catch {}
 }
@@ -9000,7 +9001,7 @@ async function pfLoadFromSupabase() {
 async function pfLoadProcessData(pid) {
   try {
     const [nodes, edges] = await Promise.all([dbPF.getNodes(pid), dbPF.getEdges(pid)]);
-    pfNodes = nodes||[];
+    pfNodes = pfRestoreImages(nodes||[]);
     pfEdges = edges||[];
     pfCurrentId = pid;
     pfSaveLocal();
@@ -9008,8 +9009,50 @@ async function pfLoadProcessData(pid) {
 }
 
 async function pfSyncNode(node) {
+  // Save image separately - base64 too large for Supabase
+  if(node.imageUrl?.startsWith('data:')) {
+    pfSaveImage(node.id, node.imageUrl);
+  }
   pfSaveLocal();
-  try { await dbPF.upsertNode(node); } catch(e){console.warn('[PF] sync node:',e);}
+  const nodeDb = {...node, imageUrl: node.imageUrl ? '__local__' : null};
+  try { await dbPF.upsertNode(nodeDb); } catch(e){console.warn('[PF] sync node:',e);}
+}
+
+function pfSaveImage(nodeId, dataUrl) {
+  try {
+    const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
+    imgs[nodeId] = dataUrl;
+    localStorage.setItem('tf_pf_images', JSON.stringify(imgs));
+  } catch(e) { console.warn('pfSaveImage:', e); }
+}
+function pfGetImage(nodeId) {
+  try {
+    const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
+    return imgs[nodeId]||null;
+  } catch { return null; }
+}
+function pfRestoreImages(nodes) {
+  return (nodes||[]).map(n => ({
+    ...n,
+    imageUrl: (n.imageUrl && n.imageUrl !== '__local__') ? n.imageUrl : pfGetImage(n.id)
+  }));
+}
+
+function pfFmtBorder(nodeId, prop, val) {
+  const node = pfNodes.find(n=>n.id===nodeId);
+  if(!node) return;
+  node.style = {...(node.style||{})};
+  if(prop==='style')  node.style.borderStyle = val;
+  if(prop==='width')  node.style.borderWidth = val;
+  if(prop==='color')  node.style.borderColor = val;
+  // Apply directly to DOM
+  const inner = document.querySelector('#pfn_'+nodeId+' .pf-node-inner');
+  if(inner) {
+    if(prop==='style') inner.style.borderStyle = val;
+    if(prop==='width') inner.style.borderWidth = val;
+    if(prop==='color') inner.style.borderColor = val;
+  }
+  pfSyncNode(node);
 }
 async function pfSyncEdge(edge) {
   pfSaveLocal();
@@ -9153,9 +9196,9 @@ function pfRenderNode(node) {
         onblur="pfEndEdit('${node.id}',event)"
         onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
         >${node.label||''}</div>
-      ${node.type==='arrow'?`<div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay (kéo)">↻</div>`:''}
       <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>
     </div>
+    ${node.type==='arrow'?`<div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay: kéo nút này">↻</div>`:''}
     <div class="pf-port top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
     <div class="pf-port bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
     <div class="pf-port left"   onmousedown="pfPortMouseDown(event,'${node.id}','left')"></div>
@@ -9347,14 +9390,21 @@ function pfCanvasMouseMove(e) {
     return;
   }
   if(pfRotating) {
-    const {nodeId,startAngle,startRot,cx,cy}=pfRotating;
-    const angle=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI;
-    const node=pfNodes.find(n=>n.id===nodeId);
-    if(node){
-      let rot=Math.round((startRot+(angle-startAngle))/15)*15; // snap to 15°
-      node.rotation=rot;
-      const el=document.getElementById('pfn_'+nodeId);
-      if(el) el.style.transform=`rotate(${rot}deg)`;
+    const {nodeId,startAngle,startRot}=pfRotating;
+    // Use current element center for accurate rotation
+    const el2=document.getElementById('pfn_'+nodeId);
+    if(el2){
+      const r2=el2.getBoundingClientRect();
+      const cx2=r2.left+r2.width/2, cy2=r2.top+r2.height/2;
+      const angle=Math.atan2(e.clientY-cy2,e.clientX-cx2)*180/Math.PI;
+      const node=pfNodes.find(n=>n.id===nodeId);
+      if(node){
+        let rot=startRot+(angle-startAngle);
+        rot=Math.round(rot/15)*15; // snap 15°
+        node.rotation=rot;
+        el2.style.transform=`rotate(${rot}deg)`;
+        el2.style.transformOrigin='center center';
+      }
     }
     return;
   }
@@ -9476,6 +9526,7 @@ function pfImgResizeStart(e, nodeId) {
 
 function pfRotateStart(e, nodeId) {
   e.stopPropagation();
+  e.preventDefault();
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   const el=document.getElementById('pfn_'+nodeId);
@@ -9483,6 +9534,8 @@ function pfRotateStart(e, nodeId) {
   const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
   const startAngle=Math.atan2(e.clientY-cy, e.clientX-cx)*180/Math.PI;
   pfRotating={nodeId, startAngle, startRot:node.rotation||0, cx, cy};
+  // Update cx,cy on mousemove since element may have moved
+  pfRotating.el = el;
 }
 
 function pfSelectEdge(id) {
@@ -9732,17 +9785,17 @@ function pfHandleImageUpload(e) {
   reader.onload=ev=>{
     const node=pfNodes.find(n=>n.id===pfSelected);
     if(!node)return;
-    node.imageUrl=ev.target.result;
-    node.imagePosition=node.imagePosition||'top';
-    node.imageWidth=node.imageWidth||100;
-    node.imageHeight=node.imageHeight||80;
-    node.h=Math.max(node.h, node.imageHeight+50);
-    node.w=Math.max(node.w, node.imageWidth+20);
+    node.imageUrl    = ev.target.result;
+    node.imagePosition = node.imagePosition||'top';
+    node.imageWidth    = node.imageWidth||100;
+    node.imageHeight   = node.imageHeight||80;
+    node.w = Math.max(node.w, node.imageWidth+40);
+    node.h = Math.max(node.h, node.imageHeight+60);
+    // Persist image in localStorage
     pfSaveImage(node.id, ev.target.result);
     pfSaveLocal();
+    // Full re-render so img src is set
     pfRenderAll();
-    const nodeForDb={...node, imageUrl:'__local__'};
-    dbPF.upsertNode(nodeForDb).catch(e=>console.warn(e));
   };
   reader.readAsDataURL(file);
   e.target.value='';
