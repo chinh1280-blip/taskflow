@@ -8830,6 +8830,20 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   background:rgba(245,158,11,.12);border-color:#f59e0b;border-radius:0;
   padding:10px 20px;
 }
+.pf-node.type-arrow .pf-node-inner{
+  background:rgba(79,124,255,.12);border-color:var(--ac);
+  clip-path:polygon(0% 30%,70% 30%,70% 0%,100% 50%,70% 100%,70% 70%,0% 70%);
+  border-radius:0;padding:8px 20px;
+}
+.pf-node.type-arrow .pf-node-text{font-size:10px}
+.pf-node.type-arrow .pf-node-rotate{
+  position:absolute;top:-24px;left:50%;transform:translateX(-50%);
+  background:var(--ac);color:#fff;border:none;border-radius:50%;
+  width:20px;height:20px;cursor:grab;font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .15s;
+}
+.pf-node.selected .pf-node-rotate{opacity:1}
 .pf-node.type-note .pf-node-inner{
   background:rgba(250,204,21,.12);border-color:#eab308;
   border-radius:2px 8px 8px 8px;font-style:italic;
@@ -8906,6 +8920,7 @@ let pfZoom        = 1;
 let pfPan         = {x:0,y:0};
 let pfDragging    = null; // {nodeId,ox,oy,startX,startY}
 let pfResizing    = null;
+let pfRotating    = null; // {nodeId, startAngle, startRot, cx, cy}
 let pfConnecting  = null; // {fromId, fromPort}
 let pfPanning     = null;
 let isProcessFlowView = false;
@@ -9071,7 +9086,8 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfAddNode('decision')"  title="Quyết định">◇ Quyết định</button>
       <button class="pf-tool-btn" onclick="pfAddNode('start')"     title="Bắt đầu">⬤ Bắt đầu</button>
       <button class="pf-tool-btn" onclick="pfAddNode('end')"       title="Kết thúc">⬤ Kết thúc</button>
-      <button class="pf-tool-btn" onclick="pfAddNode('note')"      title="Ghi chú">📝 Ghi chú</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('arrow')"     title="Mũi tên">➜ Mũi tên</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('note')" "      title="Ghi chú">📝 Ghi chú</button>
     </div>
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
@@ -9090,6 +9106,7 @@ function pfRenderToolbar() {
 
 function pfRenderNode(node) {
   const sel = pfSelected===node.id;
+  const rot = node.rotation||0;
   const fs  = node.style?.fontSize||'12px';
   const fw  = node.style?.fontWeight||'600';
   const fc  = node.style?.color||'var(--tx)';
@@ -9097,7 +9114,7 @@ function pfRenderNode(node) {
   const bc  = node.style?.borderColor||'';
   return `<div class="pf-node type-${node.type}${sel?' selected':''}"
     id="pfn_${node.id}"
-    style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px"
+    style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
     <div class="pf-node-inner" style="${bg?`background:${bg};`:''}${bc?`border-color:${bc};`:''}">
       ${node.imageUrl?`<img class="pf-node-img" src="${node.imageUrl}" style="max-height:${Math.max(30,node.h-30)}px;display:block;pointer-events:auto" ondblclick="pfUploadImage()" title="Double-click để đổi ảnh">`:``}
@@ -9106,9 +9123,10 @@ function pfRenderNode(node) {
         style="font-size:${fs};font-weight:${fw};color:${fc}"
         contenteditable="false"
         ondblclick="pfStartEdit(event,'${node.id}')"
-        onblur="pfEndEdit('${node.id}')"
+        onblur="pfEndEdit('${node.id}',event)"
         onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
         >${esc(node.label||'')}</div>
+      ${node.type==='arrow'?`<button class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay">↻</button>`:''}
       <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>
     </div>
     <div class="pf-port top"    data-node="${node.id}" data-port="top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
@@ -9289,6 +9307,18 @@ function pfCanvasMouseMove(e) {
     }
     return;
   }
+  if(pfRotating) {
+    const {nodeId,startAngle,startRot,cx,cy}=pfRotating;
+    const angle=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI;
+    const node=pfNodes.find(n=>n.id===nodeId);
+    if(node){
+      let rot=Math.round((startRot+(angle-startAngle))/15)*15; // snap to 15°
+      node.rotation=rot;
+      const el=document.getElementById('pfn_'+nodeId);
+      if(el) el.style.transform=`rotate(${rot}deg)`;
+    }
+    return;
+  }
   if(pfResizing) {
     const pos=pfGetCanvasPos(e);
     const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
@@ -9314,6 +9344,11 @@ function pfCanvasMouseUp(e) {
     const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
     if(node) pfSyncNode(node);
     pfDragging=null;
+  }
+  if(pfRotating){
+    const node=pfNodes.find(n=>n.id===pfRotating.nodeId);
+    if(node) pfSyncNode(node);
+    pfRotating=null;
   }
   if(pfResizing){
     const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
@@ -9380,6 +9415,17 @@ function pfResizeStart(e, nodeId) {
   pfResizing={nodeId};
 }
 
+function pfRotateStart(e, nodeId) {
+  e.stopPropagation();
+  const node=pfNodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  const el=document.getElementById('pfn_'+nodeId);
+  const rect=el.getBoundingClientRect();
+  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  const startAngle=Math.atan2(e.clientY-cy, e.clientX-cx)*180/Math.PI;
+  pfRotating={nodeId, startAngle, startRot:node.rotation||0, cx, cy};
+}
+
 function pfSelectEdge(id) {
   pfSelected=id;
   pfRenderCanvas();
@@ -9409,13 +9455,22 @@ function pfStartEdit(e, nodeId) {
   pfShowFmtBar(nodeId);
 }
 
-function pfEndEdit(nodeId) {
+function pfEndEdit(nodeId, e) {
+  // Don't close if focus moved to the format bar or its children
+  const bar = document.getElementById('pf-fmt-bar');
+  if(bar && e?.relatedTarget && bar.contains(e.relatedTarget)) return;
+  if(bar && e?.relatedTarget === bar) return;
   const el=document.getElementById('pft_'+nodeId);
   if(!el)return;
   el.contentEditable='false';
   const node=pfNodes.find(n=>n.id===nodeId);
-  if(node){node.label=el.textContent||''; pfSyncNode(node);}
-  pfHideFmtBar();
+  if(node){node.label=el.innerHTML||''; pfSyncNode(node);}
+  // Delay hide to allow button clicks to register
+  setTimeout(()=>{
+    const bar2=document.getElementById('pf-fmt-bar');
+    if(bar2 && document.activeElement && bar2.contains(document.activeElement)) return;
+    pfHideFmtBar();
+  }, 200);
 }
 
 // ── Format bar ───────────────────────────────────────────
@@ -9427,6 +9482,9 @@ function pfShowFmtBar(nodeId) {
   const bar=document.createElement('div');
   bar.id='pf-fmt-bar';
   bar.className='pf-fmt-bar';
+  bar.tabIndex=-1;
+  // Prevent blur when interacting with format bar
+  bar.addEventListener('mousedown', e=>e.preventDefault());
   const barLeft = Math.max(8, Math.min(rect.left, window.innerWidth-430));
   const barTop  = rect.top > 60 ? rect.top-48 : rect.bottom+6;
   bar.style.left=barLeft+'px';
@@ -9501,15 +9559,20 @@ function pfFmtSize(nodeId, size) {
   if(!node)return;
   node.style={...(node.style||{}),fontSize:size};
   const el=document.getElementById('pft_'+nodeId);
-  if(el) el.style.fontSize=size;
+  if(el) { el.style.fontSize=size; el.focus(); }
   pfSyncNode(node);
 }
 
 function pfFmtColor(nodeId, color) {
-  document.execCommand('foreColor', false, color);
+  // Apply to selection if active, else apply to whole text
+  const el=document.getElementById('pft_'+nodeId);
+  if(el && el.contentEditable==='true') {
+    document.execCommand('foreColor', false, color);
+  }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   node.style={...(node.style||{}),color};
+  if(el && el.contentEditable!=='true') el.style.color=color;
   pfSyncNode(node);
 }
 
@@ -9534,8 +9597,12 @@ function pfFmtBg(nodeId, color) {
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   node.style={...(node.style||{}),background:color};
+  // Direct DOM update (fast)
   const inner=document.querySelector(`#pfn_${nodeId} .pf-node-inner`);
   if(inner) inner.style.background=color;
+  // Update color swatch in bar
+  const swatch=document.querySelector('#pf-fmt-bar label div[style*="border"]');
+  if(swatch) swatch.style.background=color;
   pfSyncNode(node);
 }
 
@@ -9555,11 +9622,11 @@ function pfHandleImageUpload(e) {
     const node=pfNodes.find(n=>n.id===pfSelected);
     if(!node)return;
     node.imageUrl=ev.target.result;
-    node.h=Math.max(node.h,120);
-    node.w=Math.max(node.w,180);
+    node.h=Math.max(node.h,140);
+    node.w=Math.max(node.w,200);
     pfSaveLocal();
-    pfRenderCanvas();  // Re-render first to show image
-    pfSyncNode(node);  // Then sync
+    pfRenderAll(); // Full re-render to ensure img src is set
+    pfSyncNode({...node, imageUrl: ev.target.result});
   };
   reader.readAsDataURL(file);
   e.target.value='';
