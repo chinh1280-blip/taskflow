@@ -9319,13 +9319,15 @@ function pfRenderNode(node) {
   const imgFlex = node.imageUrl ? flexMap[pos] : '';
 
   const imgHtml = node.imageUrl ? `
-    <div style="position:relative;flex-shrink:0;line-height:0">
-      <img src="${node.imageUrl}"
-        style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px;pointer-events:none"
+    <div id="pfimg_${node.id}" style="position:relative;flex-shrink:0;line-height:0;display:inline-block">
+      <img id="pfimgel_${node.id}" src="${node.imageUrl}"
+        style="width:${iw}px;height:${ih}px;object-fit:contain;display:block;border-radius:4px;user-select:none"
         draggable="false">
-      <div onmousedown="pfImgResizeStart(event,'${node.id}')"
-        style="position:absolute;bottom:0;right:0;width:12px;height:12px;background:var(--ac);
-               border-radius:2px;cursor:nwse-resize;${sel?'display:block':'display:none'}"></div>
+      <div id="pfimgr_${node.id}" class="pf-img-resize-handle"
+        onmousedown="pfImgResizeStart(event,'${node.id}')"
+        style="position:absolute;bottom:-6px;right:-6px;width:14px;height:14px;
+               background:var(--ac);border:2px solid #fff;border-radius:3px;
+               cursor:nwse-resize;z-index:50;display:${sel?'block':'none'}"></div>
     </div>` : '';
 
   const innerStyle = [
@@ -9600,6 +9602,124 @@ function pfCanvasMouseMove(e) {
     const pos=pfGetCanvasPos(e);
     pfConnecting.mx=pos.x; pfConnecting.my=pos.y;
     pfUpdateSVG(true);
+  }
+}
+
+function pfCanvasMouseMove(e) {
+  if(pfPanning) {
+    pfPan.x=e.clientX-pfPanning.sx; pfPan.y=e.clientY-pfPanning.sy;
+    const canvas=document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+    return;
+  }
+  // pfImgResizing handled by document listeners in pfImgResizeStart
+
+  if(pfDragging) {
+    const pos=pfGetCanvasPos(e);
+    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
+    if(node){
+      let nx=Math.round(pos.x-pfDragging.ox);
+      let ny=Math.round(pos.y-pfDragging.oy);
+      // Snap to grid (20px)
+      const GRID=20;
+      nx=Math.round(nx/GRID)*GRID;
+      ny=Math.round(ny/GRID)*GRID;
+      // Snap to other nodes edges (within 12px)
+      const SNAP=12;
+      pfNodes.filter(n=>n.id!==node.id).forEach(other=>{
+        // Snap left/right edge
+        if(Math.abs(nx - other.x)<SNAP) nx=other.x;
+        if(Math.abs(nx+node.w - (other.x+other.w))<SNAP) nx=other.x+other.w-node.w;
+        if(Math.abs(nx - (other.x+other.w))<SNAP) nx=other.x+other.w;
+        // Snap top/bottom edge
+        if(Math.abs(ny - other.y)<SNAP) ny=other.y;
+        if(Math.abs(ny+node.h - (other.y+other.h))<SNAP) ny=other.y+other.h-node.h;
+        if(Math.abs(ny - (other.y+other.h))<SNAP) ny=other.y+other.h;
+        // Snap center
+        if(Math.abs((nx+node.w/2)-(other.x+other.w/2))<SNAP) nx=other.x+other.w/2-node.w/2;
+        if(Math.abs((ny+node.h/2)-(other.y+other.h/2))<SNAP) ny=other.y+other.h/2-node.h/2;
+      });
+      node.x=Math.round(nx); node.y=Math.round(ny);
+      const el=document.getElementById('pfn_'+node.id);
+      if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
+      pfUpdateSVG();
+    }
+    return;
+  }
+  if(pfRotating) {
+    const {nodeId,startAngle,startRot}=pfRotating;
+    // Use current element center for accurate rotation
+    const el2=document.getElementById('pfn_'+nodeId);
+    if(el2){
+      const r2=el2.getBoundingClientRect();
+      const cx2=r2.left+r2.width/2, cy2=r2.top+r2.height/2;
+      const angle=Math.atan2(e.clientY-cy2,e.clientX-cx2)*180/Math.PI;
+      const node=pfNodes.find(n=>n.id===nodeId);
+      if(node){
+        let rot=startRot+(angle-startAngle);
+        rot=Math.round(rot/15)*15; // snap 15°
+        node.rotation=rot;
+        el2.style.transform=`rotate(${rot}deg)`;
+        el2.style.transformOrigin='center center';
+      }
+    }
+    return;
+  }
+  if(pfResizing) {
+    const pos=pfGetCanvasPos(e);
+    const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
+    if(node){
+      node.w=Math.max(60,Math.round(pos.x-node.x));
+      node.h=Math.max(40,Math.round(pos.y-node.y));
+      const el=document.getElementById('pfn_'+node.id);
+      if(el){el.style.width=node.w+'px';el.style.height=node.h+'px';}
+      pfUpdateSVG();
+    }
+    return;
+  }
+  if(pfConnecting) {
+    // Draw temp line
+    const pos=pfGetCanvasPos(e);
+    pfConnecting.mx=pos.x; pfConnecting.my=pos.y;
+    pfUpdateSVG(true);
+  }
+}
+
+function pfCanvasMouseUp(e) {
+  if(pfDragging){
+    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
+    if(node) pfSyncNode(node);
+    pfDragging=null;
+  }
+  // pfImgResizing handled by document listeners in pfImgResizeStart
+  if(pfRotating){
+    const node=pfNodes.find(n=>n.id===pfRotating.nodeId);
+    if(node) pfSyncNode(node);
+    pfRotating=null;
+  }
+  if(pfResizing){
+    const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
+    if(node) pfSyncNode(node);
+    pfResizing=null;
+  }
+  if(pfPanning) pfPanning=null;
+  if(pfConnecting && pfConnecting.mx!==undefined) {
+    const pos=pfGetCanvasPos(e);
+    // Check if dropped on a port
+    let toPort=null;
+    const portEl=document.elementFromPoint(e.clientX, e.clientY);
+    if(portEl?.classList.contains('pf-port')) {
+      toPort=portEl.dataset.port;
+    }
+    // Check if dropped on a node
+    const target=pfNodes.find(n=>
+      n.id!==pfConnecting.fromId &&
+      pos.x>=n.x && pos.x<=n.x+n.w &&
+      pos.y>=n.y && pos.y<=n.y+n.h
+    );
+    if(target) pfCreateEdge(pfConnecting.fromId, target.id, pfConnecting.fromPort, toPort);
+    pfConnecting=null;
+    pfUpdateSVG();
   }
 }
 
