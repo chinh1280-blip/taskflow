@@ -8869,8 +8869,7 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   background:var(--ac);border-radius:2px;cursor:nwse-resize;
   opacity:0;transition:opacity .15s;
 }
-.pf-node.selected .pf-img-resize-handle{position:absolute;z-index:50;touch-action:none;}
-.pf-node-resize{opacity:1}
+.pf-node.selected .pf-node-resize{opacity:1}
 
 /* Connection points */
 .pf-port{
@@ -9262,11 +9261,11 @@ function pfRenderAll() {
 function pfRenderToolbar() {
   return `<div class="pf-toolbar">
     <div class="pf-tool-group">
-      <button class="pf-tool-btn${pfTool==='select'?' active':''}" onclick="pfSetTool('select')"
+      <button class="pf-tool-btn${pfTool==='select'?' active':''}" data-tool="select" onclick="pfSetTool('select')"
         title="Chọn: click chọn shape, kéo di chuyển, double-click sửa text [V]">↖ Chọn</button>
-      <button class="pf-tool-btn${pfTool==='connect'?' active':''}" onclick="pfSetTool('connect')"
+      <button class="pf-tool-btn${pfTool==='connect'?' active':''}" data-tool="connect" onclick="pfSetTool('connect')"
         title="Nối: kéo từ điểm ● trên shape tới shape khác để tạo mũi tên [C]">⤳ Nối</button>
-      <button class="pf-tool-btn${pfTool==='pan'?' active':''}" onclick="pfSetTool('pan')"
+      <button class="pf-tool-btn${pfTool==='pan'?' active':''}" data-tool="pan" onclick="pfSetTool('pan')"
         title="Pan: kéo để cuộn canvas, không tương tác với shape [Space]">✋ Pan</button>
     </div>
     <div class="pf-tool-sep"></div>
@@ -9276,7 +9275,7 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfAddNode('start')"     title="Bắt đầu">⬤ Bắt đầu</button>
       <button class="pf-tool-btn" onclick="pfAddNode('end')"       title="Kết thúc">⬤ Kết thúc</button>
       <button class="pf-tool-btn" onclick="pfAddNode('arrow')"     title="Mũi tên">➜ Mũi tên</button>
-      <button class="pf-tool-btn" onclick="pfAddNode('note')" "      title="Ghi chú">📝 Ghi chú</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('note')"      title="Ghi chú">📝 Ghi chú</button>
     </div>
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
@@ -9346,7 +9345,7 @@ function pfRenderNode(node) {
       ${imgHtml}
       <div class="pf-node-text"
         id="pft_${node.id}"
-        style="font-size:${fs};${fc?`color:${fc}`:''}text-align:${ta};flex:1;min-width:0"
+        style="font-size:${fs};${fc?`color:${fc};`:''}text-align:${ta};flex:1;min-width:0"
         contenteditable="false"
         ondblclick="pfStartEdit(event,'${node.id}')"
         onblur="pfEndEdit('${node.id}',event)"
@@ -9357,9 +9356,8 @@ function pfRenderNode(node) {
     ${node.type==='arrow'?`
       <div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay">↻</div>
       <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"
-        style="position:absolute;bottom:-6px;right:-6px;width:14px;height:14px;background:var(--ac);
-               border:2px solid #fff;border-radius:3px;cursor:nwse-resize;z-index:20;
-               display:${sel?'block':'none'}"></div>
+        style="bottom:-6px;right:-6px;width:14px;height:14px;
+               border:2px solid #fff;z-index:20"></div>
     `:''}
     <div class="pf-port top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
     <div class="pf-port bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
@@ -9494,8 +9492,9 @@ async function pfDeleteSelected() {
 // ── Canvas interaction ───────────────────────────────────
 function pfSetTool(t){
   pfTool=t;
-  document.querySelectorAll('.pf-tool-btn').forEach(b=>{
-    if(b.textContent.includes(t==='select'?'Chọn':t==='connect'?'Nối':'Pan'))b.classList.add('active');
+  // Only update the 3 mode buttons (select/connect/pan) via data-tool attribute
+  document.querySelectorAll('.pf-tool-btn[data-tool]').forEach(b=>{
+    if(b.dataset.tool===t) b.classList.add('active');
     else b.classList.remove('active');
   });
   const outer=document.getElementById('pf-canvas-outer');
@@ -9605,86 +9604,6 @@ function pfCanvasMouseMove(e) {
   }
 }
 
-function pfCanvasMouseMove(e) {
-  if(pfPanning) {
-    pfPan.x=e.clientX-pfPanning.sx; pfPan.y=e.clientY-pfPanning.sy;
-    const canvas=document.getElementById('pf-canvas');
-    if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
-    return;
-  }
-  // pfImgResizing handled by document listeners in pfImgResizeStart
-
-  if(pfDragging) {
-    const pos=pfGetCanvasPos(e);
-    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
-    if(node){
-      let nx=Math.round(pos.x-pfDragging.ox);
-      let ny=Math.round(pos.y-pfDragging.oy);
-      // Snap to grid (20px)
-      const GRID=20;
-      nx=Math.round(nx/GRID)*GRID;
-      ny=Math.round(ny/GRID)*GRID;
-      // Snap to other nodes edges (within 12px)
-      const SNAP=12;
-      pfNodes.filter(n=>n.id!==node.id).forEach(other=>{
-        // Snap left/right edge
-        if(Math.abs(nx - other.x)<SNAP) nx=other.x;
-        if(Math.abs(nx+node.w - (other.x+other.w))<SNAP) nx=other.x+other.w-node.w;
-        if(Math.abs(nx - (other.x+other.w))<SNAP) nx=other.x+other.w;
-        // Snap top/bottom edge
-        if(Math.abs(ny - other.y)<SNAP) ny=other.y;
-        if(Math.abs(ny+node.h - (other.y+other.h))<SNAP) ny=other.y+other.h-node.h;
-        if(Math.abs(ny - (other.y+other.h))<SNAP) ny=other.y+other.h;
-        // Snap center
-        if(Math.abs((nx+node.w/2)-(other.x+other.w/2))<SNAP) nx=other.x+other.w/2-node.w/2;
-        if(Math.abs((ny+node.h/2)-(other.y+other.h/2))<SNAP) ny=other.y+other.h/2-node.h/2;
-      });
-      node.x=Math.round(nx); node.y=Math.round(ny);
-      const el=document.getElementById('pfn_'+node.id);
-      if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
-      pfUpdateSVG();
-    }
-    return;
-  }
-  if(pfRotating) {
-    const {nodeId,startAngle,startRot}=pfRotating;
-    // Use current element center for accurate rotation
-    const el2=document.getElementById('pfn_'+nodeId);
-    if(el2){
-      const r2=el2.getBoundingClientRect();
-      const cx2=r2.left+r2.width/2, cy2=r2.top+r2.height/2;
-      const angle=Math.atan2(e.clientY-cy2,e.clientX-cx2)*180/Math.PI;
-      const node=pfNodes.find(n=>n.id===nodeId);
-      if(node){
-        let rot=startRot+(angle-startAngle);
-        rot=Math.round(rot/15)*15; // snap 15°
-        node.rotation=rot;
-        el2.style.transform=`rotate(${rot}deg)`;
-        el2.style.transformOrigin='center center';
-      }
-    }
-    return;
-  }
-  if(pfResizing) {
-    const pos=pfGetCanvasPos(e);
-    const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
-    if(node){
-      node.w=Math.max(60,Math.round(pos.x-node.x));
-      node.h=Math.max(40,Math.round(pos.y-node.y));
-      const el=document.getElementById('pfn_'+node.id);
-      if(el){el.style.width=node.w+'px';el.style.height=node.h+'px';}
-      pfUpdateSVG();
-    }
-    return;
-  }
-  if(pfConnecting) {
-    // Draw temp line
-    const pos=pfGetCanvasPos(e);
-    pfConnecting.mx=pos.x; pfConnecting.my=pos.y;
-    pfUpdateSVG(true);
-  }
-}
-
 function pfCanvasMouseUp(e) {
   if(pfDragging){
     const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
@@ -9709,45 +9628,8 @@ function pfCanvasMouseUp(e) {
     let toPort=null;
     const portEl=document.elementFromPoint(e.clientX, e.clientY);
     if(portEl?.classList.contains('pf-port')) {
-      toPort=portEl.dataset.port;
-    }
-    // Check if dropped on a node
-    const target=pfNodes.find(n=>
-      n.id!==pfConnecting.fromId &&
-      pos.x>=n.x && pos.x<=n.x+n.w &&
-      pos.y>=n.y && pos.y<=n.y+n.h
-    );
-    if(target) pfCreateEdge(pfConnecting.fromId, target.id, pfConnecting.fromPort, toPort);
-    pfConnecting=null;
-    pfUpdateSVG();
-  }
-}
-
-function pfCanvasMouseUp(e) {
-  if(pfDragging){
-    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
-    if(node) pfSyncNode(node);
-    pfDragging=null;
-  }
-  // pfImgResizing handled by document listeners in pfImgResizeStart
-  if(pfRotating){
-    const node=pfNodes.find(n=>n.id===pfRotating.nodeId);
-    if(node) pfSyncNode(node);
-    pfRotating=null;
-  }
-  if(pfResizing){
-    const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
-    if(node) pfSyncNode(node);
-    pfResizing=null;
-  }
-  if(pfPanning) pfPanning=null;
-  if(pfConnecting && pfConnecting.mx!==undefined) {
-    const pos=pfGetCanvasPos(e);
-    // Check if dropped on a port
-    let toPort=null;
-    const portEl=document.elementFromPoint(e.clientX, e.clientY);
-    if(portEl?.classList.contains('pf-port')) {
-      toPort=portEl.dataset.port;
+      // Port direction is encoded in class name (pf-port top/bottom/left/right)
+      toPort = ['top','bottom','left','right'].find(p=>portEl.classList.contains(p)) || null;
     }
     // Check if dropped on a node
     const target=pfNodes.find(n=>
@@ -9793,8 +9675,13 @@ function pfNodeMouseDown(e, nodeId) {
   // Don't drag when inside editing text
   const textEl=document.getElementById('pft_'+nodeId);
   if(textEl?.contentEditable==='true') return;
-  if(e.target.closest('.pf-node-text')) return;
+  // Always select on click — even if clicking on text
   pfSelected=nodeId;
+  // If clicking on (non-editing) text, just select without dragging
+  if(e.target.closest('.pf-node-text')) {
+    pfRenderCanvas();
+    return;
+  }
   const pos=pfGetCanvasPos(e);
   const node=pfNodes.find(n=>n.id===nodeId);
   if(node) pfDragging={nodeId,ox:pos.x-node.x,oy:pos.y-node.y};
@@ -10014,7 +9901,7 @@ function pfShowFmtBar(nodeId) {
     </label>
     <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
     <label title="Màu nền" style="cursor:pointer;position:relative;display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)">
-      <div style="width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);background:${bg}"></div>Nền
+      <div id="pf-fmt-bg-swatch" style="width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);background:${bg}"></div>Nền
       <input type="color" value="${bg==='transparent'?'#ffffff':bg}" onmousedown="event.stopPropagation()"
         onchange="pfFmtBg('${nodeId}',this.value)"
         style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
@@ -10140,8 +10027,8 @@ function pfFmtBg(nodeId, color) {
   // Direct DOM update (fast)
   const inner=document.querySelector(`#pfn_${nodeId} .pf-node-inner`);
   if(inner) inner.style.background=color;
-  // Update color swatch in bar
-  const swatch=document.querySelector('#pf-fmt-bar label div[style*="border"]');
+  // Update background swatch preview in format bar (specific ID to avoid matching text-color swatch)
+  const swatch=document.getElementById('pf-fmt-bg-swatch');
   if(swatch) swatch.style.background=color;
   pfSyncNode(node);
 }
@@ -10288,6 +10175,7 @@ function pfTouchMove(e) {
   e.preventDefault();
   if(e.touches.length===1){
     const t=e.touches[0];
+    pfLastTouch={x:t.clientX,y:t.clientY}; // Track latest position for accurate touchEnd
     pfCanvasMouseMove({clientX:t.clientX,clientY:t.clientY});
   }
 }
