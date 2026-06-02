@@ -8800,16 +8800,40 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 .pf-canvas-outer.panning{cursor:grab}
 .pf-canvas-outer.panning:active{cursor:grabbing}
 .pf-canvas-outer.connecting{cursor:crosshair}
-/* Grid background */
+.pf-canvas-outer.crosshair{cursor:crosshair}
+/* Grid background — finer 20px primary grid with 100px major lines (PowerPoint-like) */
 .pf-canvas-outer::before{
   content:'';position:absolute;inset:0;
   background-image:
     linear-gradient(var(--bd) 1px,transparent 1px),
     linear-gradient(90deg,var(--bd) 1px,transparent 1px);
-  background-size:40px 40px;
-  opacity:.35;pointer-events:none;
+  background-size:20px 20px;
+  opacity:.25;pointer-events:none;
 }
 .pf-canvas{position:absolute;top:0;left:0;transform-origin:0 0}
+
+/* Rubber-band marquee — rendered inside .pf-canvas so it scales with zoom */
+.pf-marquee{
+  position:absolute;
+  border:1.5px dashed var(--ac);
+  background:rgba(79,124,255,.08);
+  pointer-events:none;
+  z-index:5;
+}
+
+/* Live marquee hit preview while drawing the rubber band */
+.pf-node.marquee-hit .pf-node-inner{
+  box-shadow:0 0 0 2px rgba(79,124,255,.6) inset;
+}
+
+/* Multi-selected (not primary) gets a softer outline than .selected */
+.pf-node.multi-selected .pf-node-inner{
+  border-color:var(--ac);
+  box-shadow:0 0 0 2px rgba(79,124,255,.35);
+}
+
+/* Smart alignment guides */
+.pf-guide-line{pointer-events:none;}
 
 /* Nodes */
 .pf-node{
@@ -8917,7 +8941,8 @@ let pfProcesses   = [];   // [{id,name}]
 let pfCurrentId   = null;
 let pfNodes       = [];   // [{id,type,x,y,w,h,label,style,imageUrl}]
 let pfEdges       = [];   // [{id,fromId,toId,label,style}]
-let pfSelected    = null; // selected node/edge id
+let pfSelected    = null; // selected node/edge id (for compat — primary selection)
+let pfSelectedIds = new Set(); // multi-selection: set of node ids
 let pfTool        = 'select'; // select|connect|pan
 let pfZoom        = 1;
 let pfPan         = {x:0,y:0};
@@ -8926,6 +8951,10 @@ let pfResizing    = null;
 let pfRotating    = null; // {nodeId, startAngle, startRot, cx, cy}
 let pfConnecting  = null; // {fromId, fromPort}
 let pfPanning     = null;
+let pfMarquee     = null; // {x1,y1,x2,y2} rubber-band selection rect
+let pfGroupDrag   = null; // {pivotId,initial:{[id]:{x,y}}} drag offsets for multi-select
+let pfGridSnap    = true; // toggleable grid snap
+let pfGridSize    = 10;   // px (PPT-like fine grid)
 let isProcessFlowView = false;
 
 const PF_SBKEY = 'tf_pf';
@@ -8991,7 +9020,36 @@ async function pfSaveAll() {
   }
 }
 function pfSaveLocal() {
-  localStorage.setItem(PF_KEY, JSON.stringify({processes:pfProcesses, nodes:pfNodes, edges:pfEdges, currentId:pfCurrentId}));
+  // CRITICAL: strip base64 imageUrls before caching — they're already stored separately
+  // in 'tf_pf_images'. Without this, every image is duplicated, causing localStorage
+  // QuotaExceededError after 1-2 images (5MB cap) which surfaces as "Lỗi lưu".
+  const stripImg = n => {
+    if(n.imageUrl?.startsWith('data:')) {
+      const {imageUrl, ...rest} = n;
+      return rest; // keep image_url='__local__' marker via the n.image_url field if present
+    }
+    return n;
+  };
+  try {
+    const nodesForCache = pfNodes.map(stripImg);
+    localStorage.setItem(PF_KEY, JSON.stringify({
+      processes: pfProcesses,
+      nodes:     nodesForCache,
+      edges:     pfEdges,
+      currentId: pfCurrentId
+    }));
+  } catch(err) {
+    console.warn('[PF] localStorage save failed:', err);
+    // Recovery: if quota still exceeded, drop nodes from cache (DB is source of truth)
+    if(err.name === 'QuotaExceededError') {
+      try {
+        localStorage.setItem(PF_KEY, JSON.stringify({
+          processes: pfProcesses, nodes: [], edges: [], currentId: pfCurrentId
+        }));
+      } catch {}
+      if(typeof showNotif==='function') showNotif('nw','⚠️ localStorage đầy', 'Đã xóa cache local — dữ liệu vẫn an toàn trên Supabase');
+    }
+  }
 }
 function pfLoadLocal() {
   try {
@@ -9121,6 +9179,7 @@ function pfRestoreImages(nodes) {
 function pfFmtBorder(nodeId, prop, val) {
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
+  pfSnapshot('fmt-border-'+prop+'-'+nodeId); // coalesces rapid color-picker drag
   node.style = {...(node.style||{})};
   if(prop==='style')  node.style.borderStyle = val;
   if(prop==='width')  node.style.borderWidth = val;
@@ -9148,11 +9207,28 @@ async function pfSyncEdge(edge) {
 let pfUndoStack = [];
 let pfRedoStack = [];
 const PF_MAX_UNDO = 50;
+let pfLastSnapshotTag = null;   // identifier of the last operation type
+let pfLastSnapshotTime = 0;     // ms timestamp of the last snapshot
+const PF_COALESCE_MS = 600;      // merge same-tag snapshots fired within this window
 
-function pfSnapshot() {
+/**
+ * pfSnapshot(tag): take a state snapshot for undo.
+ * If `tag` is provided and the previous snapshot has the same tag within
+ * PF_COALESCE_MS, this snapshot is SKIPPED — rapid consecutive operations
+ * (arrow-key nudge, color slider drag, etc.) coalesce into one undo step.
+ * Pass `tag=null` for atomic operations like add/delete/paste.
+ */
+function pfSnapshot(tag) {
+  const now = Date.now();
+  if(tag && pfLastSnapshotTag===tag && (now-pfLastSnapshotTime)<PF_COALESCE_MS) {
+    pfLastSnapshotTime = now; // extend the window
+    return;
+  }
   pfUndoStack.push(JSON.stringify({nodes:pfNodes, edges:pfEdges}));
   if(pfUndoStack.length > PF_MAX_UNDO) pfUndoStack.shift();
   pfRedoStack = []; // clear redo on new action
+  pfLastSnapshotTag = tag||null;
+  pfLastSnapshotTime = now;
 }
 
 function pfUndo() {
@@ -9161,7 +9237,11 @@ function pfUndo() {
   const prev = JSON.parse(pfUndoStack.pop());
   pfNodes = pfRestoreImages(prev.nodes||[]);
   pfEdges = prev.edges||[];
-  pfSelected=null; pfSaveLocal(); pfRenderAll();
+  pfSelected=null;
+  pfSelectedIds.clear();
+  pfLastSnapshotTag=null;
+  pfSaveLocal(); pfRenderAll();
+  pfMarkDirty?.();
 }
 
 function pfRedo() {
@@ -9170,7 +9250,11 @@ function pfRedo() {
   const next = JSON.parse(pfRedoStack.pop());
   pfNodes = pfRestoreImages(next.nodes||[]);
   pfEdges = next.edges||[];
-  pfSelected=null; pfSaveLocal(); pfRenderAll();
+  pfSelected=null;
+  pfSelectedIds.clear();
+  pfLastSnapshotTag=null;
+  pfSaveLocal(); pfRenderAll();
+  pfMarkDirty?.();
 }
 
 // ── Copy/Paste ────────────────────────────────────────────
@@ -9197,9 +9281,10 @@ function pfPasteNode() {
     node.imageUrl = imgData;
     pfSaveImage(node.id, imgData);
   }
-  pfSnapshot();
+  pfSnapshot('paste');
   pfNodes.push(node);
   pfSelected = node.id;
+  pfSelectedIds.clear(); pfSelectedIds.add(node.id);
   pfSaveLocal(); pfRenderAll();
   pfSyncNode(node);
 }
@@ -9280,14 +9365,17 @@ function pfRenderToolbar() {
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
       <button class="pf-tool-btn" onclick="pfUploadImage()" title="Chèn ảnh">🖼 Ảnh</button>
-      <button class="pf-tool-btn" onclick="pfZoomIn()">＋</button>
-      <button class="pf-tool-btn" onclick="pfZoomOut()">－</button>
-      <button class="pf-tool-btn" onclick="pfZoomFit()">⊡ Fit</button>
+      <button class="pf-tool-btn${pfGridSnap?' active':''}" onclick="pfToggleGrid()" title="Bật/tắt snap lưới [G]">📐 Grid</button>
+      <button class="pf-tool-btn" onclick="pfZoomIn()" title="Phóng to (Ctrl+Wheel)">＋</button>
+      <button class="pf-tool-btn" onclick="pfZoomOut()" title="Thu nhỏ (Ctrl+Wheel)">－</button>
+      <button class="pf-tool-btn" onclick="pfZoom100()" title="Zoom 100%">100%</button>
+      <button class="pf-tool-btn" onclick="pfZoomFit()" title="Vừa khít với màn hình">⊡ Fit</button>
     </div>
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
       <button class="pf-tool-btn" onclick="pfUndo()"          title="Undo (Ctrl+Z)">↩ Undo</button>
       <button class="pf-tool-btn" onclick="pfRedo()"          title="Redo (Ctrl+Y)">↪ Redo</button>
+      <button class="pf-tool-btn" onclick="pfSelectAll()"     title="Chọn tất cả (Ctrl+A)">⊞ Tất cả</button>
       <button class="pf-tool-btn" onclick="pfCopySelected()"  title="Copy shape (Ctrl+C)">⎘ Copy</button>
       <button class="pf-tool-btn" onclick="pfPasteNode()"     title="Paste (Ctrl+V)">⎘ Paste</button>
       <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa (Del)">🗑 Xóa</button>
@@ -9301,6 +9389,7 @@ function pfRenderToolbar() {
 
 function pfRenderNode(node) {
   const sel = pfSelected===node.id;
+  const multi = pfSelectedIds.has(node.id);
   const rot = node.rotation||0;
   const fs  = node.style?.fontSize||'12px';
   const fc  = node.style?.color||'';
@@ -9337,7 +9426,7 @@ function pfRenderNode(node) {
     imgFlex ? `flex-direction:${imgFlex};display:flex;align-items:center;gap:6px` : '',
   ].filter(Boolean).join(';');
 
-  return `<div class="pf-node type-${node.type}${sel?' selected':''}"
+  return `<div class="pf-node type-${node.type}${sel?' selected':''}${multi&&!sel?' multi-selected':''}"
     id="pfn_${node.id}"
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
@@ -9446,47 +9535,59 @@ function pfRenameProcess(id) {
 // ── Node management ─────────────────────────────────────
 function pfAddNode(type) {
   if(!pfCurrentId){showNotif('nw','⚠️','Chọn hoặc tạo process trước');return;}
-  const cx = (400 - pfPan.x)/pfZoom + Math.random()*80;
-  const cy = (200 - pfPan.y)/pfZoom + Math.random()*60;
+  // Place near viewport center (PowerPoint-style) with small random offset to avoid stacking
+  const outer = document.getElementById('pf-canvas-outer');
+  const rect  = outer ? outer.getBoundingClientRect() : {width:800, height:500};
+  const cx = (rect.width/2  - pfPan.x)/pfZoom + (Math.random()*40-20);
+  const cy = (rect.height/2 - pfPan.y)/pfZoom + (Math.random()*40-20);
   const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú'};
   const w = type==='decision'?120:type==='start'||type==='end'?120:160;
   const h = type==='decision'?80:60;
   const node = {
     id:'pfnode_'+Date.now(), process_id:pfCurrentId,
-    type, x:Math.round(cx), y:Math.round(cy), w, h,
+    type, x:Math.round(cx-w/2), y:Math.round(cy-h/2), w, h,
     label:defaultLabels[type]||'', style:{},
     created_at:new Date().toISOString()
   };
-  pfSnapshot();
+  pfSnapshot('add-node');
   pfNodes.push(node);
   pfSelected=node.id;
+  pfSelectedIds.clear(); pfSelectedIds.add(node.id);
   pfSaveLocal(); pfRenderCanvas();
   pfMarkDirty();
   pfSyncNode(node);
 }
 
 async function pfDeleteSelected() {
-  if(!pfSelected) return;
-  pfSnapshot();
-  const nodeIdx = pfNodes.findIndex(n=>n.id===pfSelected);
-  if(nodeIdx>=0) {
-    const id=pfSelected;
-    // Also delete connected edges
-    const toDelete=pfEdges.filter(e=>e.from_id===id||e.to_id===id);
-    pfEdges=pfEdges.filter(e=>e.from_id!==id&&e.to_id!==id);
-    pfNodes.splice(nodeIdx,1);
-    pfSelected=null; pfSaveLocal(); pfRenderCanvas();
-    try{await dbPF.deleteNode(id);}catch{}
-    for(const e of toDelete){try{await dbPF.deleteEdge(e.id);}catch{}}
-    return;
-  }
-  const edgeIdx=pfEdges.findIndex(e=>e.id===pfSelected);
-  if(edgeIdx>=0){
-    const id=pfSelected;
-    pfEdges.splice(edgeIdx,1);
-    pfSelected=null; pfSaveLocal(); pfRenderCanvas();
-    try{await dbPF.deleteEdge(id);}catch{}
-  }
+  // Build complete list of nodes/edges to delete (multi-select aware)
+  const nodeIds = new Set(pfSelectedIds);
+  if(!nodeIds.size && pfSelected) nodeIds.add(pfSelected);
+
+  if(!nodeIds.size) return;
+  pfSnapshot('delete');
+
+  // Separate edges from nodes (edges may be in pfSelected — pfSelectedIds only tracks nodes)
+  const edgeIds = new Set();
+  if(pfSelected && pfEdges.find(e=>e.id===pfSelected)) edgeIds.add(pfSelected);
+
+  // Filter out any IDs that are actually edges (defensive: pfSelectedIds should only hold nodes)
+  nodeIds.forEach(id => {
+    if(pfEdges.find(e=>e.id===id)) { nodeIds.delete(id); edgeIds.add(id); }
+  });
+
+  // Collect edges to delete: explicit + edges connected to any deleted node
+  const connectedEdges = pfEdges.filter(e => nodeIds.has(e.from_id) || nodeIds.has(e.to_id));
+  connectedEdges.forEach(e => edgeIds.add(e.id));
+
+  // Apply locally
+  pfNodes = pfNodes.filter(n => !nodeIds.has(n.id));
+  pfEdges = pfEdges.filter(e => !edgeIds.has(e.id));
+  pfSelected=null; pfSelectedIds.clear();
+  pfSaveLocal(); pfRenderCanvas(); pfMarkDirty();
+
+  // Sync to DB (errors are non-fatal — local state already updated)
+  for(const id of nodeIds) { try{ await dbPF.deleteNode(id); }catch{} }
+  for(const id of edgeIds) { try{ await dbPF.deleteEdge(id); }catch{} }
 }
 
 // ── Canvas interaction ───────────────────────────────────
@@ -9514,60 +9615,147 @@ function pfCanvasMouseDown(e) {
                 || e.target===document.getElementById('pf-canvas')
                 || e.target===document.getElementById('pf-svg');
   if(!onCanvas) return;
-  pfSelected=null;
-  // Pan: only in pan mode or middle button or alt+drag
+
+  // Pan: pan tool, middle button, or Space-held (we use altKey as proxy from pan tool)
   if(pfTool==='pan' || e.button===1 || (e.button===0&&e.altKey)) {
     pfPanning={sx:e.clientX-pfPan.x, sy:e.clientY-pfPan.y};
     e.preventDefault();
+    return;
   }
-  // Select/Connect: deselect, no pan
+
+  // Click on empty canvas in SELECT mode → start rubber-band selection (unless Shift/Ctrl held)
+  if(pfTool==='select' && e.button===0) {
+    const pos = pfGetCanvasPos(e);
+    pfMarquee = {x1:pos.x, y1:pos.y, x2:pos.x, y2:pos.y, additive:e.shiftKey||e.ctrlKey||e.metaKey};
+    // Clear current selection unless additive
+    if(!pfMarquee.additive) {
+      pfSelected=null;
+      pfSelectedIds.clear();
+    }
+    e.preventDefault();
+    pfRenderCanvas();
+    return;
+  }
+
+  // Other tools: just deselect
+  pfSelected=null;
+  pfSelectedIds.clear();
   pfRenderCanvas();
 }
 
+/**
+ * Compute snapped position for a node being dragged, finding alignment with
+ * other (non-selected) nodes. Returns {nx, ny, guides:[{type,coord,from,to}]}
+ * where guides are smart alignment lines to draw.
+ */
+function pfSnapNodePosition(node, targetX, targetY, others, opts) {
+  const SNAP = 8;            // alignment snap distance
+  const GRID = pfGridSize;   // grid size (10px default)
+  let nx = targetX, ny = targetY;
+  const guides = [];
+
+  // Grid snap (skipped when Alt held to disable, or when pfGridSnap is off)
+  if(pfGridSnap && !opts?.skipGrid) {
+    nx = Math.round(nx/GRID)*GRID;
+    ny = Math.round(ny/GRID)*GRID;
+  }
+
+  // Smart-guide alignment with other nodes (PowerPoint-style)
+  let bestDxL=SNAP, bestDxR=SNAP, bestDxC=SNAP;
+  let bestDyT=SNAP, bestDyB=SNAP, bestDyC=SNAP;
+  let snapX=null, snapY=null, gxRef=null, gyRef=null;
+
+  others.forEach(other=>{
+    // Left edges align
+    const dL = Math.abs(nx - other.x);
+    if(dL < bestDxL) { bestDxL=dL; snapX=other.x; gxRef={coord:other.x, kind:'edge'}; }
+    // Right edges align
+    const dR = Math.abs((nx+node.w) - (other.x+other.w));
+    if(dR < bestDxR) { bestDxR=dR; snapX=other.x+other.w-node.w; gxRef={coord:other.x+other.w, kind:'edge'}; }
+    // Left aligns with right of other
+    const dLR = Math.abs(nx - (other.x+other.w));
+    if(dLR < bestDxL) { bestDxL=dLR; snapX=other.x+other.w; gxRef={coord:other.x+other.w, kind:'edge'}; }
+    // Centers align horizontally
+    const dCx = Math.abs((nx+node.w/2)-(other.x+other.w/2));
+    if(dCx < bestDxC) { bestDxC=dCx; snapX=other.x+other.w/2-node.w/2; gxRef={coord:other.x+other.w/2, kind:'center'}; }
+
+    // Top edges align
+    const dT = Math.abs(ny - other.y);
+    if(dT < bestDyT) { bestDyT=dT; snapY=other.y; gyRef={coord:other.y, kind:'edge'}; }
+    // Bottom edges align
+    const dB = Math.abs((ny+node.h) - (other.y+other.h));
+    if(dB < bestDyB) { bestDyB=dB; snapY=other.y+other.h-node.h; gyRef={coord:other.y+other.h, kind:'edge'}; }
+    // Top aligns with bottom
+    const dTB = Math.abs(ny - (other.y+other.h));
+    if(dTB < bestDyT) { bestDyT=dTB; snapY=other.y+other.h; gyRef={coord:other.y+other.h, kind:'edge'}; }
+    // Centers align vertically
+    const dCy = Math.abs((ny+node.h/2)-(other.y+other.h/2));
+    if(dCy < bestDyC) { bestDyC=dCy; snapY=other.y+other.h/2-node.h/2; gyRef={coord:other.y+other.h/2, kind:'center'}; }
+  });
+
+  if(snapX!==null) { nx = snapX; guides.push({orientation:'v', coord:gxRef.coord, kind:gxRef.kind}); }
+  if(snapY!==null) { ny = snapY; guides.push({orientation:'h', coord:gyRef.coord, kind:gyRef.kind}); }
+
+  return {nx: Math.round(nx), ny: Math.round(ny), guides};
+}
+
 function pfCanvasMouseMove(e) {
+  // Marquee selection (highest priority — supersedes default behavior on empty canvas)
+  if(pfMarquee) {
+    const pos = pfGetCanvasPos(e);
+    pfMarquee.x2 = pos.x; pfMarquee.y2 = pos.y;
+    pfDrawMarquee();
+    pfUpdateMarqueeHits();
+    return;
+  }
   if(pfPanning) {
     pfPan.x=e.clientX-pfPanning.sx; pfPan.y=e.clientY-pfPanning.sy;
     const canvas=document.getElementById('pf-canvas');
     if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
     return;
   }
-  // pfImgResizing handled by document listeners in pfImgResizeStart
 
   if(pfDragging) {
     const pos=pfGetCanvasPos(e);
     const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
     if(node){
-      let nx=Math.round(pos.x-pfDragging.ox);
-      let ny=Math.round(pos.y-pfDragging.oy);
-      // Snap to grid (20px)
-      const GRID=20;
-      nx=Math.round(nx/GRID)*GRID;
-      ny=Math.round(ny/GRID)*GRID;
-      // Snap to other nodes edges (within 12px)
-      const SNAP=12;
-      pfNodes.filter(n=>n.id!==node.id).forEach(other=>{
-        // Snap left/right edge
-        if(Math.abs(nx - other.x)<SNAP) nx=other.x;
-        if(Math.abs(nx+node.w - (other.x+other.w))<SNAP) nx=other.x+other.w-node.w;
-        if(Math.abs(nx - (other.x+other.w))<SNAP) nx=other.x+other.w;
-        // Snap top/bottom edge
-        if(Math.abs(ny - other.y)<SNAP) ny=other.y;
-        if(Math.abs(ny+node.h - (other.y+other.h))<SNAP) ny=other.y+other.h-node.h;
-        if(Math.abs(ny - (other.y+other.h))<SNAP) ny=other.y+other.h;
-        // Snap center
-        if(Math.abs((nx+node.w/2)-(other.x+other.w/2))<SNAP) nx=other.x+other.w/2-node.w/2;
-        if(Math.abs((ny+node.h/2)-(other.y+other.h/2))<SNAP) ny=other.y+other.h/2-node.h/2;
-      });
-      node.x=Math.round(nx); node.y=Math.round(ny);
-      const el=document.getElementById('pfn_'+node.id);
-      if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
+      const skipSnap = e.altKey; // Hold Alt = no snap (PPT convention)
+      const others = pfNodes.filter(n=>n.id!==node.id && !pfSelectedIds.has(n.id));
+      const target = pfSnapNodePosition(
+        node,
+        pos.x-pfDragging.ox,
+        pos.y-pfDragging.oy,
+        others,
+        {skipGrid:skipSnap}
+      );
+      const dx = target.nx - node.x;
+      const dy = target.ny - node.y;
+      // Apply to node (and group, if multi-drag)
+      if(pfGroupDrag) {
+        Object.entries(pfGroupDrag.initial).forEach(([id, init])=>{
+          const n = pfNodes.find(x=>x.id===id);
+          if(!n) return;
+          if(id === pfGroupDrag.pivotId) {
+            n.x = target.nx; n.y = target.ny;
+          } else {
+            n.x = init.x + (target.nx - pfGroupDrag.pivotStart.x);
+            n.y = init.y + (target.ny - pfGroupDrag.pivotStart.y);
+          }
+          const el = document.getElementById('pfn_'+id);
+          if(el){ el.style.left=n.x+'px'; el.style.top=n.y+'px'; }
+        });
+      } else {
+        node.x = target.nx; node.y = target.ny;
+        const el=document.getElementById('pfn_'+node.id);
+        if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
+      }
+      pfDrawGuides(skipSnap ? [] : target.guides);
       pfUpdateSVG();
     }
     return;
   }
   if(pfRotating) {
     const {nodeId,startAngle,startRot}=pfRotating;
-    // Use current element center for accurate rotation
     const el2=document.getElementById('pfn_'+nodeId);
     if(el2){
       const r2=el2.getBoundingClientRect();
@@ -9576,7 +9764,7 @@ function pfCanvasMouseMove(e) {
       const node=pfNodes.find(n=>n.id===nodeId);
       if(node){
         let rot=startRot+(angle-startAngle);
-        rot=Math.round(rot/15)*15; // snap 15°
+        if(!e.altKey) rot=Math.round(rot/15)*15; // snap 15° unless Alt
         node.rotation=rot;
         el2.style.transform=`rotate(${rot}deg)`;
         el2.style.transformOrigin='center center';
@@ -9588,8 +9776,22 @@ function pfCanvasMouseMove(e) {
     const pos=pfGetCanvasPos(e);
     const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
     if(node){
-      node.w=Math.max(60,Math.round(pos.x-node.x));
-      node.h=Math.max(40,Math.round(pos.y-node.y));
+      let newW = Math.max(40, Math.round(pos.x-node.x));
+      let newH = Math.max(30, Math.round(pos.y-node.y));
+      // Shift = preserve aspect ratio (PPT convention)
+      if(e.shiftKey && pfResizing.aspect) {
+        // Use whichever axis moved further to drive the other
+        const dx = Math.abs(newW - pfResizing.startW);
+        const dy = Math.abs(newH - pfResizing.startH);
+        if(dx > dy) newH = Math.max(30, Math.round(newW / pfResizing.aspect));
+        else        newW = Math.max(40, Math.round(newH * pfResizing.aspect));
+      }
+      // Grid snap when grid is on and Alt not held
+      if(pfGridSnap && !e.altKey) {
+        newW = Math.round(newW/pfGridSize)*pfGridSize;
+        newH = Math.round(newH/pfGridSize)*pfGridSize;
+      }
+      node.w=newW; node.h=newH;
       const el=document.getElementById('pfn_'+node.id);
       if(el){el.style.width=node.w+'px';el.style.height=node.h+'px';}
       pfUpdateSVG();
@@ -9605,12 +9807,26 @@ function pfCanvasMouseMove(e) {
 }
 
 function pfCanvasMouseUp(e) {
+  pfHideGuides();
+  if(pfMarquee) {
+    pfFinalizeMarquee();
+    pfMarquee=null;
+    return;
+  }
   if(pfDragging){
-    const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
-    if(node) pfSyncNode(node);
+    // Sync all affected nodes (multi-drag syncs every selected)
+    if(pfGroupDrag) {
+      Object.keys(pfGroupDrag.initial).forEach(id=>{
+        const n = pfNodes.find(x=>x.id===id);
+        if(n) pfSyncNode(n);
+      });
+      pfGroupDrag=null;
+    } else {
+      const node=pfNodes.find(n=>n.id===pfDragging.nodeId);
+      if(node) pfSyncNode(node);
+    }
     pfDragging=null;
   }
-  // pfImgResizing handled by document listeners in pfImgResizeStart
   if(pfRotating){
     const node=pfNodes.find(n=>n.id===pfRotating.nodeId);
     if(node) pfSyncNode(node);
@@ -9643,20 +9859,118 @@ function pfCanvasMouseUp(e) {
   }
 }
 
+/**
+ * PowerPoint-style wheel handling:
+ *   - Ctrl/Cmd + wheel  → zoom centered on cursor
+ *   - Plain wheel       → pan vertically (Shift+wheel pans horizontally)
+ */
 function pfCanvasWheel(e) {
-  e.preventDefault();
-  const factor=e.deltaY<0?1.1:0.9;
-  const outer=document.getElementById('pf-canvas-outer');
-  if(!outer)return;
-  const rect=outer.getBoundingClientRect();
-  const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
-  pfPan.x = cx - (cx-pfPan.x)*factor;
-  pfPan.y = cy - (cy-pfPan.y)*factor;
-  pfZoom = Math.max(0.2, Math.min(3, pfZoom*factor));
-  const canvas=document.getElementById('pf-canvas');
-  if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
-  const zi=document.querySelector('.pf-zoom-indicator');
-  if(zi) zi.textContent=Math.round(pfZoom*100)+'%';
+  if(e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const factor=e.deltaY<0?1.1:0.9;
+    const outer=document.getElementById('pf-canvas-outer');
+    if(!outer)return;
+    const rect=outer.getBoundingClientRect();
+    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+    pfPan.x = cx - (cx-pfPan.x)*factor;
+    pfPan.y = cy - (cy-pfPan.y)*factor;
+    pfZoom = Math.max(0.2, Math.min(3, pfZoom*factor));
+    const canvas=document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+    const zi=document.querySelector('.pf-zoom-indicator');
+    if(zi) zi.textContent=Math.round(pfZoom*100)+'%';
+  } else {
+    // Plain wheel = pan (PPT-like). Shift+wheel = horizontal pan.
+    e.preventDefault();
+    if(e.shiftKey) { pfPan.x -= e.deltaY; }
+    else           { pfPan.y -= e.deltaY; pfPan.x -= e.deltaX; }
+    const canvas=document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+  }
+}
+
+// ── Marquee (rubber-band) selection rendering ────────────
+function pfDrawMarquee() {
+  if(!pfMarquee) return;
+  const outer = document.getElementById('pf-canvas-outer');
+  if(!outer) return;
+  let el = document.getElementById('pf-marquee');
+  if(!el) {
+    el = document.createElement('div');
+    el.id = 'pf-marquee';
+    el.className = 'pf-marquee';
+    outer.appendChild(el);
+  }
+  // marquee uses canvas coords → must be in canvas space
+  const canvas = document.getElementById('pf-canvas');
+  if(!el.parentElement || el.parentElement!==canvas) canvas.appendChild(el);
+  const x = Math.min(pfMarquee.x1, pfMarquee.x2);
+  const y = Math.min(pfMarquee.y1, pfMarquee.y2);
+  const w = Math.abs(pfMarquee.x2 - pfMarquee.x1);
+  const h = Math.abs(pfMarquee.y2 - pfMarquee.y1);
+  el.style.left = x+'px'; el.style.top = y+'px';
+  el.style.width = w+'px'; el.style.height = h+'px';
+}
+
+function pfUpdateMarqueeHits() {
+  if(!pfMarquee) return;
+  const x1 = Math.min(pfMarquee.x1, pfMarquee.x2);
+  const y1 = Math.min(pfMarquee.y1, pfMarquee.y2);
+  const x2 = Math.max(pfMarquee.x1, pfMarquee.x2);
+  const y2 = Math.max(pfMarquee.y1, pfMarquee.y2);
+  // Live highlight: nodes inside get a temporary marquee-hit class
+  pfNodes.forEach(n => {
+    const el = document.getElementById('pfn_'+n.id);
+    if(!el) return;
+    const inside = (n.x+n.w >= x1) && (n.x <= x2) && (n.y+n.h >= y1) && (n.y <= y2);
+    if(inside) el.classList.add('marquee-hit');
+    else       el.classList.remove('marquee-hit');
+  });
+}
+
+function pfFinalizeMarquee() {
+  if(!pfMarquee) return;
+  const x1 = Math.min(pfMarquee.x1, pfMarquee.x2);
+  const y1 = Math.min(pfMarquee.y1, pfMarquee.y2);
+  const x2 = Math.max(pfMarquee.x1, pfMarquee.x2);
+  const y2 = Math.max(pfMarquee.y1, pfMarquee.y2);
+  // Build set of hits
+  const hits = pfNodes
+    .filter(n => (n.x+n.w >= x1) && (n.x <= x2) && (n.y+n.h >= y1) && (n.y <= y2))
+    .map(n => n.id);
+  if(!pfMarquee.additive) pfSelectedIds.clear();
+  hits.forEach(id => pfSelectedIds.add(id));
+  pfSelected = hits[0] || null;
+  // Clean up
+  document.getElementById('pf-marquee')?.remove();
+  document.querySelectorAll('.pf-node.marquee-hit').forEach(el=>el.classList.remove('marquee-hit'));
+  pfRenderCanvas();
+}
+
+// ── Smart alignment guides ───────────────────────────────
+function pfDrawGuides(guides) {
+  const svg = document.getElementById('pf-svg');
+  if(!svg) return;
+  svg.querySelectorAll('.pf-guide-line').forEach(g=>g.remove());
+  if(!guides?.length) return;
+  guides.forEach(g => {
+    const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.classList.add('pf-guide-line');
+    if(g.orientation==='v') {
+      ln.setAttribute('x1', g.coord); ln.setAttribute('x2', g.coord);
+      ln.setAttribute('y1', 0); ln.setAttribute('y2', 4000);
+    } else {
+      ln.setAttribute('y1', g.coord); ln.setAttribute('y2', g.coord);
+      ln.setAttribute('x1', 0); ln.setAttribute('x2', 4000);
+    }
+    ln.setAttribute('stroke', '#ff4081');
+    ln.setAttribute('stroke-width', '1');
+    ln.setAttribute('stroke-dasharray', '4,3');
+    svg.appendChild(ln);
+  });
+}
+function pfHideGuides() {
+  document.querySelectorAll('.pf-guide-line').forEach(g=>g.remove());
 }
 
 function pfCanvasDblClick(e) {
@@ -9675,16 +9989,50 @@ function pfNodeMouseDown(e, nodeId) {
   // Don't drag when inside editing text
   const textEl=document.getElementById('pft_'+nodeId);
   if(textEl?.contentEditable==='true') return;
-  // Always select on click — even if clicking on text
-  pfSelected=nodeId;
+
+  // Multi-select modifiers
+  if(e.shiftKey || e.ctrlKey || e.metaKey) {
+    // Toggle in selection
+    if(pfSelectedIds.has(nodeId)) {
+      pfSelectedIds.delete(nodeId);
+      if(pfSelected===nodeId) pfSelected = pfSelectedIds.size ? [...pfSelectedIds][0] : null;
+    } else {
+      pfSelectedIds.add(nodeId);
+      pfSelected = nodeId;
+    }
+    pfRenderCanvas();
+    return;
+  }
+
+  // If clicking a node that's already part of selection → start group drag
+  // Otherwise: replace selection with this node alone
+  if(!pfSelectedIds.has(nodeId)) {
+    pfSelectedIds.clear();
+    pfSelectedIds.add(nodeId);
+  }
+  pfSelected = nodeId;
+
   // If clicking on (non-editing) text, just select without dragging
   if(e.target.closest('.pf-node-text')) {
     pfRenderCanvas();
     return;
   }
+
   const pos=pfGetCanvasPos(e);
   const node=pfNodes.find(n=>n.id===nodeId);
-  if(node) pfDragging={nodeId,ox:pos.x-node.x,oy:pos.y-node.y};
+  if(node) {
+    pfSnapshot('drag-'+nodeId);  // capture state BEFORE drag begins
+    pfDragging={nodeId,ox:pos.x-node.x,oy:pos.y-node.y};
+    // For multi-drag: record initial positions of all selected nodes
+    if(pfSelectedIds.size > 1) {
+      const initial = {};
+      pfSelectedIds.forEach(id => {
+        const n = pfNodes.find(x=>x.id===id);
+        if(n) initial[id] = {x:n.x, y:n.y};
+      });
+      pfGroupDrag = {pivotId:nodeId, initial, pivotStart:{x:node.x, y:node.y}};
+    }
+  }
   pfRenderCanvas();
 }
 function pfPortMouseDown(e, nodeId, port) {
@@ -9696,7 +10044,16 @@ function pfPortMouseDown(e, nodeId, port) {
 
 function pfResizeStart(e, nodeId) {
   e.stopPropagation();
-  pfResizing={nodeId};
+  // Capture initial w/h so Shift can lock aspect ratio
+  const node = pfNodes.find(n=>n.id===nodeId);
+  if(!node) return;
+  pfSnapshot('resize-'+nodeId);
+  pfResizing={
+    nodeId,
+    startW: node.w, startH: node.h,
+    startX: node.x, startY: node.y,
+    aspect: node.h ? node.w/node.h : 1
+  };
 }
 
 let pfImgResizing = null;
@@ -9708,6 +10065,7 @@ function pfImgResizeStart(e, nodeId) {
   pfRotating = null;
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
+  pfSnapshot('imgresize-'+nodeId);
   const startW = node.imageWidth  || 80;
   const startH = node.imageHeight || 60;
   const startX = e.clientX;
@@ -9758,6 +10116,7 @@ function pfRotateStart(e, nodeId) {
   e.preventDefault();
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
+  pfSnapshot('rotate-'+nodeId);
   const el=document.getElementById('pfn_'+nodeId);
   const rect=el.getBoundingClientRect();
   const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
@@ -9769,6 +10128,7 @@ function pfRotateStart(e, nodeId) {
 
 function pfSelectEdge(id) {
   pfSelected=id;
+  pfSelectedIds.clear();
   pfRenderCanvas();
 }
 
@@ -9784,7 +10144,7 @@ async function pfCreateEdge(fromId, toId, fromPort, toPort) {
       else toPort=dx>0?'left':'right';
     }
   }
-  pfSnapshot();
+  pfSnapshot('create-edge');
   const edge={id:'pfedge_'+Date.now(), process_id:pfCurrentId,
     from_id:fromId, to_id:toId,
     from_port:fromPort||'bottom', to_port:toPort||'top',
@@ -9803,6 +10163,7 @@ function pfStartEdit(e, nodeId) {
   const el=document.getElementById('pft_'+nodeId);
   if(!el) return;
   if(el.contentEditable==='true') return; // already editing
+  pfSnapshot('edit-'+nodeId); // entire edit session is 1 undo step
   el.contentEditable='true';
   el.focus();
   // Place cursor at click position (not select all)
@@ -9971,6 +10332,7 @@ function pfFmtSize(nodeId, size) {
   }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
+  pfSnapshot('fmt-size-'+nodeId);
   node.style={...(node.style||{}),fontSize:size};
   if(textEl) textEl.style.fontSize=size;
   pfSyncNode(node);
@@ -9983,6 +10345,7 @@ function pfFmtColor(nodeId, color) {
   }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
+  pfSnapshot('fmt-color-'+nodeId);
   node.style={...(node.style||{}),color};
   if(el && el.contentEditable!=='true') el.style.color=color;
   pfSyncNode(node);
@@ -9991,6 +10354,7 @@ function pfFmtColor(nodeId, color) {
 function pfFmtImgPos(nodeId, pos) {
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
+  pfSnapshot('fmt-imgpos-'+nodeId);
   node.imagePosition=pos;
   pfSaveLocal();
   pfRenderAll(); // Must re-render fully to update flex-direction on node-inner
@@ -10000,6 +10364,7 @@ function pfFmtImgPos(nodeId, pos) {
 function pfFmtAlign(nodeId, align) {
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
+  pfSnapshot('fmt-align-'+nodeId);
   node.style={...(node.style||{}),textAlign:align};
   const el=document.getElementById('pft_'+nodeId);
   if(el) el.style.textAlign=align;
@@ -10023,6 +10388,7 @@ function pfFmtHex(nodeId, val) {
 function pfFmtBg(nodeId, color) {
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
+  pfSnapshot('fmt-bg-'+nodeId);
   node.style={...(node.style||{}),background:color};
   // Direct DOM update (fast)
   const inner=document.querySelector(`#pfn_${nodeId} .pf-node-inner`);
@@ -10067,19 +10433,38 @@ function pfHandleImageUpload(e) {
   e.target.value='';
 }
 // ── Zoom ─────────────────────────────────────────────────
-function pfZoomIn()  { pfZoom=Math.min(3,pfZoom*1.2); pfApplyZoom(); }
-function pfZoomOut() { pfZoom=Math.max(0.2,pfZoom/1.2); pfApplyZoom(); }
+function pfZoomToPoint(newZoom, cx, cy) {
+  // Zoom toward viewport center if no cx/cy provided
+  const outer=document.getElementById('pf-canvas-outer');
+  if(!outer){pfZoom=newZoom; pfApplyZoom(); return;}
+  const rect=outer.getBoundingClientRect();
+  if(cx===undefined) cx = rect.width/2;
+  if(cy===undefined) cy = rect.height/2;
+  const factor = newZoom / pfZoom;
+  pfPan.x = cx - (cx-pfPan.x)*factor;
+  pfPan.y = cy - (cy-pfPan.y)*factor;
+  pfZoom = Math.max(0.2, Math.min(3, newZoom));
+  pfApplyZoom();
+}
+function pfZoomIn()  { pfZoomToPoint(pfZoom*1.2); }
+function pfZoomOut() { pfZoomToPoint(pfZoom/1.2); }
+function pfZoom100() { pfZoomToPoint(1); }
 function pfZoomFit() {
-  if(!pfNodes.length){pfZoom=1;pfPan={x:100,y:100};pfApplyZoom();return;}
+  const outer=document.getElementById('pf-canvas-outer');
+  if(!outer)return;
+  const rect=outer.getBoundingClientRect();
+  if(!pfNodes.length){
+    pfZoom=1; pfPan={x:rect.width/2, y:rect.height/2}; pfApplyZoom(); return;
+  }
   const xs=pfNodes.map(n=>n.x), ys=pfNodes.map(n=>n.y);
   const x2=pfNodes.map(n=>n.x+n.w), y2=pfNodes.map(n=>n.y+n.h);
   const minX=Math.min(...xs)-40, minY=Math.min(...ys)-40;
   const maxX=Math.max(...x2)+40, maxY=Math.max(...y2)+40;
-  const outer=document.getElementById('pf-canvas-outer');
-  if(!outer)return;
-  const rect=outer.getBoundingClientRect();
-  pfZoom=Math.min(3,Math.min(rect.width/(maxX-minX),rect.height/(maxY-minY)),1);
-  pfPan={x:-minX*pfZoom+20,y:-minY*pfZoom+20};
+  const cw = maxX-minX, ch = maxY-minY;
+  pfZoom=Math.min(3, Math.min(rect.width/cw, rect.height/ch), 1);
+  // Center the content
+  pfPan.x = (rect.width  - cw*pfZoom)/2 - minX*pfZoom;
+  pfPan.y = (rect.height - ch*pfZoom)/2 - minY*pfZoom;
   pfApplyZoom();
 }
 function pfApplyZoom() {
@@ -10087,6 +10472,22 @@ function pfApplyZoom() {
   if(canvas) canvas.style.transform=`translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
   const zi=document.querySelector('.pf-zoom-indicator');
   if(zi) zi.textContent=Math.round(pfZoom*100)+'%';
+}
+
+// ── Grid toggle ──────────────────────────────────────────
+function pfToggleGrid() {
+  pfGridSnap = !pfGridSnap;
+  pfRenderAll();
+  if(typeof showNotif==='function')
+    showNotif('ns', pfGridSnap?'📐 Grid on':'📐 Grid off', pfGridSnap?'Snap '+pfGridSize+'px':'Free positioning');
+}
+
+// ── Select all ───────────────────────────────────────────
+function pfSelectAll() {
+  pfSelectedIds.clear();
+  pfNodes.forEach(n => pfSelectedIds.add(n.id));
+  pfSelected = pfNodes[0]?.id || null;
+  pfRenderCanvas();
 }
 
 // ── Partial re-render (fast) ─────────────────────────────
@@ -10102,7 +10503,9 @@ function pfRenderCanvas() {
       canvas.appendChild(tmp.firstChild);
       pfBindNodeEvents(node.id);
     } else {
-      el.className=`pf-node type-${node.type}${pfSelected===node.id?' selected':''}`;
+      const isSel = pfSelected===node.id;
+      const isMulti = pfSelectedIds.has(node.id) && !isSel;
+      el.className=`pf-node type-${node.type}${isSel?' selected':''}${isMulti?' multi-selected':''}`;
       el.style.left=node.x+'px'; el.style.top=node.y+'px';
       el.style.width=node.w+'px'; el.style.height=node.h+'px';
       // If node has image, rebuild inner HTML to ensure img src is set
@@ -10193,39 +10596,71 @@ document.addEventListener('keydown', e => {
   if((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); if(e.shiftKey) pfRedo(); else pfUndo(); return; }
   if((e.ctrlKey||e.metaKey) && e.key==='y') { e.preventDefault(); pfRedo(); return; }
 
+  // Select all (Ctrl+A)
+  if((e.ctrlKey||e.metaKey) && e.key==='a' && !isEditing) { e.preventDefault(); pfSelectAll(); return; }
+
   // Copy/Paste
   if((e.ctrlKey||e.metaKey) && e.key==='c' && !isEditing) { e.preventDefault(); pfCopySelected(); return; }
   if((e.ctrlKey||e.metaKey) && e.key==='v' && !isEditing) { e.preventDefault(); pfPasteNode(); return; }
 
+  // Zoom shortcuts (PowerPoint-style)
+  if((e.ctrlKey||e.metaKey) && (e.key==='='||e.key==='+')) { e.preventDefault(); pfZoomIn(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='-')                 { e.preventDefault(); pfZoomOut(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='0')                 { e.preventDefault(); pfZoom100(); return; }
+
   // Delete
   if((e.key==='Delete'||e.key==='Backspace') && !isEditing) { pfDeleteSelected(); return; }
 
-  // Arrow key move
-  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && pfSelected && !isEditing) {
+  // Arrow key move — works on all selected nodes; debounced snapshot+sync
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && !isEditing) {
+    // Collect all nodes to move (multi-select aware)
+    const ids = pfSelectedIds.size ? [...pfSelectedIds]
+              : (pfSelected ? [pfSelected] : []);
+    if(!ids.length) return;
     e.preventDefault();
-    const node=pfNodes.find(n=>n.id===pfSelected);
-    if(node){
-      const step = e.shiftKey ? 10 : 2;
-      if(e.key==='ArrowUp')    node.y -= step;
-      if(e.key==='ArrowDown')  node.y += step;
-      if(e.key==='ArrowLeft')  node.x -= step;
-      if(e.key==='ArrowRight') node.x += step;
-      const el=document.getElementById('pfn_'+node.id);
-      if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
-      pfUpdateSVG();
-      clearTimeout(window._pfArrowSyncTimer);
-      window._pfArrowSyncTimer=setTimeout(()=>pfSyncNode(node),400);
-    }
+
+    // Coalesce rapid arrow presses: 1 snapshot for a burst, then sync after 400ms idle
+    pfSnapshot('arrow-move');
+
+    const step = e.shiftKey ? 10 : 1;
+    let dx=0, dy=0;
+    if(e.key==='ArrowUp')    dy=-step;
+    if(e.key==='ArrowDown')  dy= step;
+    if(e.key==='ArrowLeft')  dx=-step;
+    if(e.key==='ArrowRight') dx= step;
+
+    ids.forEach(id => {
+      const node = pfNodes.find(n=>n.id===id);
+      if(!node) return;
+      node.x += dx; node.y += dy;
+      const el = document.getElementById('pfn_'+id);
+      if(el){ el.style.left=node.x+'px'; el.style.top=node.y+'px'; }
+    });
+    pfUpdateSVG();
+
+    clearTimeout(window._pfArrowSyncTimer);
+    window._pfArrowSyncTimer = setTimeout(()=>{
+      ids.forEach(id => {
+        const n = pfNodes.find(x=>x.id===id);
+        if(n) pfSyncNode(n);
+      });
+    }, 400);
     return;
   }
 
-  // Tool shortcuts (not editing)
+  // Tool / grid shortcuts (not editing)
   if(!isEditing) {
     if(e.key==='v' && !e.ctrlKey && !e.metaKey) pfSetTool('select');
     if(e.key==='c' && !e.ctrlKey && !e.metaKey) pfSetTool('connect');
-    if(e.key==='h') pfSetTool('pan');
+    if(e.key==='h' && !e.ctrlKey && !e.metaKey) pfSetTool('pan');
+    if(e.key==='g' && !e.ctrlKey && !e.metaKey) pfToggleGrid();
   }
   if((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); pfSaveAll(); return; }
-  if(e.key==='Escape') { pfHideFmtBar(); pfSelected=null; pfRenderCanvas(); }
+  if(e.key==='Escape') {
+    pfHideFmtBar();
+    pfSelected=null;
+    pfSelectedIds.clear();
+    pfRenderCanvas();
+  }
 });
 </script>
