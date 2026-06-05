@@ -8775,7 +8775,19 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 <style>
 /* ═══ PROCESS FLOW ═══════════════════════════════════════ */
 .pf-layout{display:flex;height:100%;overflow:hidden}
-.pf-sidebar{width:220px;min-width:220px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.pf-sidebar{width:220px;min-width:220px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;transition:width .2s ease,min-width .2s ease}
+.pf-sidebar.collapsed{width:38px;min-width:38px}
+.pf-sidebar.collapsed .pf-sidebar-title,
+.pf-sidebar.collapsed .pf-new-btn,
+.pf-sidebar.collapsed .pf-process-list{display:none}
+.pf-sidebar-toggle{
+  background:none;border:1px solid var(--bd);border-radius:5px;
+  width:24px;height:24px;cursor:pointer;color:var(--tx2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;padding:0;
+  transition:background .12s
+}
+.pf-sidebar-toggle:hover{background:var(--s2);color:var(--ac)}
 .pf-sidebar-header{padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px}
 .pf-sidebar-title{font-size:13px;font-weight:700;color:var(--tx);flex:1}
 .pf-new-btn{padding:5px 10px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -8895,6 +8907,19 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 }
 .pf-node.selected .pf-node-resize{opacity:1}
 
+/* 4-corner resize handles — visible only when shape is selected */
+.pf-resize-handle{
+  position:absolute;width:10px;height:10px;
+  background:#fff;border:1.5px solid var(--ac);border-radius:50%;
+  opacity:0;pointer-events:none;
+  z-index:25;transition:opacity .12s;
+}
+.pf-node.selected .pf-resize-handle{opacity:1;pointer-events:auto}
+.pf-resize-handle.nw{top:-6px; left:-6px; cursor:nwse-resize}
+.pf-resize-handle.ne{top:-6px; right:-6px;cursor:nesw-resize}
+.pf-resize-handle.sw{bottom:-6px;left:-6px; cursor:nesw-resize}
+.pf-resize-handle.se{bottom:-6px;right:-6px;cursor:nwse-resize}
+
 /* Connection points */
 .pf-port{
   position:absolute;width:10px;height:10px;border-radius:50%;
@@ -8926,6 +8951,10 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 .pf-fmt-btn{padding:4px 7px;border-radius:5px;border:none;background:none;color:var(--tx2);font-size:12px;cursor:pointer;font-weight:600;min-width:26px}
 .pf-fmt-btn:hover{background:var(--s2)}
 .pf-fmt-btn.active{background:rgba(79,124,255,.15);color:var(--ac)}
+.pf-fmt-tabs{display:inline-flex;gap:1px;background:var(--s2);border-radius:6px;padding:2px}
+.pf-fmt-tab{padding:4px 9px;border:none;background:none;color:var(--tx2);font-size:11px;cursor:pointer;border-radius:4px;font-weight:600;white-space:nowrap}
+.pf-fmt-tab:hover{background:rgba(79,124,255,.08)}
+.pf-fmt-tab.active{background:var(--ac);color:#fff}
 
 /* Empty state */
 .pf-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--tx3)}
@@ -9004,6 +9033,7 @@ async function pfSaveAll() {
     const toDbEdge = e => ({
       id: e.id, process_id: e.process_id,
       from_id: e.from_id, to_id: e.to_id,
+      from_port: e.from_port||'bottom', to_port: e.to_port||'top',
       label: e.label||'', style: e.style||'solid',
     });
     await Promise.all([
@@ -9197,6 +9227,7 @@ async function pfSyncEdge(edge) {
   pfSaveLocal();
   const edgeDb = { id: edge.id, process_id: edge.process_id,
     from_id: edge.from_id, to_id: edge.to_id,
+    from_port: edge.from_port||'bottom', to_port: edge.to_port||'top',
     label: edge.label||'', style: edge.style||'solid' };
   try { await dbPF.upsertEdge(edgeDb); } catch(e){console.warn('[PF] sync edge:',e);}
 }
@@ -9291,10 +9322,14 @@ function pfPasteNode() {
 function pfRenderAll() {
   const view = document.getElementById('processflow-view');
   if(!view) return;
+  const sidebarCollapsed = localStorage.getItem('pf_sidebar_collapsed')==='1';
   view.innerHTML = `
   <div class="pf-layout">
-    <div class="pf-sidebar">
+    <div class="pf-sidebar${sidebarCollapsed?' collapsed':''}" id="pf-sidebar">
       <div class="pf-sidebar-header">
+        <button class="pf-sidebar-toggle" onclick="pfToggleSidebar()" title="${sidebarCollapsed?'Mở rộng':'Thu gọn'}">
+          ${sidebarCollapsed?'»':'«'}
+        </button>
         <div class="pf-sidebar-title">📋 Processes</div>
         <button class="pf-new-btn" onclick="pfCreateProcess()">+ New</button>
       </div>
@@ -9380,6 +9415,9 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfPasteNode()"     title="Paste (Ctrl+V)">⎘ Paste</button>
       <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa (Del)">🗑 Xóa</button>
       <div class="pf-tool-sep"></div>
+      <button class="pf-tool-btn" onclick="pfExportSVG()" title="Xuất ra file SVG (mở được trong PowerPoint, Illustrator,...)">⬇ SVG</button>
+      <button class="pf-tool-btn" onclick="pfExportPDF()" title="Xuất ra PDF (chọn 'Save as PDF' khi in)">⬇ PDF</button>
+      <div class="pf-tool-sep"></div>
       <button id="pf-save-btn" class="pf-tool-btn" onclick="pfSaveAll()" title="Lưu tất cả (Ctrl+S)"
         style="font-weight:700">💾 Lưu</button>
     </div>
@@ -9440,13 +9478,19 @@ function pfRenderNode(node) {
         onblur="pfEndEdit('${node.id}',event)"
         onkeydown="if(event.key==='Escape'||event.key==='Enter'&&!event.shiftKey){event.preventDefault();pfEndEdit('${node.id}')}"
         >${node.label||''}</div>
-      ${node.type!=='arrow'?`<div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"></div>`:''}
+      ${node.type!=='arrow'?`
+        <div class="pf-resize-handle nw" onmousedown="pfResizeStart(event,'${node.id}','nw')"></div>
+        <div class="pf-resize-handle ne" onmousedown="pfResizeStart(event,'${node.id}','ne')"></div>
+        <div class="pf-resize-handle sw" onmousedown="pfResizeStart(event,'${node.id}','sw')"></div>
+        <div class="pf-resize-handle se" onmousedown="pfResizeStart(event,'${node.id}','se')"></div>
+      `:''}
     </div>
     ${node.type==='arrow'?`
       <div class="pf-node-rotate" onmousedown="pfRotateStart(event,'${node.id}')" title="Xoay">↻</div>
-      <div class="pf-node-resize" onmousedown="pfResizeStart(event,'${node.id}')"
-        style="bottom:-6px;right:-6px;width:14px;height:14px;
-               border:2px solid #fff;z-index:20"></div>
+      <div class="pf-resize-handle nw" onmousedown="pfResizeStart(event,'${node.id}','nw')"></div>
+      <div class="pf-resize-handle ne" onmousedown="pfResizeStart(event,'${node.id}','ne')"></div>
+      <div class="pf-resize-handle sw" onmousedown="pfResizeStart(event,'${node.id}','sw')"></div>
+      <div class="pf-resize-handle se" onmousedown="pfResizeStart(event,'${node.id}','se')"></div>
     `:''}
     <div class="pf-port top"    onmousedown="pfPortMouseDown(event,'${node.id}','top')"></div>
     <div class="pf-port bottom" onmousedown="pfPortMouseDown(event,'${node.id}','bottom')"></div>
@@ -9631,6 +9675,7 @@ function pfCanvasMouseDown(e) {
     if(!pfMarquee.additive) {
       pfSelected=null;
       pfSelectedIds.clear();
+      pfHideFmtBar();
     }
     e.preventDefault();
     pfRenderCanvas();
@@ -9640,6 +9685,7 @@ function pfCanvasMouseDown(e) {
   // Other tools: just deselect
   pfSelected=null;
   pfSelectedIds.clear();
+  pfHideFmtBar();
   pfRenderCanvas();
 }
 
@@ -9776,11 +9822,13 @@ function pfCanvasMouseMove(e) {
     const pos=pfGetCanvasPos(e);
     const node=pfNodes.find(n=>n.id===pfResizing.nodeId);
     if(node){
-      let newW = Math.max(40, Math.round(pos.x-node.x));
-      let newH = Math.max(30, Math.round(pos.y-node.y));
+      const corner = pfResizing.corner || 'se';
+      const anchor = pfResizing.anchor;
+      // Width/height based on distance from anchor to current mouse position
+      let newW = Math.max(40, Math.abs(pos.x - anchor.x));
+      let newH = Math.max(30, Math.abs(pos.y - anchor.y));
       // Shift = preserve aspect ratio (PPT convention)
       if(e.shiftKey && pfResizing.aspect) {
-        // Use whichever axis moved further to drive the other
         const dx = Math.abs(newW - pfResizing.startW);
         const dy = Math.abs(newH - pfResizing.startH);
         if(dx > dy) newH = Math.max(30, Math.round(newW / pfResizing.aspect));
@@ -9790,10 +9838,18 @@ function pfCanvasMouseMove(e) {
       if(pfGridSnap && !e.altKey) {
         newW = Math.round(newW/pfGridSize)*pfGridSize;
         newH = Math.round(newH/pfGridSize)*pfGridSize;
+        newW = Math.max(40, newW); newH = Math.max(30, newH);
       }
-      node.w=newW; node.h=newH;
+      // Compute new x/y so that the anchor corner stays fixed
+      let newX = corner.includes('e') ? anchor.x : anchor.x - newW;
+      let newY = corner.includes('s') ? anchor.y : anchor.y - newH;
+      node.w = Math.round(newW); node.h = Math.round(newH);
+      node.x = Math.round(newX); node.y = Math.round(newY);
       const el=document.getElementById('pfn_'+node.id);
-      if(el){el.style.width=node.w+'px';el.style.height=node.h+'px';}
+      if(el){
+        el.style.left=node.x+'px'; el.style.top=node.y+'px';
+        el.style.width=node.w+'px'; el.style.height=node.h+'px';
+      }
       pfUpdateSVG();
     }
     return;
@@ -9983,6 +10039,7 @@ function pfNodeMouseDown(e, nodeId) {
   e.stopPropagation();
   if(e.target.classList.contains('pf-port'))             return;
   if(e.target.classList.contains('pf-node-resize'))      return;
+  if(e.target.classList.contains('pf-resize-handle'))    return;
   if(e.target.classList.contains('pf-node-rotate'))      return;
   if(e.target.classList.contains('pf-img-resize-handle'))return;
   if(pfTool==='connect') return;
@@ -10015,6 +10072,7 @@ function pfNodeMouseDown(e, nodeId) {
   // If clicking on (non-editing) text, just select without dragging
   if(e.target.closest('.pf-node-text')) {
     pfRenderCanvas();
+    pfShowFmtBar(nodeId, 'shape'); // show shape format bar on select
     return;
   }
 
@@ -10034,6 +10092,9 @@ function pfNodeMouseDown(e, nodeId) {
     }
   }
   pfRenderCanvas();
+  // Show shape format bar when selecting a single shape (not during multi-select)
+  if(pfSelectedIds.size <= 1) pfShowFmtBar(nodeId, 'shape');
+  else pfHideFmtBar();
 }
 function pfPortMouseDown(e, nodeId, port) {
   e.stopPropagation();
@@ -10042,14 +10103,25 @@ function pfPortMouseDown(e, nodeId, port) {
   pfSetTool('connect'); // auto switch to connect mode
 }
 
-function pfResizeStart(e, nodeId) {
+/**
+ * Start resizing from a specific corner.
+ * corner: 'nw' | 'ne' | 'sw' | 'se' (defaults to 'se' for backward compatibility)
+ * Stores the "anchor" — the point on the shape that stays fixed during resize.
+ */
+function pfResizeStart(e, nodeId, corner) {
   e.stopPropagation();
-  // Capture initial w/h so Shift can lock aspect ratio
+  e.preventDefault();
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
   pfSnapshot('resize-'+nodeId);
+  corner = corner || 'se';
+  // Anchor = the opposite corner (stays fixed during resize)
+  const anchor = {
+    x: corner.includes('e') ? node.x : node.x + node.w,
+    y: corner.includes('s') ? node.y : node.y + node.h,
+  };
   pfResizing={
-    nodeId,
+    nodeId, corner, anchor,
     startW: node.w, startH: node.h,
     startX: node.x, startY: node.y,
     aspect: node.h ? node.w/node.h : 1
@@ -10153,7 +10225,9 @@ async function pfCreateEdge(fromId, toId, fromPort, toPort) {
   pfSelected=edge.id;
   pfSaveLocal(); pfMarkDirty();
   pfRenderCanvas();
-  const edgeDb={id:edge.id,process_id:edge.process_id,from_id:edge.from_id,to_id:edge.to_id,label:edge.label||'',style:edge.style||'solid'};
+  const edgeDb={id:edge.id,process_id:edge.process_id,from_id:edge.from_id,to_id:edge.to_id,
+    from_port:edge.from_port||'bottom', to_port:edge.to_port||'top',
+    label:edge.label||'',style:edge.style||'solid'};
   try{await dbPF.upsertEdge(edgeDb);}catch(e){console.warn(e);}
 }
 
@@ -10178,7 +10252,7 @@ function pfStartEdit(e, nodeId) {
     window.getSelection()?.removeAllRanges();
     window.getSelection()?.addRange(range);
   }
-  pfShowFmtBar(nodeId);
+  pfShowFmtBar(nodeId, 'text');
 }
 
 function pfNodeClick(e, nodeId) {
@@ -10198,54 +10272,75 @@ function pfEndEdit(nodeId, e) {
   el.contentEditable='false';
   const node=pfNodes.find(n=>n.id===nodeId);
   if(node){ node.label=el.innerHTML||''; pfSyncNode(node); }
+  // Switch format bar back to SHAPE mode if shape is still selected
   setTimeout(()=>{
-    if(!document.getElementById('pf-fmt-bar')?.contains(document.activeElement))
-      pfHideFmtBar();
+    const fmtBar = document.getElementById('pf-fmt-bar');
+    const fmtFocused = fmtBar?.contains(document.activeElement);
+    if(fmtFocused) return; // user is interacting with format bar — don't hide
+    if(pfSelected === nodeId) pfShowFmtBar(nodeId, 'shape');
+    else pfHideFmtBar();
   }, 250);
 }
-// ── Format bar ───────────────────────────────────────────
-function pfShowFmtBar(nodeId) {
+// ── Format bar (split into TEXT and SHAPE modes) ────────
+function pfShowFmtBar(nodeId, mode) {
   pfHideFmtBar();
+  if(!nodeId) return;
   const node = pfNodes.find(n=>n.id===nodeId);
   const el   = document.getElementById('pfn_'+nodeId);
-  if(!el) return;
+  if(!node || !el) return;
+  mode = mode || 'shape';
 
   const rect = el.getBoundingClientRect();
   const bar  = document.createElement('div');
   bar.id     = 'pf-fmt-bar';
   bar.className = 'pf-fmt-bar';
+  bar.dataset.mode = mode;
+  bar.dataset.nodeId = nodeId;
   bar.tabIndex  = -1;
-  // Critical: prevent mousedown from stealing focus/selection
   bar.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); });
 
+  // Mode toggle tabs (always visible at the start of the bar)
+  const tabs = `
+    <div class="pf-fmt-tabs">
+      <button class="pf-fmt-tab${mode==='text'?' active':''}"
+        onmousedown="event.preventDefault()" onclick="pfShowFmtBar('${nodeId}','text')"
+        title="Định dạng văn bản">📝 Chữ</button>
+      <button class="pf-fmt-tab${mode==='shape'?' active':''}"
+        onmousedown="event.preventDefault()" onclick="pfShowFmtBar('${nodeId}','shape')"
+        title="Định dạng khung">🔷 Khung</button>
+    </div>`;
+
+  bar.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:600px;padding:2px">
+    ${tabs}
+    <div style="width:1px;height:20px;background:var(--bd);margin:0 2px"></div>
+    ${mode==='text' ? pfFmtBarText(nodeId, node) : pfFmtBarShape(nodeId, node)}
+  </div>`;
+
+  const barLeft = Math.max(8, Math.min(rect.left, window.innerWidth-620));
+  const barTop  = rect.top > 70 ? rect.top-58 : rect.bottom+8;
+  bar.style.left = barLeft+'px';
+  bar.style.top  = barTop+'px';
+  document.body.appendChild(bar);
+}
+
+function pfFmtBarText(nodeId, node) {
   const fs  = node?.style?.fontSize||'12px';
   const fc  = node?.style?.color||'#333333';
-  const bg  = node?.style?.background||'#ffffff';
-  const bc  = node?.style?.borderColor||'#888888';
   const ta  = node?.style?.textAlign||'center';
-  const bs  = node?.style?.borderStyle||'solid';
-  const bw  = node?.style?.borderWidth||'2px';
-
   const presets=['#000000','#ef4444','#f97316','#eab308','#16a34a','#2563eb','#7c3aed','#ec4899','#ffffff','#64748b'];
-
-  bar.innerHTML=`
-  <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;max-width:520px;padding:2px">
-    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('bold')"         title="Bold"><b>B</b></button>
-    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('italic')"       title="Nghiêng"><i>I</i></button>
-    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('underline')"    title="Gạch dưới"><u>U</u></button>
-    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('strikeThrough')" title="Gạch chữ"><s>S</s></button>
+  return `
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('bold')"          title="Đậm (Ctrl+B)"><b>B</b></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('italic')"        title="Nghiêng (Ctrl+I)"><i>I</i></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('underline')"     title="Gạch dưới (Ctrl+U)"><u>U</u></button>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmt('strikeThrough')" title="Gạch ngang"><s>S</s></button>
     <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfInsertDivider('${nodeId}')" title="Gạch phân cách" style="font-size:14px;line-height:1">━</button>
     <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-    <select onmousedown="event.stopPropagation()"
-      onchange="pfFmtSize('${nodeId}',this.value)"
-      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer"
-      title="Font size">
-      ${[9,10,11,12,13,14,16,18,20,24,28].map(s=>`<option value="${s}px"${fs===s+'px'?' selected':''}>${s}</option>`).join('')}
+    <select onmousedown="event.stopPropagation()" onchange="pfFmtSize('${nodeId}',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Cỡ chữ">
+      ${[9,10,11,12,13,14,16,18,20,24,28,32].map(s=>`<option value="${s}px"${fs===s+'px'?' selected':''}>${s}</option>`).join('')}
     </select>
-    <select onmousedown="event.stopPropagation()"
-      onchange="pfFmtAlign('${nodeId}',this.value)"
-      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer"
-      title="Căn lề">
+    <select onmousedown="event.stopPropagation()" onchange="pfFmtAlign('${nodeId}',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Căn lề">
       <option value="left"    ${ta==='left'   ?'selected':''}>⬅ Trái</option>
       <option value="center"  ${ta==='center' ?'selected':''}>↔ Giữa</option>
       <option value="right"   ${ta==='right'  ?'selected':''}>➡ Phải</option>
@@ -10254,65 +10349,63 @@ function pfShowFmtBar(nodeId) {
     <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
     ${presets.map(clr=>`<div onmousedown="event.preventDefault()" onclick="pfFmtColor('${nodeId}','${clr}')"
       style="width:16px;height:16px;border-radius:3px;background:${clr};border:1px solid var(--bd);cursor:pointer;flex-shrink:0" title="${clr}"></div>`).join('')}
-    <label title="Màu chữ" style="cursor:pointer;position:relative">
+    <label title="Màu chữ tùy chọn" style="cursor:pointer;position:relative">
       <div style="width:22px;height:22px;border-radius:3px;border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ac)">A</div>
-      <input type="color" value="${fc}" onmousedown="event.stopPropagation()"
-        onchange="pfFmtColor('${nodeId}',this.value)"
+      <input type="color" value="${fc}" onmousedown="event.stopPropagation()" onchange="pfFmtColor('${nodeId}',this.value)"
         style="position:absolute;opacity:0;width:22px;height:22px;top:0;left:0;cursor:pointer">
     </label>
-    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
+    <input type="text" placeholder="#HEX" onmousedown="event.stopPropagation()" onkeydown="event.stopPropagation()"
+      onchange="pfFmtHex('${nodeId}',this.value)"
+      style="width:80px;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:monospace" title="Nhập mã màu">`;
+}
+
+function pfFmtBarShape(nodeId, node) {
+  const bg  = node?.style?.background||'#ffffff';
+  const bc  = node?.style?.borderColor||'#888888';
+  const bs  = node?.style?.borderStyle||'solid';
+  const bw  = node?.style?.borderWidth||'2px';
+  return `
+    <span style="font-size:10px;color:var(--tx3);margin-right:2px">Viền:</span>
+    <select onmousedown="event.stopPropagation()" onchange="pfFmtBorder('${nodeId}','style',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Kiểu viền">
+      <option value="solid"  ${bs==='solid' ?'selected':''}>━ Liền</option>
+      <option value="dashed" ${bs==='dashed'?'selected':''}>╌ Đứt</option>
+      <option value="dotted" ${bs==='dotted'?'selected':''}>··· Chấm</option>
+      <option value="double" ${bs==='double'?'selected':''}>═ Đôi</option>
+      <option value="none"   ${bs==='none'  ?'selected':''}>○ Không</option>
+    </select>
+    <select onmousedown="event.stopPropagation()" onchange="pfFmtBorder('${nodeId}','width',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Độ dày">
+      ${['1px','2px','3px','4px','5px','6px'].map(w=>`<option value="${w}" ${bw===w?'selected':''}>${w}</option>`).join('')}
+    </select>
+    <label title="Màu viền" style="cursor:pointer;position:relative;display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)">
+      <div style="width:18px;height:18px;border-radius:3px;border:2px solid ${bc}"></div>Màu viền
+      <input type="color" value="${bc==='transparent'?'#888888':bc}" onmousedown="event.stopPropagation()"
+        onchange="pfFmtBorder('${nodeId}','color',this.value)"
+        style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
+    </label>
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 4px"></div>
+    <span style="font-size:10px;color:var(--tx3);margin-right:2px">Nền:</span>
     <label title="Màu nền" style="cursor:pointer;position:relative;display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)">
-      <div id="pf-fmt-bg-swatch" style="width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);background:${bg}"></div>Nền
+      <div id="pf-fmt-bg-swatch" style="width:18px;height:18px;border-radius:3px;border:1px solid var(--bd);background:${bg}"></div>Chọn
       <input type="color" value="${bg==='transparent'?'#ffffff':bg}" onmousedown="event.stopPropagation()"
         onchange="pfFmtBg('${nodeId}',this.value)"
         style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
     </label>
-    <input type="text" placeholder="#HEX hoặc rgb()" id="pf-hex-inp"
-      onmousedown="event.stopPropagation()" onkeydown="event.stopPropagation()"
-      onchange="pfFmtHex('${nodeId}',this.value)"
-      style="width:100px;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:monospace"
-      title="Nhập #HEX hoặc rgb()">
-    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-    <select onmousedown="event.stopPropagation()"
-      onchange="pfFmtBorder('${nodeId}','style',this.value)"
-      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Kiểu viền">
-      <option value="solid"  ${bs==='solid' ?'selected':''}>━ Liền</option>
-      <option value="dashed" ${bs==='dashed'?'selected':''}>╌ Nét đứt</option>
-      <option value="dotted" ${bs==='dotted'?'selected':''}>··· Chấm</option>
-      <option value="double" ${bs==='double'?'selected':''}>═ Đôi</option>
-    </select>
-    <select onmousedown="event.stopPropagation()"
-      onchange="pfFmtBorder('${nodeId}','width',this.value)"
-      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Độ dày viền">
-      <option value="1px" ${bw==='1px'?'selected':''}>1px</option>
-      <option value="2px" ${bw==='2px'?'selected':''}>2px</option>
-      <option value="3px" ${bw==='3px'?'selected':''}>3px</option>
-      <option value="4px" ${bw==='4px'?'selected':''}>4px</option>
-    </select>
-    <label title="Màu viền" style="cursor:pointer;position:relative;display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)">
-      <div style="width:16px;height:16px;border-radius:3px;border:2px solid ${bc}"></div>Viền
-      <input type="color" value="${bc}" onmousedown="event.stopPropagation()"
-        onchange="pfFmtBorder('${nodeId}','color',this.value)"
-        style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
-    </label>
+    <button class="pf-fmt-btn" onmousedown="event.preventDefault()" onclick="pfFmtBg('${nodeId}','transparent')" title="Bỏ màu nền"
+      style="font-size:10px">Trong suốt</button>
     ${node?.imageUrl ? `
-    <div style="width:1px;height:18px;background:var(--bd);margin:0 2px"></div>
-    <select onmousedown="event.stopPropagation()"
-      onchange="pfFmtImgPos('${nodeId}',this.value)"
-      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer" title="Vị trí ảnh">
-      <option value="top"    ${(node?.imagePosition||'top')==='top'   ?'selected':''}>🔼 Ảnh trên</option>
-      <option value="bottom" ${(node?.imagePosition||'top')==='bottom'?'selected':''}>🔽 Ảnh dưới</option>
-      <option value="left"   ${(node?.imagePosition||'top')==='left'  ?'selected':''}>◀ Ảnh trái</option>
-      <option value="right"  ${(node?.imagePosition||'top')==='right' ?'selected':''}>▶ Ảnh phải</option>
-    </select>` : ''}
-  </div>`;
-
-  const barLeft = Math.max(8, Math.min(rect.left, window.innerWidth-530));
-  const barTop  = rect.top > 60 ? rect.top-52 : rect.bottom+6;
-  bar.style.left = barLeft+'px';
-  bar.style.top  = barTop+'px';
-  document.body.appendChild(bar);
+    <div style="width:1px;height:18px;background:var(--bd);margin:0 4px"></div>
+    <span style="font-size:10px;color:var(--tx3);margin-right:2px">Ảnh:</span>
+    <select onmousedown="event.stopPropagation()" onchange="pfFmtImgPos('${nodeId}',this.value)"
+      style="font-size:11px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:2px 4px;color:var(--tx);height:26px;cursor:pointer">
+      <option value="top"    ${(node?.imagePosition||'top')==='top'   ?'selected':''}>🔼 Trên</option>
+      <option value="bottom" ${(node?.imagePosition||'top')==='bottom'?'selected':''}>🔽 Dưới</option>
+      <option value="left"   ${(node?.imagePosition||'top')==='left'  ?'selected':''}>◀ Trái</option>
+      <option value="right"  ${(node?.imagePosition||'top')==='right' ?'selected':''}>▶ Phải</option>
+    </select>` : ''}`;
 }
+
 function pfHideFmtBar() { document.getElementById('pf-fmt-bar')?.remove(); }
 
 function pfFmt(cmd) { document.execCommand(cmd,false,null); }
@@ -10540,15 +10633,15 @@ function pfUpdateSVG(withTemp) {
   const newPaths=document.createElementNS('http://www.w3.org/2000/svg','g');
   newPaths.innerHTML=pfRenderEdgesSVG();
   while(newPaths.firstChild) svg.appendChild(newPaths.firstChild);
-  // Temp connecting line
+  // Temp connecting line — start from the port the user grabbed, not always bottom
   svg.querySelector('#pf-tmp-line')?.remove();
   if(withTemp&&pfConnecting?.mx!==undefined) {
     const from=pfNodes.find(n=>n.id===pfConnecting.fromId);
     if(from){
-      const fx=from.x+from.w/2, fy=from.y+from.h;
+      const fp = pfPortPoint(from, pfConnecting.fromPort||'bottom');
       const line=document.createElementNS('http://www.w3.org/2000/svg','line');
       line.setAttribute('id','pf-tmp-line');
-      line.setAttribute('x1',fx);line.setAttribute('y1',fy);
+      line.setAttribute('x1',fp.x);line.setAttribute('y1',fp.y);
       line.setAttribute('x2',pfConnecting.mx);line.setAttribute('y2',pfConnecting.my);
       line.setAttribute('stroke','var(--ac)');line.setAttribute('stroke-width','2');
       line.setAttribute('stroke-dasharray','6,3');
@@ -10584,6 +10677,144 @@ function pfTouchMove(e) {
 }
 function pfTouchEnd(e) {
   pfCanvasMouseUp({clientX:pfLastTouch?.x||0,clientY:pfLastTouch?.y||0});
+}
+
+// ── Sidebar collapse ─────────────────────────────────────
+function pfToggleSidebar() {
+  const sidebar = document.getElementById('pf-sidebar');
+  if(!sidebar) return;
+  const wasCollapsed = sidebar.classList.contains('collapsed');
+  sidebar.classList.toggle('collapsed');
+  localStorage.setItem('pf_sidebar_collapsed', wasCollapsed ? '0' : '1');
+  // Update toggle button text
+  const btn = sidebar.querySelector('.pf-sidebar-toggle');
+  if(btn) {
+    btn.textContent = wasCollapsed ? '«' : '»';
+    btn.title = wasCollapsed ? 'Thu gọn' : 'Mở rộng';
+  }
+}
+
+// ── Export to SVG / PDF ──────────────────────────────────
+/**
+ * Build a self-contained SVG document representing the entire current process.
+ * Uses <foreignObject> with embedded HTML so styles, fonts, and images render
+ * identically to the on-screen view. Returns the SVG as a string.
+ */
+function pfBuildExportSVG() {
+  if(!pfNodes.length && !pfEdges.length) return null;
+
+  // Compute bounding box across all nodes (and edges, indirectly via nodes)
+  const PAD = 40;
+  const xs = pfNodes.map(n=>n.x), ys = pfNodes.map(n=>n.y);
+  const x2 = pfNodes.map(n=>n.x+n.w), y2 = pfNodes.map(n=>n.y+n.h);
+  const minX = Math.min(...xs) - PAD;
+  const minY = Math.min(...ys) - PAD;
+  const maxX = Math.max(...x2) + PAD;
+  const maxY = Math.max(...y2) + PAD;
+  const w = maxX - minX, h = maxY - minY;
+
+  // Render edges as native SVG paths using the existing edge logic
+  const edgesSvg = pfRenderEdgesSVG();
+
+  // For each node, build a <foreignObject> containing the node HTML.
+  // This preserves text formatting, colors, borders, images — everything.
+  const nodesSvg = pfNodes.map(node => {
+    const rot = node.rotation||0;
+    const html = pfRenderNode(node);
+    // pfRenderNode returns a <div class="pf-node" style="left:Xpx;top:Ypx;...">
+    // For SVG embedding we need to neutralize the absolute positioning since
+    // the foreignObject already positions us. We swap the outer div's style.
+    const innerOnly = html.replace(/style="left:[^"]*"/, 'style="position:relative;width:100%;height:100%"');
+    return `<foreignObject x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}"
+      ${rot ? `transform="rotate(${rot} ${node.x+node.w/2} ${node.y+node.h/2})"` : ''}>
+      <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%">${innerOnly}</div>
+    </foreignObject>`;
+  }).join('\n');
+
+  // Inline minimal CSS so the exported SVG renders standalone
+  const inlineCss = `
+    .pf-node-inner{box-sizing:border-box;width:100%;height:100%;border:2px solid #888;border-radius:8px;background:#fff;
+      display:flex;align-items:center;justify-content:center;padding:6px;font-family:system-ui,-apple-system,sans-serif}
+    .pf-node.type-decision .pf-node-inner{transform:rotate(45deg);border-radius:6px}
+    .pf-node.type-decision .pf-node-text{transform:rotate(-45deg)}
+    .pf-node.type-start  .pf-node-inner,
+    .pf-node.type-end    .pf-node-inner{border-radius:999px}
+    .pf-node.type-note   .pf-node-inner{background:#fff8c4;border-color:#e0c97a}
+    .pf-node.type-start  .pf-node-inner{background:#d4edda}
+    .pf-node.type-end    .pf-node-inner{background:#f8d7da}
+    .pf-node-text{font-size:12px;text-align:center;color:#333;line-height:1.3}
+    .pf-edge{fill:none;stroke:#666;stroke-width:2}
+    .pf-edge.dashed{stroke-dasharray:6,3}
+    .pf-edge-label{font-size:11px;fill:#666;font-family:system-ui,sans-serif}
+    .pf-port,.pf-node-resize,.pf-resize-handle,.pf-node-rotate{display:none}`;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml"
+     viewBox="${minX} ${minY} ${w} ${h}" width="${w}" height="${h}">
+  <defs>
+    <marker id="pf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#666"/>
+    </marker>
+    <style><![CDATA[${inlineCss}]]></style>
+  </defs>
+  <rect x="${minX}" y="${minY}" width="${w}" height="${h}" fill="#fff"/>
+  ${edgesSvg}
+  ${nodesSvg}
+</svg>`;
+}
+
+function pfExportSVG() {
+  const svg = pfBuildExportSVG();
+  if(!svg) { showNotif?.('nw','⚠️','Không có nội dung để xuất'); return; }
+  const proc = pfProcesses.find(p=>p.id===pfCurrentId);
+  const name = (proc?.name || 'process').replace(/[^\w\s\-\.]/g,'').replace(/\s+/g,'_');
+  const blob = new Blob([svg], {type:'image/svg+xml'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = name + '.svg';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showNotif?.('ns','✅ Đã xuất SVG', name+'.svg');
+}
+
+function pfExportPDF() {
+  const svg = pfBuildExportSVG();
+  if(!svg) { showNotif?.('nw','⚠️','Không có nội dung để xuất'); return; }
+  const proc = pfProcesses.find(p=>p.id===pfCurrentId);
+  const name = proc?.name || 'Process';
+  // Open a popup window with the SVG embedded; trigger print dialog.
+  // User then chooses "Save as PDF" in the printer list.
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if(!win) { showNotif?.('nw','⚠️','Vui lòng cho phép popup để xuất PDF'); return; }
+  win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${name}</title>
+<style>
+  body{margin:0;padding:20px;font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5}
+  h1{font-size:18px;margin:0 0 12px 0;color:#222}
+  .meta{font-size:11px;color:#666;margin-bottom:16px}
+  .canvas{background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:inline-block}
+  svg{display:block;max-width:100%;height:auto}
+  .actions{position:fixed;top:20px;right:20px;display:flex;gap:8px}
+  .actions button{padding:8px 14px;font-size:13px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;font-weight:600}
+  .actions button.primary{background:#4f7cff;color:#fff;border-color:#4f7cff}
+  @media print{
+    body{background:#fff;padding:0}
+    .actions{display:none}
+    .canvas{box-shadow:none;padding:0}
+    h1,.meta{display:none}
+  }
+</style>
+</head><body>
+<div class="actions">
+  <button class="primary" onclick="window.print()">🖨 In / Lưu PDF</button>
+  <button onclick="window.close()">✕ Đóng</button>
+</div>
+<h1>${name}</h1>
+<div class="meta">Xuất từ TaskFlow • ${new Date().toLocaleString('vi-VN')}</div>
+<div class="canvas">${svg}</div>
+<script>setTimeout(()=>window.print(),400);<\/script>
+</body></html>`);
+  win.document.close();
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────
