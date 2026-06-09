@@ -8803,7 +8803,20 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 
 /* Canvas area */
 .pf-canvas-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.pf-toolbar{padding:8px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--s1)}
+.pf-toolbar{
+  padding:6px 10px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:6px;
+  background:var(--s1);
+  flex-wrap:nowrap;       /* never wrap → canvas never shifts vertically */
+  overflow-x:auto;        /* scroll horizontally if too many buttons */
+  overflow-y:hidden;
+  min-height:44px;        /* lock to one row */
+  flex-shrink:0;          /* keep height even when canvas content tries to push */
+  scrollbar-width:thin;   /* Firefox: thinner scrollbar */
+}
+.pf-toolbar::-webkit-scrollbar{height:6px}
+.pf-toolbar::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+.pf-toolbar > * {flex-shrink:0}  /* prevent buttons from shrinking — they'd become unreadable */
 .pf-tool-group{display:flex;gap:4px;align-items:center}
 .pf-tool-sep{width:1px;height:20px;background:var(--bd);margin:0 4px}
 .pf-tool-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--bd);background:none;color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:4px}
@@ -8879,15 +8892,24 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   display:flex;align-items:center;justify-content:center;position:relative;
 }
 .pf-node.type-cross .pf-node-text{display:none}
+/* Decision (diamond): rendered as inline SVG inside .pf-node-inner so that the
+   border (stroke) renders correctly. Previously clip-path was used which CUTS OFF
+   the border. */
 .pf-node.type-decision .pf-node-inner{
-  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
-  background:rgba(245,158,11,.12);border-color:#f59e0b;border-radius:0;
-  padding:10px 20px;
+  background:transparent;border:0;border-radius:0;
+  padding:14px 22px;position:relative;
 }
+.pf-node.type-decision .pf-shape-svg{
+  position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+}
+
+/* Arrow: same approach as decision */
 .pf-node.type-arrow .pf-node-inner{
-  background:rgba(79,124,255,.12);border-color:var(--ac);
-  clip-path:polygon(0% 30%,70% 30%,70% 0%,100% 50%,70% 100%,70% 70%,0% 70%);
-  border-radius:0;padding:8px 20px;
+  background:transparent;border:0;border-radius:0;
+  padding:8px 20px;position:relative;
+}
+.pf-node.type-arrow .pf-shape-svg{
+  position:absolute;inset:0;width:100%;height:100%;overflow:visible;
 }
 .pf-node.type-arrow .pf-node-text{font-size:10px}
 .pf-node-rotate{
@@ -9415,48 +9437,77 @@ async function pfIdbMigrateFromLocalStorage() {
 
 // Storage diagnostic (Fix #4 visibility tool)
 async function pfShowStorageInfo() {
-  let html = '<div style="font-size:12px;line-height:1.6">';
-  // localStorage usage
+  let html = '<div style="font-size:12px;line-height:1.7">';
+
+  // 1. localStorage usage
   let lsSize = 0;
   try {
     Object.keys(localStorage).forEach(k => {
       lsSize += (localStorage.getItem(k)||'').length + k.length;
     });
   } catch {}
-  html += `<div><b>localStorage:</b> ~${Math.round(lsSize/1024)} KB / 5,000 KB</div>`;
+  const lsPct = ((lsSize/(5*1024*1024))*100).toFixed(1);
+  html += `<div><b>📦 localStorage:</b> ${(lsSize/1024).toFixed(0)} KB / ~5,000 KB <span style="color:var(--tx3)">(${lsPct}%)</span></div>`;
 
-  // IndexedDB usage (via Storage Manager API where available)
+  // 2. IndexedDB usage via Storage Manager API
   if(navigator.storage?.estimate) {
     try {
       const est = await navigator.storage.estimate();
       const usedMB = (est.usage/1024/1024).toFixed(1);
       const quotaMB = (est.quota/1024/1024).toFixed(0);
       const pct = ((est.usage/est.quota)*100).toFixed(1);
-      html += `<div><b>Toàn bộ browser storage:</b> ${usedMB} MB / ${quotaMB} MB (${pct}%)</div>`;
+      html += `<div><b>💾 Browser storage tổng:</b> ${usedMB} MB / ${quotaMB} MB <span style="color:var(--tx3)">(${pct}%)</span></div>`;
     } catch {}
   }
 
-  // Count images in IndexedDB
+  // 3. Per-storage image counts (IndexedDB + legacy localStorage)
+  let idbCount = 0, lsImgCount = 0, lsImgIds = [];
   if(pfIdb) {
-    const count = await new Promise(res => {
+    idbCount = await new Promise(res => {
       const tx = pfIdb.transaction(PF_IDB_STORE, 'readonly');
       const req = tx.objectStore(PF_IDB_STORE).count();
       req.onsuccess = () => res(req.result);
       req.onerror = () => res(0);
     });
-    html += `<div><b>Ảnh trong IndexedDB:</b> ${count}</div>`;
   }
-
-  // localStorage images count
   try {
     const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
-    html += `<div><b>Ảnh trong localStorage (legacy):</b> ${Object.keys(imgs).length}</div>`;
+    lsImgIds = Object.keys(imgs);
+    lsImgCount = lsImgIds.length;
   } catch {}
+  html += `<div style="margin-top:8px"><b>🖼️ Ảnh đã lưu:</b></div>`;
+  html += `<div style="padding-left:16px">• IndexedDB (mới): <b>${idbCount}</b> ảnh</div>`;
+  html += `<div style="padding-left:16px">• localStorage (cũ): ${lsImgCount} ảnh</div>`;
 
-  html += `<div style="margin-top:10px;color:var(--tx3)">
-    • IndexedDB hỗ trợ ~500MB-1GB tùy browser<br>
-    • Ảnh mới sẽ tự động lưu vào IndexedDB<br>
-    • Ảnh cũ trong localStorage đã được tự migrate
+  // 4. Cross-process orphan check: count node IDs in current process vs total images
+  const currentNodeIds = new Set(pfNodes.map(n=>n.id));
+  const totalNodeCount = pfNodes.length;
+  const currentWithImg = pfNodes.filter(n=>n.imageUrl?.startsWith('data:')).length;
+  html += `<div style="margin-top:8px"><b>📊 Process hiện tại:</b></div>`;
+  html += `<div style="padding-left:16px">• Tổng shape: ${totalNodeCount}</div>`;
+  html += `<div style="padding-left:16px">• Có ảnh: ${currentWithImg}</div>`;
+
+  // 5. Sanity check — IDB images that DON'T match any current-process node
+  // (these belong to OTHER processes — they should be safely kept)
+  if(pfIdb) {
+    const idbIds = await new Promise(res => {
+      const tx = pfIdb.transaction(PF_IDB_STORE, 'readonly');
+      const req = tx.objectStore(PF_IDB_STORE).getAllKeys();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => res([]);
+    });
+    const otherProcessImages = idbIds.filter(id => !currentNodeIds.has(id)).length;
+    html += `<div style="padding-left:16px;color:var(--ac)">• Ảnh của process khác (được giữ an toàn): ${otherProcessImages}</div>`;
+  }
+
+  html += `<div style="margin-top:12px;padding:10px;background:var(--s2);border-radius:6px;color:var(--tx3);font-size:11px;line-height:1.5">
+    💡 <b>Về Supabase:</b> Hiện tại Supabase CHỈ lưu metadata shape (vị trí, text, màu...).
+    Ảnh được lưu LOCAL trong browser (IndexedDB ~500MB-1GB).
+    Vì vậy mở app từ device khác sẽ không thấy ảnh.<br>
+    <b>Nếu muốn sync ảnh giữa device:</b> cần dùng Supabase Storage (1GB free tier).
+    Liên hệ nếu cần tích hợp.<br><br>
+    <b>Khi lưu ảnh fail:</b> Code hiện tại KHÔNG bao giờ auto-delete ảnh process khác nữa
+    (bug đã fix v8). Nếu IndexedDB đầy, app sẽ báo lỗi rõ ràng.
   </div></div>`;
 
   // Show as modal
@@ -9465,16 +9516,56 @@ async function pfShowStorageInfo() {
   modal.id = 'pf-storage-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center';
   modal.innerHTML = `
-    <div style="background:var(--s1);border-radius:10px;padding:20px;width:380px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--tx)">
+    <div style="background:var(--s1);border-radius:10px;padding:20px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--tx)">
       <h3 style="margin:0 0 14px 0;font-size:15px">💾 Tình trạng lưu trữ</h3>
       ${html}
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+        <button onclick="pfClearOrphanImages()"
+          style="padding:8px 14px;border:1px solid var(--bd);border-radius:5px;background:var(--s2);color:var(--tx);cursor:pointer;font-size:12px"
+          title="CHỈ xóa ảnh không thuộc bất kỳ shape nào (kiểm tra ALL processes từ DB)">🧹 Dọn ảnh orphan</button>
         <button onclick="document.getElementById('pf-storage-modal').remove()"
           style="padding:8px 14px;border:none;border-radius:5px;background:var(--ac);color:#fff;cursor:pointer;font-weight:600;font-size:12px">Đóng</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+}
+
+// Safe orphan cleanup: load ALL node IDs from Supabase, only delete images
+// whose nodeId doesn't match ANY existing shape across ALL processes
+async function pfClearOrphanImages() {
+  if(!confirm('Dọn các ảnh không thuộc shape nào? Sẽ kiểm tra ALL processes trên Supabase trước.\n\nThao tác này AN TOÀN — chỉ xóa ảnh thật sự mồ côi.')) return;
+  if(!pfIdb) { showNotif?.('nw','⚠️','IndexedDB chưa sẵn sàng'); return; }
+  showNotif?.('ns','⏳ Đang kiểm tra...','Tải danh sách node từ Supabase');
+  try {
+    // Get ALL node IDs from Supabase (across all processes)
+    const allDbNodes = await sbFetch(`pf_nodes?select=id`);
+    const allIds = new Set((allDbNodes||[]).map(n=>n.id));
+    // Also include in-memory nodes (in case not synced yet)
+    pfNodes.forEach(n => allIds.add(n.id));
+    // Find orphans in IndexedDB
+    const idbKeys = await new Promise(res => {
+      const tx = pfIdb.transaction(PF_IDB_STORE, 'readonly');
+      const req = tx.objectStore(PF_IDB_STORE).getAllKeys();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => res([]);
+    });
+    const orphans = idbKeys.filter(id => !allIds.has(id));
+    if(!orphans.length) {
+      showNotif?.('ns','✅ Sạch sẽ','Không có ảnh orphan để dọn');
+      return;
+    }
+    // Confirm deletion
+    if(!confirm(`Tìm thấy ${orphans.length} ảnh orphan. Xóa?`)) return;
+    for(const id of orphans) {
+      await pfIdbDeleteImage(id);
+    }
+    showNotif?.('ns','✅ Đã dọn', `Xóa ${orphans.length} ảnh orphan`);
+    document.getElementById('pf-storage-modal')?.remove();
+  } catch(err) {
+    console.error('orphan cleanup:', err);
+    showNotif?.('nw','❌ Lỗi', err.message||String(err));
+  }
 }
 
 // Initialize IndexedDB on script load
@@ -9577,6 +9668,17 @@ function pfFmtBorder(nodeId, prop, val) {
     if(prop==='style') inner.style.borderStyle = val;
     if(prop==='width') inner.style.borderWidth = val;
     if(prop==='color') inner.style.borderColor = val;
+  }
+  // ALSO update inline SVG polygon stroke for decision/arrow (border was invisible due to clip-path before; now SVG-based)
+  const polygon = document.querySelector('#pfn_'+nodeId+' .pf-shape-svg polygon');
+  if(polygon) {
+    if(prop==='color') polygon.setAttribute('stroke', val);
+    if(prop==='width') polygon.setAttribute('stroke-width', parseFloat(val)||2);
+    if(prop==='style') {
+      const dash = val==='dashed'?'6,3':val==='dotted'?'2,3':'';
+      if(dash) polygon.setAttribute('stroke-dasharray', dash);
+      else polygon.removeAttribute('stroke-dasharray');
+    }
   }
   pfSyncNode(node);
 }
@@ -9868,6 +9970,26 @@ function pfRenderNode(node) {
                cursor:nwse-resize;z-index:50;display:${sel?'block':'none'}"></div>
     </div>` : '';
 
+  // SVG shapes for decision/arrow — fill+stroke render correctly (no clip-path).
+  // Border color/width/style read from the same style props so format panel works.
+  const shapeFill   = bg || (node.type==='decision' ? 'rgba(245,158,11,.12)'
+                          :  node.type==='arrow'    ? 'rgba(79,124,255,.12)' : '#fff');
+  const shapeStroke = bc || (node.type==='decision' ? '#f59e0b'
+                          :  node.type==='arrow'    ? '#4f7cff' : '#888');
+  const shapeStrokeW = parseFloat(bw||'2');
+  const shapeDash   = bs==='dashed' ? '6,3' : bs==='dotted' ? '2,3' : '';
+  const shapeSvg =
+    node.type==='decision' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <polygon points="50,2 98,50 50,98 2,50" fill="${shapeFill}" stroke="${shapeStroke}"
+          stroke-width="${shapeStrokeW}" ${shapeDash?`stroke-dasharray="${shapeDash}"`:''}
+          vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      </svg>` :
+    node.type==='arrow' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <polygon points="2,30 70,30 70,5 98,50 70,95 70,70 2,70" fill="${shapeFill}" stroke="${shapeStroke}"
+          stroke-width="${shapeStrokeW}" ${shapeDash?`stroke-dasharray="${shapeDash}"`:''}
+          vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      </svg>` : '';
+
   const innerStyle = [
     bg   ? `background:${bg}`   : '',
     bc   ? `border-color:${bc}` : '',
@@ -9876,11 +9998,15 @@ function pfRenderNode(node) {
     imgFlex ? `flex-direction:${imgFlex};display:flex;align-items:center;gap:6px` : '',
   ].filter(Boolean).join(';');
 
+  // Line-height from style (Fix #5 — was missing, so reload reset to default)
+  const lh = node.style?.lineHeight;
+
   return `<div class="pf-node type-${node.type}${sel?' selected':''}${multi&&!sel?' multi-selected':''}"
     id="pfn_${node.id}"
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
     onmousedown="pfNodeMouseDown(event,'${node.id}')">
     <div class="pf-node-inner" style="${innerStyle}">
+      ${shapeSvg}
       ${node.type==='tick' ? `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"
         style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
         <path d="M 25 52 L 44 71 L 76 33" stroke="#fff" stroke-width="11" fill="none"
@@ -9894,7 +10020,7 @@ function pfRenderNode(node) {
       ${imgHtml}
       <div class="pf-node-text"
         id="pft_${node.id}"
-        style="font-size:${fs};${fc?`color:${fc};`:''}text-align:${ta};flex:1;min-width:0"
+        style="font-size:${fs};${fc?`color:${fc};`:''}text-align:${ta};${lh?`line-height:${lh};`:''}flex:1;min-width:0;position:relative;z-index:1"
         contenteditable="false"
         ondblclick="pfStartEdit(event,'${node.id}')"
         onblur="pfEndEdit('${node.id}',event)"
@@ -10251,21 +10377,24 @@ function pfCanvasMouseMove(e) {
     if(node){
       const corner = pfResizing.corner || 'se';
       const anchor = pfResizing.anchor;
+      // Type-specific minimums: tick/cross can go smaller because they're symbols
+      const minW = (node.type==='tick'||node.type==='cross') ? 20 : 40;
+      const minH = (node.type==='tick'||node.type==='cross') ? 20 : 30;
       // Width/height based on distance from anchor to current mouse position
-      let newW = Math.max(40, Math.abs(pos.x - anchor.x));
-      let newH = Math.max(30, Math.abs(pos.y - anchor.y));
+      let newW = Math.max(minW, Math.abs(pos.x - anchor.x));
+      let newH = Math.max(minH, Math.abs(pos.y - anchor.y));
       // Shift = preserve aspect ratio (PPT convention)
       if(e.shiftKey && pfResizing.aspect) {
         const dx = Math.abs(newW - pfResizing.startW);
         const dy = Math.abs(newH - pfResizing.startH);
-        if(dx > dy) newH = Math.max(30, Math.round(newW / pfResizing.aspect));
-        else        newW = Math.max(40, Math.round(newH * pfResizing.aspect));
+        if(dx > dy) newH = Math.max(minH, Math.round(newW / pfResizing.aspect));
+        else        newW = Math.max(minW, Math.round(newH * pfResizing.aspect));
       }
       // Grid snap when grid is on and Alt not held
       if(pfGridSnap && !e.altKey) {
         newW = Math.round(newW/pfGridSize)*pfGridSize;
         newH = Math.round(newH/pfGridSize)*pfGridSize;
-        newW = Math.max(40, newW); newH = Math.max(30, newH);
+        newW = Math.max(minW, newW); newH = Math.max(minH, newH);
       }
       // Compute new x/y so that the anchor corner stays fixed
       let newX = corner.includes('e') ? anchor.x : anchor.x - newW;
@@ -10788,16 +10917,18 @@ function pfBuildFmtPanel(primaryId, node, mode, isMulti, count) {
                              : pfPanelBodyShape(primaryId, node, isMulti);
 
   // ── Compact W/H input (single-shape only) ──
+  const minW = (node.type==='tick'||node.type==='cross') ? 20 : 40;
+  const minH = (node.type==='tick'||node.type==='cross') ? 20 : 30;
   const sizeBox = !isMulti ? `
     <div class="pf-panel-divider"></div>
     <div class="pf-panel-row">
       <span class="pf-panel-lab">Size</span>
       <div style="display:flex;gap:4px;align-items:center;flex:1">
         <span style="font-size:10px;color:var(--tx3)">W</span>
-        <input type="number" min="40" step="10" value="${node.w}" onchange="pfSetSize('${primaryId}','w',this.value)"
+        <input type="number" min="${minW}" step="5" value="${node.w}" onchange="pfSetSize('${primaryId}','w',this.value)"
           class="pf-panel-num" onmousedown="event.stopPropagation()" onkeydown="event.stopPropagation()" style="width:50px">
         <span style="font-size:10px;color:var(--tx3)">H</span>
-        <input type="number" min="30" step="10" value="${node.h}" onchange="pfSetSize('${primaryId}','h',this.value)"
+        <input type="number" min="${minH}" step="5" value="${node.h}" onchange="pfSetSize('${primaryId}','h',this.value)"
           class="pf-panel-num" onmousedown="event.stopPropagation()" onkeydown="event.stopPropagation()" style="width:50px">
       </div>
     </div>` : '';
@@ -11024,6 +11155,9 @@ function pfFmtBg(nodeId, color) {
   // Direct DOM update (fast)
   const inner=document.querySelector(`#pfn_${nodeId} .pf-node-inner`);
   if(inner) inner.style.background=color;
+  // ALSO update SVG polygon fill for decision/arrow shapes (they use SVG, not the inner background)
+  const polygon = document.querySelector('#pfn_'+nodeId+' .pf-shape-svg polygon');
+  if(polygon) polygon.setAttribute('fill', color);
   // Update background swatch preview in format bar (specific ID to avoid matching text-color swatch)
   const swatch=document.getElementById('pf-fmt-bg-swatch');
   if(swatch) swatch.style.background=color;
@@ -11088,7 +11222,12 @@ function pfNodeSendBackward(nodeId) {
 function pfSetSize(nodeId, prop, val) {
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
-  const n = Math.max(prop==='w'?40:30, Math.round(parseFloat(val)||0));
+  // Type-specific minimums (tick/cross can be small as they're symbols)
+  const isSymbol = node.type==='tick' || node.type==='cross';
+  const minW = isSymbol ? 20 : 40;
+  const minH = isSymbol ? 20 : 30;
+  const min = prop==='w' ? minW : minH;
+  const n = Math.max(min, Math.round(parseFloat(val)||0));
   if(isNaN(n) || n<10) return;
   pfSnapshot('size-'+prop+'-'+nodeId);
   node[prop] = n;
@@ -11730,7 +11869,8 @@ function pfBuildExportHTML(region) {
                .replace(/id="pft_[^"]+"/g, '')
                .replace(/id="pfimg_[^"]+"/g, '');
     // Translate position from absolute canvas coords → bbox-local coords
-    html = html.replace(/left:(\d+)px;top:(\d+)px/,
+    // Regex MUST handle negative numbers (shapes can be positioned at e.g. -10px)
+    html = html.replace(/left:(-?\d+)px;top:(-?\d+)px/,
       (_, x, y) => `left:${parseInt(x)-bbox.minX}px;top:${parseInt(y)-bbox.minY}px`);
     return html;
   }).join('\n');
