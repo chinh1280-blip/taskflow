@@ -9247,7 +9247,7 @@ function switchToProcessFlowView() {
   isProcessFlowView=true;
   pfLoadLocal();
   pfRenderAll();
-  pfLoadFromSupabase();
+  pfLoadFromSupabase().then(()=>pfRefreshImagesFromIdb());
   closeSidebar?.();
 }
 
@@ -9324,7 +9324,173 @@ async function pfSyncNode(node) {
   }
 }
 
+// ── IndexedDB storage for images (Fix #4) ────────────────
+// Why IndexedDB? localStorage cap is ~5MB total per origin and breaks silently on
+// quota. IndexedDB is ~500MB+ in Chrome and ~1GB in Firefox/Safari, plenty for
+// many high-res shape images.
+let pfIdb = null;
+let pfIdbReady = false;
+const PF_IDB_NAME = 'taskflow_pf';
+const PF_IDB_STORE = 'images';
+
+function pfIdbInit() {
+  return new Promise((resolve) => {
+    if(!window.indexedDB) { resolve(false); return; }
+    const req = indexedDB.open(PF_IDB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(PF_IDB_STORE))
+        db.createObjectStore(PF_IDB_STORE); // key = nodeId, value = dataUrl string
+    };
+    req.onsuccess = (e) => {
+      pfIdb = e.target.result;
+      pfIdbReady = true;
+      // One-time migration: copy any old localStorage images into IndexedDB
+      pfIdbMigrateFromLocalStorage().finally(()=>resolve(true));
+    };
+    req.onerror = (e) => {
+      console.warn('IndexedDB open failed:', e.target?.error);
+      resolve(false);
+    };
+  });
+}
+
+function pfIdbPutImage(nodeId, dataUrl) {
+  return new Promise((resolve, reject) => {
+    if(!pfIdb) return reject(new Error('IndexedDB not ready'));
+    const tx = pfIdb.transaction(PF_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(PF_IDB_STORE);
+    const req = store.put(dataUrl, nodeId);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function pfIdbGetImage(nodeId) {
+  return new Promise((resolve, reject) => {
+    if(!pfIdb) return resolve(null);
+    const tx = pfIdb.transaction(PF_IDB_STORE, 'readonly');
+    const store = tx.objectStore(PF_IDB_STORE);
+    const req = store.get(nodeId);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function pfIdbDeleteImage(nodeId) {
+  return new Promise((resolve) => {
+    if(!pfIdb) return resolve();
+    const tx = pfIdb.transaction(PF_IDB_STORE, 'readwrite');
+    tx.objectStore(PF_IDB_STORE).delete(nodeId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+}
+
+// Migrate any leftover images from localStorage → IndexedDB (one-time)
+async function pfIdbMigrateFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem('tf_pf_images');
+    if(!raw) return;
+    const imgs = JSON.parse(raw);
+    const ids = Object.keys(imgs);
+    if(!ids.length) return;
+    let migrated = 0;
+    for(const id of ids) {
+      try {
+        // Don't overwrite if already in IDB (avoids regression)
+        const existing = await pfIdbGetImage(id);
+        if(!existing) {
+          await pfIdbPutImage(id, imgs[id]);
+          migrated++;
+        }
+      } catch {}
+    }
+    if(migrated > 0) {
+      console.log(`[PF] Migrated ${migrated} images from localStorage → IndexedDB`);
+      // Don't delete localStorage immediately — keep as backup for 1 session
+    }
+  } catch(e) { console.warn('Migrate failed:', e); }
+}
+
+// Storage diagnostic (Fix #4 visibility tool)
+async function pfShowStorageInfo() {
+  let html = '<div style="font-size:12px;line-height:1.6">';
+  // localStorage usage
+  let lsSize = 0;
+  try {
+    Object.keys(localStorage).forEach(k => {
+      lsSize += (localStorage.getItem(k)||'').length + k.length;
+    });
+  } catch {}
+  html += `<div><b>localStorage:</b> ~${Math.round(lsSize/1024)} KB / 5,000 KB</div>`;
+
+  // IndexedDB usage (via Storage Manager API where available)
+  if(navigator.storage?.estimate) {
+    try {
+      const est = await navigator.storage.estimate();
+      const usedMB = (est.usage/1024/1024).toFixed(1);
+      const quotaMB = (est.quota/1024/1024).toFixed(0);
+      const pct = ((est.usage/est.quota)*100).toFixed(1);
+      html += `<div><b>Toàn bộ browser storage:</b> ${usedMB} MB / ${quotaMB} MB (${pct}%)</div>`;
+    } catch {}
+  }
+
+  // Count images in IndexedDB
+  if(pfIdb) {
+    const count = await new Promise(res => {
+      const tx = pfIdb.transaction(PF_IDB_STORE, 'readonly');
+      const req = tx.objectStore(PF_IDB_STORE).count();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res(0);
+    });
+    html += `<div><b>Ảnh trong IndexedDB:</b> ${count}</div>`;
+  }
+
+  // localStorage images count
+  try {
+    const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
+    html += `<div><b>Ảnh trong localStorage (legacy):</b> ${Object.keys(imgs).length}</div>`;
+  } catch {}
+
+  html += `<div style="margin-top:10px;color:var(--tx3)">
+    • IndexedDB hỗ trợ ~500MB-1GB tùy browser<br>
+    • Ảnh mới sẽ tự động lưu vào IndexedDB<br>
+    • Ảnh cũ trong localStorage đã được tự migrate
+  </div></div>`;
+
+  // Show as modal
+  document.getElementById('pf-storage-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'pf-storage-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--s1);border-radius:10px;padding:20px;width:380px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--tx)">
+      <h3 style="margin:0 0 14px 0;font-size:15px">💾 Tình trạng lưu trữ</h3>
+      ${html}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+        <button onclick="document.getElementById('pf-storage-modal').remove()"
+          style="padding:8px 14px;border:none;border-radius:5px;background:var(--ac);color:#fff;cursor:pointer;font-weight:600;font-size:12px">Đóng</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+}
+
+// Initialize IndexedDB on script load
+pfIdbInit();
+
 function pfSaveImage(nodeId, dataUrl) {
+  // Try IndexedDB first (much bigger quota ~500MB+)
+  if(pfIdbReady) {
+    return pfIdbPutImage(nodeId, dataUrl).then(()=>true).catch(err=>{
+      console.warn('pfSaveImage IDB:', err);
+      if(typeof showNotif==='function')
+        showNotif('nw','⚠️ Lưu ảnh thất bại', String(err.message||err));
+      return false;
+    });
+  }
+  // Fallback: localStorage (legacy)
   try {
     const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
     imgs[nodeId] = dataUrl;
@@ -9332,39 +9498,68 @@ function pfSaveImage(nodeId, dataUrl) {
     return true;
   } catch(e) {
     console.warn('pfSaveImage:', e);
-    // Quota exceeded — try cleaning orphan images (for deleted nodes) and retry
+    // NOTE: We do NOT auto-delete other images on quota error any more!
+    // Previously: cleaned by pfNodes.map(n=>n.id) which only includes CURRENT process,
+    // so it DELETED images of all OTHER processes. Data loss bug.
+    // Now: report error clearly and let user decide.
     if(e.name === 'QuotaExceededError') {
-      try {
-        const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
-        const validIds = new Set(pfNodes.map(n=>n.id));
-        const cleaned = {};
-        Object.entries(imgs).forEach(([id, img]) => {
-          if(validIds.has(id)) cleaned[id] = img;
-        });
-        cleaned[nodeId] = dataUrl;
-        localStorage.setItem('tf_pf_images', JSON.stringify(cleaned));
-        return true;
-      } catch(e2) {
-        console.warn('pfSaveImage retry failed:', e2);
-        if(typeof showNotif==='function')
-          showNotif('nw','⚠️ Ảnh quá lớn','Không lưu được vào local. Hãy chọn ảnh nhỏ hơn.');
-        return false;
-      }
+      if(typeof showNotif==='function')
+        showNotif('nw','⚠️ Local storage đầy',
+          'Ảnh không lưu được vào localStorage. Hãy reload trang để dùng IndexedDB (500MB).');
     }
     return false;
   }
 }
+// Sync get (legacy localStorage only) — used by initial load before IDB ready
 function pfGetImage(nodeId) {
   try {
     const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
     return imgs[nodeId]||null;
   } catch { return null; }
 }
+
+// Async get — checks IndexedDB first (where new images live), then localStorage
+async function pfGetImageAsync(nodeId) {
+  try {
+    if(pfIdbReady) {
+      const idbImg = await pfIdbGetImage(nodeId);
+      if(idbImg) return idbImg;
+    }
+  } catch {}
+  return pfGetImage(nodeId);
+}
+
 function pfRestoreImages(nodes) {
   return (nodes||[]).map(n => ({
     ...n,
     imageUrl: (n.imageUrl && n.imageUrl !== '__local__') ? n.imageUrl : pfGetImage(n.id)
   }));
+}
+
+// After initial render, refresh images from IndexedDB (where they might exist
+// without being in localStorage). This is what makes images survive across browsers
+// when the user opens the app from a different device — IDB has it, localStorage doesn't.
+async function pfRefreshImagesFromIdb() {
+  if(!pfIdbReady) return;
+  let changed = false;
+  for(const node of pfNodes) {
+    if(!node.imageUrl || node.imageUrl === '__local__') {
+      try {
+        const idbImg = await pfIdbGetImage(node.id);
+        if(idbImg) { node.imageUrl = idbImg; changed = true; }
+      } catch {}
+    }
+  }
+  if(changed) {
+    // Re-render only image elements (don't disturb selection/format panel)
+    pfNodes.forEach(n => {
+      if(!n.imageUrl?.startsWith('data:')) return;
+      const imgEl = document.querySelector(`#pfimg_${n.id} img`);
+      if(imgEl && imgEl.src !== n.imageUrl) imgEl.src = n.imageUrl;
+      // If shape was rendered without imageUrl previously (no img element), do full re-render
+      if(!imgEl) pfRenderAll();
+    });
+  }
 }
 
 function pfFmtBorder(nodeId, prop, val) {
@@ -9633,6 +9828,7 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfExportSVG()" title="Xuất ra file SVG (mở được trong PowerPoint, Illustrator,...)">⬇ SVG</button>
       <button class="pf-tool-btn" onclick="pfExportPDF()" title="Xuất ra PDF (chọn 'Save as PDF' khi in)">⬇ PDF</button>
       <button class="pf-tool-btn" onclick="pfShowImageExportDialog()" title="Xuất ra ảnh PNG/JPG (chọn scale, vùng)">⬇ Ảnh</button>
+      <button class="pf-tool-btn" onclick="pfShowStorageInfo()" title="Xem dung lượng lưu trữ">💾</button>
       <div class="pf-tool-sep"></div>
       <button id="pf-save-btn" class="pf-tool-btn" onclick="pfSaveAll()" title="Lưu tất cả (Ctrl+S)"
         style="font-weight:700;min-width:110px;text-align:center">💾 Lưu</button>
@@ -11063,12 +11259,12 @@ function pfHandleImageUpload(e) {
     node.imageHeight   = node.imageHeight||80;
     node.w = Math.max(node.w, node.imageWidth+40);
     node.h = Math.max(node.h, node.imageHeight+60);
-    // Persist image to localStorage; warn if quota fails
-    const ok = pfSaveImage(node.id, dataUrl);
+    // Persist image to localStorage/IndexedDB; warn if all paths fail
+    const ok = await pfSaveImage(node.id, dataUrl);
     if(!ok) {
-      // Image not persisted locally — try smaller compression once
+      // Image not persisted — try smaller compression once
       const smaller = await pfCompressImage(ev.target.result, 600, 0.7);
-      const ok2 = pfSaveImage(node.id, smaller);
+      const ok2 = await pfSaveImage(node.id, smaller);
       if(ok2) node.imageUrl = smaller;
     }
     pfSaveLocal();
@@ -11446,42 +11642,189 @@ function pfExportSVG() {
   showNotif?.('ns','✅ Đã xuất SVG', name+'.svg');
 }
 
+// ── High-fidelity HTML-based export (Fix #2/#3) ──────────
+// Preserves: rich text formatting, hyperlinks, CSS effects, image quality.
+// Used by PNG/JPG (via SVG foreignObject) and PDF (via popup print).
+
+/** Compute bounding box of given (or current process) nodes plus padding */
+function pfExportBBox(nodes, pad) {
+  pad = pad==null ? 40 : pad;
+  if(!nodes.length) return null;
+  const xs = nodes.map(n=>n.x), ys = nodes.map(n=>n.y);
+  const x2 = nodes.map(n=>n.x+n.w), y2 = nodes.map(n=>n.y+n.h);
+  const minX = Math.min(...xs) - pad, minY = Math.min(...ys) - pad;
+  const maxX = Math.max(...x2) + pad, maxY = Math.max(...y2) + pad;
+  return { minX, minY, w: maxX-minX, h: maxY-minY };
+}
+
+/** Inlined CSS for export (no CSS variables — fully resolved values). */
+function pfExportCss() {
+  return `
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1a1a}
+    .pf-export-canvas{position:relative;background:#fff;font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+    .pf-node{position:absolute;font-family:inherit}
+    .pf-node-inner{box-sizing:border-box;width:100%;height:100%;border:2px solid #888;border-radius:8px;background:#fff;
+      display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;
+      gap:4px;flex-direction:column}
+    .pf-node.type-decision .pf-node-inner{transform:rotate(45deg);border-radius:6px}
+    .pf-node.type-decision .pf-node-text{transform:rotate(-45deg)}
+    .pf-node.type-start .pf-node-inner{border-radius:30px;background:rgba(22,163,74,.12);border-color:#16a34a}
+    .pf-node.type-end .pf-node-inner{border-radius:30px;background:rgba(239,68,68,.1);border-color:#ef4444}
+    .pf-node.type-note .pf-node-inner{background:#fff8c4;border-color:#e0c97a}
+    .pf-node.type-tick .pf-node-inner{border-radius:50%;background:#16a34a;border:0;position:relative}
+    .pf-node.type-cross .pf-node-inner{border-radius:50%;background:#ef4444;border:0;position:relative}
+    .pf-node-text{font-size:12px;text-align:center;color:#333;line-height:1.3;
+      word-wrap:break-word;width:100%;white-space:pre-wrap}
+    .pf-link,a{color:#2563eb;text-decoration:underline}
+    .pf-edge{fill:none;stroke:#666;stroke-width:2}
+    .pf-edge.dashed{stroke-dasharray:6,3}
+    .pf-edge-label{font-size:11px;fill:#555;font-family:system-ui,sans-serif}
+    .pf-port,.pf-node-resize,.pf-resize-handle,.pf-node-rotate,
+    .pf-img-resize-handle,.pf-marquee,.pf-guide-line{display:none}
+    img{max-width:100%;display:block}`;
+}
+
+/**
+ * Build complete HTML for the export.
+ * @param region — 'all' | 'selected' | 'visible'
+ * @returns {html, width, height, minX, minY} or null
+ */
+function pfBuildExportHTML(region) {
+  region = region || 'all';
+  // Decide which nodes
+  let exportNodes = pfNodes;
+  if(region === 'selected' && pfSelectedIds.size > 0)
+    exportNodes = pfNodes.filter(n => pfSelectedIds.has(n.id));
+  if(!exportNodes.length && region !== 'visible') return null;
+
+  // BBox
+  let bbox;
+  if(region === 'visible') {
+    const outer = document.getElementById('pf-canvas-outer');
+    const rect = outer.getBoundingClientRect();
+    bbox = {
+      minX: -pfPan.x / pfZoom, minY: -pfPan.y / pfZoom,
+      w: rect.width / pfZoom, h: rect.height / pfZoom
+    };
+    // For visible region include ALL nodes inside viewport
+    exportNodes = pfNodes.filter(n =>
+      n.x + n.w >= bbox.minX && n.x <= bbox.minX + bbox.w &&
+      n.y + n.h >= bbox.minY && n.y <= bbox.minY + bbox.h);
+  } else {
+    bbox = pfExportBBox(exportNodes, 40);
+  }
+  if(!bbox) return null;
+
+  // Sort nodes by z-order (same as live render)
+  const sorted = [...exportNodes].sort((a,b)=>(a.style?.z||0)-(b.style?.z||0));
+
+  // Render nodes as REAL HTML, translated so (minX, minY) → (0, 0)
+  const nodesHtml = sorted.map(node => {
+    let html = pfRenderNode(node);
+    // Strip event handlers and ID for safety
+    html = html.replace(/onmousedown="[^"]*"/g, '')
+               .replace(/ondblclick="[^"]*"/g, '')
+               .replace(/onblur="[^"]*"/g, '')
+               .replace(/id="pfn_[^"]+"/g, '')
+               .replace(/id="pft_[^"]+"/g, '')
+               .replace(/id="pfimg_[^"]+"/g, '');
+    // Translate position from absolute canvas coords → bbox-local coords
+    html = html.replace(/left:(\d+)px;top:(\d+)px/,
+      (_, x, y) => `left:${parseInt(x)-bbox.minX}px;top:${parseInt(y)-bbox.minY}px`);
+    return html;
+  }).join('\n');
+
+  // Render edges as SVG (only edges between exportNodes for non-visible region)
+  const exportIds = new Set(exportNodes.map(n=>n.id));
+  const origEdges = pfEdges;
+  if(region !== 'all') pfEdges = pfEdges.filter(e => exportIds.has(e.from_id) && exportIds.has(e.to_id));
+  const edgesSvg = pfRenderEdgesSVG();
+  pfEdges = origEdges;
+
+  // Edges use absolute canvas coords too — wrap them in an SVG that's translated to bbox
+  const edgesLayer = `<svg xmlns="http://www.w3.org/2000/svg"
+    style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible"
+    viewBox="${bbox.minX} ${bbox.minY} ${bbox.w} ${bbox.h}">
+    <defs>
+      <marker id="pf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#666"/>
+      </marker>
+    </defs>
+    ${edgesSvg}
+  </svg>`;
+
+  const html = `<div class="pf-export-canvas" style="width:${bbox.w}px;height:${bbox.h}px">
+    ${edgesLayer}
+    ${nodesHtml}
+  </div>`;
+
+  return { html, width: bbox.w, height: bbox.h, minX: bbox.minX, minY: bbox.minY };
+}
+
+/** Wrap export HTML in SVG with foreignObject so it can be rasterized via canvas */
+function pfBuildExportSVGForeign(region, bgChoice) {
+  const built = pfBuildExportHTML(region);
+  if(!built) return null;
+  const { html, width, height } = built;
+  const css = pfExportCss();
+  const bg = bgChoice === 'transparent' ? '' : `<rect width="100%" height="100%" fill="#fff"/>`;
+  // The SVG MUST declare correct namespaces and the foreignObject child must declare XHTML namespace.
+  return {
+    svg: `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs><style type="text/css">${css}</style></defs>
+  ${bg}
+  <foreignObject x="0" y="0" width="${width}" height="${height}">
+    <div xmlns="http://www.w3.org/1999/xhtml">${html}</div>
+  </foreignObject>
+</svg>`,
+    width, height
+  };
+}
+
 function pfExportPDF() {
-  const svg = pfBuildExportSVG();
-  if(!svg) { showNotif?.('nw','⚠️','Không có nội dung để xuất'); return; }
+  const built = pfBuildExportHTML('all');
+  if(!built) { showNotif?.('nw','⚠️','Không có nội dung để xuất'); return; }
+  const { html, width, height } = built;
   const proc = pfProcesses.find(p=>p.id===pfCurrentId);
   const name = proc?.name || 'Process';
-  // Open a popup window with the SVG embedded; trigger print dialog.
-  // User then chooses "Save as PDF" in the printer list.
-  const win = window.open('', '_blank', 'width=900,height=700');
+  const win = window.open('', '_blank', 'width=1000,height=750');
   if(!win) { showNotif?.('nw','⚠️','Vui lòng cho phép popup để xuất PDF'); return; }
+  // CRITICAL: render with real HTML (not SVG-text) so links remain clickable in the PDF
+  // and the browser handles text wrapping naturally (no character-count guess).
   win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${name}</title>
+<html><head><meta charset="utf-8"><title>${name.replace(/[<>"]/g,'')}</title>
 <style>
-  body{margin:0;padding:20px;font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5}
-  h1{font-size:18px;margin:0 0 12px 0;color:#222}
-  .meta{font-size:11px;color:#666;margin-bottom:16px}
-  .canvas{background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:inline-block}
-  svg{display:block;max-width:100%;height:auto}
-  .actions{position:fixed;top:20px;right:20px;display:flex;gap:8px}
-  .actions button{padding:8px 14px;font-size:13px;border-radius:5px;border:1px solid #ccc;background:#fff;cursor:pointer;font-weight:600}
+  ${pfExportCss()}
+  body{margin:0;padding:20px;background:#f5f5f5;font-family:system-ui,-apple-system,sans-serif;color:#222}
+  .wrap{max-width:max-content;margin:0 auto;background:#fff;padding:24px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  h1{font-size:18px;margin:0 0 6px 0;color:#222;font-weight:600}
+  .meta{font-size:11px;color:#666;margin-bottom:18px}
+  .actions{position:fixed;top:16px;right:16px;display:flex;gap:8px;z-index:1000}
+  .actions button{padding:9px 16px;font-size:13px;border-radius:6px;border:1px solid #d4d4d4;background:#fff;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
   .actions button.primary{background:#4f7cff;color:#fff;border-color:#4f7cff}
+  .actions button.primary:hover{background:#3d6aee}
   @media print{
     body{background:#fff;padding:0}
     .actions{display:none}
-    .canvas{box-shadow:none;padding:0}
+    .wrap{box-shadow:none;padding:0;border-radius:0;max-width:none}
     h1,.meta{display:none}
+    @page{margin:10mm}
   }
 </style>
 </head><body>
 <div class="actions">
-  <button class="primary" onclick="window.print()">🖨 In / Lưu PDF</button>
+  <button class="primary" onclick="window.print()">🖨 Lưu PDF</button>
   <button onclick="window.close()">✕ Đóng</button>
 </div>
-<h1>${name}</h1>
-<div class="meta">Xuất từ TaskFlow • ${new Date().toLocaleString('vi-VN')}</div>
-<div class="canvas">${svg}</div>
-<script>setTimeout(()=>window.print(),400);<\/script>
+<div class="wrap">
+  <h1>${name.replace(/[<>"]/g,'')}</h1>
+  <div class="meta">Xuất từ TaskFlow • ${new Date().toLocaleString('vi-VN')} • ${pfNodes.length} shapes, ${pfEdges.length} kết nối</div>
+  ${html}
+</div>
+<script>setTimeout(()=>window.print(),500);<\/script>
 </body></html>`);
   win.document.close();
 }
@@ -11561,49 +11904,16 @@ async function pfDoImageExport() {
   const quality = parseInt(document.getElementById('pf-exp-quality').value)/100;
   document.getElementById('pf-img-export-modal').remove();
 
-  // Decide which nodes to include
-  let exportNodes = pfNodes;
-  if(region === 'selected' && pfSelectedIds.size > 0) {
-    exportNodes = pfNodes.filter(n => pfSelectedIds.has(n.id));
-  }
+  // Build hi-fi SVG (foreignObject containing real HTML — preserves rich text,
+  // exact CSS, hyperlinks etc. — matches the on-screen view much better than
+  // the native SVG primitives approach)
+  const built = pfBuildExportSVGForeign(region, bgChoice);
+  if(!built) { showNotif?.('nw','⚠️','Không có nội dung để xuất'); return; }
+  const { svg, width, height } = built;
 
-  // Compute bbox based on chosen region
-  const PAD = 40;
-  let minX, minY, w, h;
-  if(region === 'visible') {
-    const outer = document.getElementById('pf-canvas-outer');
-    const rect = outer.getBoundingClientRect();
-    minX = -pfPan.x / pfZoom; minY = -pfPan.y / pfZoom;
-    w = rect.width / pfZoom; h = rect.height / pfZoom;
-  } else {
-    if(!exportNodes.length) { showNotif?.('nw','⚠️','Không có shape nào trong vùng chọn'); return; }
-    const xs = exportNodes.map(n=>n.x), ys = exportNodes.map(n=>n.y);
-    const x2 = exportNodes.map(n=>n.x+n.w), y2 = exportNodes.map(n=>n.y+n.h);
-    minX = Math.min(...xs) - PAD; minY = Math.min(...ys) - PAD;
-    w = Math.max(...x2) - minX + PAD; h = Math.max(...y2) - minY + PAD;
-  }
-
-  // Build SVG with explicit viewBox for the chosen region.
-  // We reuse pfBuildExportSVG by temporarily swapping pfNodes — but for region=selected
-  // we still want connected edges only between selected. For "visible" we include all.
-  const origNodes = pfNodes;
-  if(region === 'selected') pfNodes = exportNodes;
-  let svgStr = pfBuildExportSVG();
-  pfNodes = origNodes;
-  if(!svgStr) { showNotif?.('nw','⚠️','Không có nội dung'); return; }
-  // Override viewBox for visible-region mode
-  if(region === 'visible') {
-    svgStr = svgStr.replace(/viewBox="[^"]*"\s*width="[^"]*"\s*height="[^"]*"/,
-      `viewBox="${minX} ${minY} ${w} ${h}" width="${w}" height="${h}"`);
-  }
-  // Convert transparent background if requested for PNG; replace the white fill rect
-  if(bgChoice === 'transparent' && format === 'png') {
-    svgStr = svgStr.replace(/<rect x="[^"]*" y="[^"]*" width="[^"]*" height="[^"]*" fill="#fff"\/>/, '');
-  }
-
-  showNotif?.('ns','⏳ Đang render...','Vui lòng đợi vài giây');
+  showNotif?.('ns','⏳ Đang render ảnh...','Đợi vài giây để render đầy đủ');
   try {
-    const dataUrl = await pfRasterizeSVG(svgStr, w, h, scale, format, quality, bgChoice);
+    const dataUrl = await pfRasterizeSVG(svg, width, height, scale, format, quality, bgChoice);
     const proc = pfProcesses.find(p=>p.id===pfCurrentId);
     const name = (proc?.name || 'process').replace(/[^\w\s\-\.]/g,'').replace(/\s+/g,'_');
     const filename = `${name}_${scale}x.${format==='jpg'?'jpg':'png'}`;
@@ -11618,15 +11928,29 @@ async function pfDoImageExport() {
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    // Cleanup
-    setTimeout(()=>{
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
-    }, 1500);
+    setTimeout(()=>{ a.remove(); URL.revokeObjectURL(blobUrl); }, 1500);
     showNotif?.('ns','✅ Đã tải xuống', filename + ' (' + Math.round(blob.size/1024) + ' KB)');
   } catch(err) {
     console.error('[PF] image export error:', err);
-    showNotif?.('nw','❌ Lỗi xuất ảnh', err.message||String(err));
+    // Fallback to native-primitive SVG if foreignObject failed (rare — Safari old versions)
+    showNotif?.('nw','⚠️ Render foreignObject lỗi','Đang thử fallback...');
+    try {
+      const fallback = pfBuildExportSVG();
+      const fbUrl = await pfRasterizeSVG(fallback, width, height, scale, format, quality, bgChoice);
+      const blob = await (await fetch(fbUrl)).blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const proc = pfProcesses.find(p=>p.id===pfCurrentId);
+      const name = (proc?.name || 'process').replace(/[^\w\s\-\.]/g,'').replace(/\s+/g,'_');
+      a.href = blobUrl;
+      a.download = `${name}_${scale}x.${format==='jpg'?'jpg':'png'}`;
+      a.click();
+      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(blobUrl); }, 1500);
+      showNotif?.('ns','✅ Fallback OK', a.download + ' (chất lượng cơ bản)');
+    } catch(err2) {
+      console.error('[PF] fallback also failed:', err2);
+      showNotif?.('nw','❌ Lỗi xuất ảnh', err.message||String(err));
+    }
   }
 }
 
