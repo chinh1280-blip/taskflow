@@ -8863,6 +8863,35 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 .pf-node-inner:hover{border-color:var(--ac)}
 .pf-node.type-start .pf-node-inner{border-radius:30px;background:rgba(22,163,74,.12);border-color:#16a34a}
 .pf-node.type-end   .pf-node-inner{border-radius:30px;background:rgba(239,68,68,.1);border-color:#ef4444}
+
+/* Tick (correct) — green circle with white checkmark */
+.pf-node.type-tick .pf-node-inner{
+  border-radius:50%;background:#16a34a;border-color:#15803d;border-width:0;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.pf-node.type-tick .pf-node-inner::after{
+  content:'';position:absolute;left:28%;top:48%;width:38%;height:22%;
+  border-left:5px solid #fff;border-bottom:5px solid #fff;
+  transform:rotate(-50deg);transform-origin:left top;
+  border-radius:2px;
+}
+.pf-node.type-tick .pf-node-text{display:none}
+
+/* Cross (incorrect) — red circle with white X */
+.pf-node.type-cross .pf-node-inner{
+  border-radius:50%;background:#ef4444;border-color:#dc2626;border-width:0;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.pf-node.type-cross .pf-node-inner::before,
+.pf-node.type-cross .pf-node-inner::after{
+  content:'';position:absolute;left:50%;top:50%;width:50%;height:5px;
+  background:#fff;border-radius:3px;
+}
+.pf-node.type-cross .pf-node-inner::before{transform:translate(-50%,-50%) rotate(45deg)}
+.pf-node.type-cross .pf-node-inner::after {transform:translate(-50%,-50%) rotate(-45deg)}
+.pf-node.type-cross .pf-node-text{display:none}
 .pf-node.type-decision .pf-node-inner{
   clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
   background:rgba(245,158,11,.12);border-color:#f59e0b;border-radius:0;
@@ -8907,18 +8936,42 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 }
 .pf-node.selected .pf-node-resize{opacity:1}
 
-/* 4-corner resize handles — visible only when shape is selected */
+/* 4-corner resize handles — visible only when shape is selected.
+   Larger size + drop shadow so they stand out against any background.
+   For rounded shapes (start/end/tick/cross), handles are nudged inward so
+   they don't fall outside the visible circle. */
 .pf-resize-handle{
-  position:absolute;width:10px;height:10px;
-  background:#fff;border:1.5px solid var(--ac);border-radius:50%;
+  position:absolute;width:13px;height:13px;
+  background:#fff;border:2px solid var(--ac);border-radius:50%;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);
   opacity:0;pointer-events:none;
-  z-index:25;transition:opacity .12s;
+  z-index:25;transition:opacity .12s,transform .1s;
 }
+.pf-resize-handle:hover{transform:scale(1.25)}
 .pf-node.selected .pf-resize-handle{opacity:1;pointer-events:auto}
-.pf-resize-handle.nw{top:-6px; left:-6px; cursor:nwse-resize}
-.pf-resize-handle.ne{top:-6px; right:-6px;cursor:nesw-resize}
-.pf-resize-handle.sw{bottom:-6px;left:-6px; cursor:nesw-resize}
-.pf-resize-handle.se{bottom:-6px;right:-6px;cursor:nwse-resize}
+.pf-resize-handle.nw{top:-7px; left:-7px; cursor:nwse-resize}
+.pf-resize-handle.ne{top:-7px; right:-7px;cursor:nesw-resize}
+.pf-resize-handle.sw{bottom:-7px;left:-7px; cursor:nesw-resize}
+.pf-resize-handle.se{bottom:-7px;right:-7px;cursor:nwse-resize}
+
+/* Nudge handles inward on rounded shapes so they sit ON the visible edge
+   instead of in the empty corner outside the circle */
+.pf-node.type-start .pf-resize-handle.nw,
+.pf-node.type-tick  .pf-resize-handle.nw,
+.pf-node.type-cross .pf-resize-handle.nw,
+.pf-node.type-end   .pf-resize-handle.nw{top:5%;  left:5%}
+.pf-node.type-start .pf-resize-handle.ne,
+.pf-node.type-tick  .pf-resize-handle.ne,
+.pf-node.type-cross .pf-resize-handle.ne,
+.pf-node.type-end   .pf-resize-handle.ne{top:5%;  right:5%}
+.pf-node.type-start .pf-resize-handle.sw,
+.pf-node.type-tick  .pf-resize-handle.sw,
+.pf-node.type-cross .pf-resize-handle.sw,
+.pf-node.type-end   .pf-resize-handle.sw{bottom:5%; left:5%}
+.pf-node.type-start .pf-resize-handle.se,
+.pf-node.type-tick  .pf-resize-handle.se,
+.pf-node.type-cross .pf-resize-handle.se,
+.pf-node.type-end   .pf-resize-handle.se{bottom:5%; right:5%}
 
 /* Connection points */
 .pf-port{
@@ -9022,13 +9075,19 @@ async function pfSaveAll() {
   const btn = document.getElementById('pf-save-btn');
   if(btn) { btn.textContent='⏳ Đang lưu...'; btn.disabled=true; }
   try {
-    // Sanitize before sending to DB
+    // Sanitize before sending to DB — MUST match pfSyncNode's nodeDb structure so
+    // auto-save doesn't wipe rotation/image-position metadata stored in style.jsonb
     const toDbNode = n => ({
       id: n.id, process_id: n.process_id, type: n.type,
       x: n.x, y: n.y, w: n.w, h: n.h, label: n.label||'',
-      style: n.style||{},
+      style: {
+        ...(n.style||{}),
+        imagePosition: n.imagePosition,
+        imageWidth:    n.imageWidth,
+        imageHeight:   n.imageHeight,
+        rotation:      n.rotation,
+      },
       image_url: n.imageUrl ? '__local__' : null,
-      // Store extra fields in style jsonb
     });
     const toDbEdge = e => ({
       id: e.id, process_id: e.process_id,
@@ -9191,7 +9250,30 @@ function pfSaveImage(nodeId, dataUrl) {
     const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
     imgs[nodeId] = dataUrl;
     localStorage.setItem('tf_pf_images', JSON.stringify(imgs));
-  } catch(e) { console.warn('pfSaveImage:', e); }
+    return true;
+  } catch(e) {
+    console.warn('pfSaveImage:', e);
+    // Quota exceeded — try cleaning orphan images (for deleted nodes) and retry
+    if(e.name === 'QuotaExceededError') {
+      try {
+        const imgs = JSON.parse(localStorage.getItem('tf_pf_images')||'{}');
+        const validIds = new Set(pfNodes.map(n=>n.id));
+        const cleaned = {};
+        Object.entries(imgs).forEach(([id, img]) => {
+          if(validIds.has(id)) cleaned[id] = img;
+        });
+        cleaned[nodeId] = dataUrl;
+        localStorage.setItem('tf_pf_images', JSON.stringify(cleaned));
+        return true;
+      } catch(e2) {
+        console.warn('pfSaveImage retry failed:', e2);
+        if(typeof showNotif==='function')
+          showNotif('nw','⚠️ Ảnh quá lớn','Không lưu được vào local. Hãy chọn ảnh nhỏ hơn.');
+        return false;
+      }
+    }
+    return false;
+  }
 }
 function pfGetImage(nodeId) {
   try {
@@ -9289,35 +9371,61 @@ function pfRedo() {
 }
 
 // ── Copy/Paste ────────────────────────────────────────────
-let pfClipboard = null;
+let pfClipboard = null; // array of node snapshots
 
 function pfCopySelected() {
-  if(!pfSelected) return;
-  const node = pfNodes.find(n=>n.id===pfSelected);
-  if(!node) return;
-  pfClipboard = JSON.parse(JSON.stringify(node));
-  showNotif('ns','📋 Đã copy', esc(node.label||'Shape'));
+  // Collect all selected node IDs (multi-select aware)
+  const ids = pfSelectedIds.size ? [...pfSelectedIds]
+            : (pfSelected ? [pfSelected] : []);
+  if(!ids.length) {
+    showNotif?.('nw','⚠️','Chưa chọn shape nào để copy');
+    return;
+  }
+  // Deep clone, preserve image data via pfGetImage
+  pfClipboard = ids.map(id => {
+    const node = pfNodes.find(n=>n.id===id);
+    if(!node) return null;
+    const copy = JSON.parse(JSON.stringify(node));
+    // Remember image data so paste can restore even if node was deleted
+    const img = pfGetImage(id);
+    if(img) copy._imgData = img;
+    return copy;
+  }).filter(Boolean);
+  showNotif?.('ns','📋 Đã copy', pfClipboard.length + ' shape');
 }
 
 function pfPasteNode() {
-  if(!pfClipboard || !pfCurrentId) return;
-  const node = JSON.parse(JSON.stringify(pfClipboard));
-  node.id = 'pfnode_'+Date.now();
-  node.x += 20; node.y += 20; // offset so it doesn't overlap
-  node.process_id = pfCurrentId;
-  node.created_at = new Date().toISOString();
-  // Copy image if any
-  const imgData = pfGetImage(pfClipboard.id);
-  if(imgData) {
-    node.imageUrl = imgData;
-    pfSaveImage(node.id, imgData);
-  }
+  if(!pfClipboard?.length || !pfCurrentId) return;
   pfSnapshot('paste');
-  pfNodes.push(node);
-  pfSelected = node.id;
-  pfSelectedIds.clear(); pfSelectedIds.add(node.id);
+  // Compute bounding box of clipboard to offset all together
+  const baseTs = Date.now();
+  const newIds = [];
+  pfClipboard.forEach((src, i) => {
+    const node = JSON.parse(JSON.stringify(src));
+    delete node._imgData;
+    const newId = 'pfnode_'+(baseTs+i);
+    // Restore image if it was there
+    if(src._imgData) {
+      pfSaveImage(newId, src._imgData);
+      node.imageUrl = src._imgData;
+    }
+    node.id = newId;
+    node.x += 20; node.y += 20; // offset so it doesn't overlap exactly
+    node.process_id = pfCurrentId;
+    node.created_at = new Date().toISOString();
+    pfNodes.push(node);
+    newIds.push(newId);
+  });
+  // Select the newly pasted shapes
+  pfSelectedIds.clear();
+  newIds.forEach(id => pfSelectedIds.add(id));
+  pfSelected = newIds[0] || null;
   pfSaveLocal(); pfRenderAll();
-  pfSyncNode(node);
+  // Sync each to DB
+  newIds.forEach(id => {
+    const n = pfNodes.find(x=>x.id===id);
+    if(n) pfSyncNode(n);
+  });
 }
 function pfRenderAll() {
   const view = document.getElementById('processflow-view');
@@ -9394,6 +9502,8 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfAddNode('decision')"  title="Quyết định">◇ Quyết định</button>
       <button class="pf-tool-btn" onclick="pfAddNode('start')"     title="Bắt đầu">⬤ Bắt đầu</button>
       <button class="pf-tool-btn" onclick="pfAddNode('end')"       title="Kết thúc">⬤ Kết thúc</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('tick')"      title="Đúng (✓)" style="color:#16a34a">✓ Đúng</button>
+      <button class="pf-tool-btn" onclick="pfAddNode('cross')"     title="Sai (✗)" style="color:#ef4444">✗ Sai</button>
       <button class="pf-tool-btn" onclick="pfAddNode('arrow')"     title="Mũi tên">➜ Mũi tên</button>
       <button class="pf-tool-btn" onclick="pfAddNode('note')"      title="Ghi chú">📝 Ghi chú</button>
     </div>
@@ -9584,9 +9694,14 @@ function pfAddNode(type) {
   const rect  = outer ? outer.getBoundingClientRect() : {width:800, height:500};
   const cx = (rect.width/2  - pfPan.x)/pfZoom + (Math.random()*40-20);
   const cy = (rect.height/2 - pfPan.y)/pfZoom + (Math.random()*40-20);
-  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú'};
-  const w = type==='decision'?120:type==='start'||type==='end'?120:160;
-  const h = type==='decision'?80:60;
+  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú',tick:'',cross:''};
+  const w = type==='tick'||type==='cross' ? 70
+          : type==='decision' ? 120
+          : type==='start'||type==='end' ? 120
+          : 160;
+  const h = type==='tick'||type==='cross' ? 70
+          : type==='decision' ? 80
+          : 60;
   const node = {
     id:'pfnode_'+Date.now(), process_id:pfCurrentId,
     type, x:Math.round(cx-w/2), y:Math.round(cy-h/2), w, h,
@@ -9911,6 +10026,15 @@ function pfCanvasMouseUp(e) {
     );
     if(target) pfCreateEdge(pfConnecting.fromId, target.id, pfConnecting.fromPort, toPort);
     pfConnecting=null;
+    // Restore cursor (might have been changed by port drag)
+    const outer = document.getElementById('pf-canvas-outer');
+    if(outer && pfTool!=='connect' && pfTool!=='pan') outer.classList.remove('connecting');
+    pfUpdateSVG();
+  } else if(pfConnecting) {
+    // Connection cancelled (released without target)
+    pfConnecting=null;
+    const outer = document.getElementById('pf-canvas-outer');
+    if(outer && pfTool!=='connect' && pfTool!=='pan') outer.classList.remove('connecting');
     pfUpdateSVG();
   }
 }
@@ -10099,8 +10223,11 @@ function pfNodeMouseDown(e, nodeId) {
 function pfPortMouseDown(e, nodeId, port) {
   e.stopPropagation();
   e.preventDefault();
+  // Port drag now works in ANY mode (select, connect, pan) — no tool switch needed
   pfConnecting={fromId:nodeId, fromPort:port, mx:undefined, my:undefined};
-  pfSetTool('connect'); // auto switch to connect mode
+  // Visual cue: cursor changes to crosshair via canvas-outer class
+  const outer = document.getElementById('pf-canvas-outer');
+  if(outer) outer.classList.add('connecting');
 }
 
 /**
@@ -10500,26 +10627,62 @@ function pfUploadImage() {
   document.getElementById('pf-img-input')?.click();
 }
 
+/**
+ * Resize/recompress an image dataURL so it fits comfortably in localStorage.
+ * Caps the longest dimension at maxDim, then re-encodes as JPEG at given quality.
+ * PNG-with-transparency is preserved when source is PNG and image is small.
+ */
+function pfCompressImage(dataUrl, maxDim, quality) {
+  maxDim = maxDim || 1200;
+  quality = quality || 0.85;
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if(w > maxDim || h > maxDim) {
+        const scale = Math.min(maxDim/w, maxDim/h);
+        w = Math.round(w*scale); h = Math.round(h*scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      // Prefer JPEG (much smaller) unless source was small PNG (might be a logo with transparency)
+      const isSmallPng = dataUrl.startsWith('data:image/png') && (w*h) < 90000;
+      const out = canvas.toDataURL(isSmallPng ? 'image/png' : 'image/jpeg', quality);
+      resolve(out);
+    };
+    img.onerror = () => resolve(dataUrl); // fallback to original on error
+    img.src = dataUrl;
+  });
+}
+
 function pfHandleImageUpload(e) {
   const file=e.target.files?.[0];
   if(!file||!pfSelected) return;
   const reader=new FileReader();
-  reader.onload=ev=>{
+  reader.onload=async ev=>{
     const node=pfNodes.find(n=>n.id===pfSelected);
     if(!node)return;
-    node.imageUrl    = ev.target.result;
+    // Compress before storing — typical 4MB photo becomes 100-300KB
+    const dataUrl = await pfCompressImage(ev.target.result, 1200, 0.85);
+    node.imageUrl    = dataUrl;
     node.imagePosition = node.imagePosition||'top';
     node.imageWidth    = node.imageWidth||100;
     node.imageHeight   = node.imageHeight||80;
     node.w = Math.max(node.w, node.imageWidth+40);
     node.h = Math.max(node.h, node.imageHeight+60);
-    // Persist image in localStorage
-    pfSaveImage(node.id, ev.target.result);
+    // Persist image to localStorage; warn if quota fails
+    const ok = pfSaveImage(node.id, dataUrl);
+    if(!ok) {
+      // Image not persisted locally — try smaller compression once
+      const smaller = await pfCompressImage(ev.target.result, 600, 0.7);
+      const ok2 = pfSaveImage(node.id, smaller);
+      if(ok2) node.imageUrl = smaller;
+    }
     pfSaveLocal();
     pfMarkDirty?.();
-    // Full re-render so img src is set
     pfRenderAll();
-    // Sync to DB after render
     pfSyncNode(node);
   };
   reader.readAsDataURL(file);
@@ -10700,10 +10863,148 @@ function pfToggleSidebar() {
  * Uses <foreignObject> with embedded HTML so styles, fonts, and images render
  * identically to the on-screen view. Returns the SVG as a string.
  */
+/**
+ * Render a single node as native SVG primitives.
+ * Returns SVG string. Uses real <rect>/<ellipse>/<polygon>/<path> so PDF
+ * printing renders shapes correctly (foreignObject is unreliable in print).
+ * Text uses <text>/<tspan> with multi-line word-wrapping.
+ */
+function pfNodeToSvg(node) {
+  const x = node.x, y = node.y, w = node.w, h = node.h;
+  const st = node.style || {};
+  const bg = st.background || pfDefaultBgFor(node.type);
+  const bc = st.borderColor || pfDefaultBorderFor(node.type);
+  const bw = parseFloat(st.borderWidth) || 2;
+  const bs = st.borderStyle || 'solid';
+  const fs = parseFloat(st.fontSize) || 12;
+  const fc = st.color || '#333';
+  const ta = st.textAlign || 'center';
+  const dash = bs==='dashed' ? '6,3' : bs==='dotted' ? '2,3' : '';
+  const labelText = pfStripHtml(node.label || '');
+  const rot = node.rotation || 0;
+  const cx = x + w/2, cy = y + h/2;
+  const groupTransform = rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : '';
+
+  // Build the shape body based on type
+  let shape = '';
+  if(node.type==='start' || node.type==='end') {
+    shape = `<ellipse cx="${cx}" cy="${cy}" rx="${w/2}" ry="${h/2}" fill="${bg}" stroke="${bc}" stroke-width="${bw}" ${dash?`stroke-dasharray="${dash}"`:''}/>`;
+  } else if(node.type==='decision') {
+    // Diamond: 4-point polygon
+    const pts = `${cx},${y} ${x+w},${cy} ${cx},${y+h} ${x},${cy}`;
+    shape = `<polygon points="${pts}" fill="${bg}" stroke="${bc}" stroke-width="${bw}" ${dash?`stroke-dasharray="${dash}"`:''}/>`;
+  } else if(node.type==='tick') {
+    // Green circle + white checkmark
+    const r = Math.min(w,h)/2;
+    const checkPath = `M ${cx-r*0.40},${cy+r*0.03} L ${cx-r*0.05},${cy+r*0.38} L ${cx+r*0.45},${cy-r*0.30}`;
+    shape = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#16a34a"/>
+      <path d="${checkPath}" stroke="#fff" stroke-width="${r*0.18}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  } else if(node.type==='cross') {
+    // Red circle + white X
+    const r = Math.min(w,h)/2;
+    const a = r*0.35;
+    shape = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ef4444"/>
+      <line x1="${cx-a}" y1="${cy-a}" x2="${cx+a}" y2="${cy+a}" stroke="#fff" stroke-width="${r*0.18}" stroke-linecap="round"/>
+      <line x1="${cx+a}" y1="${cy-a}" x2="${cx-a}" y2="${cy+a}" stroke="#fff" stroke-width="${r*0.18}" stroke-linecap="round"/>`;
+  } else if(node.type==='arrow') {
+    // Arrow shape: hexagonal-arrow pointing right
+    const tip = x + w;
+    const headW = Math.min(w*0.3, h);
+    const stemY1 = y + h*0.25, stemY2 = y + h*0.75;
+    const stemEnd = tip - headW;
+    const pts = `${x},${stemY1} ${stemEnd},${stemY1} ${stemEnd},${y} ${tip},${cy} ${stemEnd},${y+h} ${stemEnd},${stemY2} ${x},${stemY2}`;
+    shape = `<polygon points="${pts}" fill="${bg}" stroke="${bc}" stroke-width="${bw}"/>`;
+  } else {
+    // step / note / default rectangle (rounded for step, sharp for note)
+    const r = node.type==='note' ? 4 : 8;
+    shape = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}" fill="${bg}" stroke="${bc}" stroke-width="${bw}" ${dash?`stroke-dasharray="${dash}"`:''}/>`;
+  }
+
+  // Skip text for tick/cross — visual is the symbol itself
+  if(node.type==='tick' || node.type==='cross') return `<g${groupTransform}>${shape}</g>`;
+
+  // Render label as wrapped <text>
+  let textSvg = '';
+  if(labelText) {
+    const lineHeight = fs * 1.3;
+    const padding = 8;
+    const innerW = w - padding*2;
+    const lines = pfWrapText(labelText, fs, innerW);
+    const totalH = lines.length * lineHeight;
+    const startY = cy - totalH/2 + fs;
+    // Decision diamond: text already centered; for rectangles too
+    const anchor = ta==='left' ? 'start' : ta==='right' ? 'end' : 'middle';
+    const tx = ta==='left' ? x+padding : ta==='right' ? x+w-padding : cx;
+    textSvg = `<text x="${tx}" y="${startY}" font-family="system-ui,-apple-system,sans-serif"
+      font-size="${fs}" fill="${fc}" text-anchor="${anchor}">
+      ${lines.map((line,i)=>`<tspan x="${tx}" dy="${i===0?0:lineHeight}">${pfEscXml(line)}</tspan>`).join('')}
+    </text>`;
+  }
+
+  // Image (base64) inside the shape — uses <image> element
+  let imgSvg = '';
+  if(node.imageUrl && node.imageUrl.startsWith('data:')) {
+    const iw = node.imageWidth||80, ih = node.imageHeight||60;
+    const ix = cx - iw/2;
+    let iy = cy - ih/2;
+    // Position based on imagePosition (rough)
+    if(node.imagePosition==='top')    iy = y + 8;
+    if(node.imagePosition==='bottom') iy = y + h - ih - 8;
+    imgSvg = `<image href="${node.imageUrl}" x="${ix}" y="${iy}" width="${iw}" height="${ih}" preserveAspectRatio="xMidYMid meet"/>`;
+  }
+
+  return `<g${groupTransform}>${shape}${imgSvg}${textSvg}</g>`;
+}
+
+// Defaults for shape fill/border when style not set
+function pfDefaultBgFor(type) {
+  return type==='start' ? 'rgb(220,247,228)'
+       : type==='end'   ? 'rgb(252,227,228)'
+       : type==='note'  ? '#fff8c4'
+       : type==='arrow' ? '#a8d4ff'
+       : '#ffffff';
+}
+function pfDefaultBorderFor(type) {
+  return type==='start' ? '#16a34a'
+       : type==='end'   ? '#ef4444'
+       : type==='note'  ? '#e0c97a'
+       : type==='arrow' ? '#4f7cff'
+       : '#888888';
+}
+
+// Strip HTML tags from label, decoding entities
+function pfStripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || '';
+}
+function pfEscXml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// Naive word-wrap based on approximate character width (no font metrics)
+function pfWrapText(text, fontSize, maxWidth) {
+  const avgCharW = fontSize * 0.55;
+  const maxChars = Math.max(4, Math.floor(maxWidth / avgCharW));
+  const out = [];
+  const paragraphs = text.split('\n');
+  paragraphs.forEach(par => {
+    const words = par.split(/\s+/).filter(Boolean);
+    if(!words.length) { out.push(''); return; }
+    let line = '';
+    words.forEach(w => {
+      if(!line) { line = w; return; }
+      if((line + ' ' + w).length <= maxChars) line += ' ' + w;
+      else { out.push(line); line = w; }
+    });
+    if(line) out.push(line);
+  });
+  return out;
+}
+
 function pfBuildExportSVG() {
   if(!pfNodes.length && !pfEdges.length) return null;
 
-  // Compute bounding box across all nodes (and edges, indirectly via nodes)
+  // Compute bounding box across all nodes
   const PAD = 40;
   const xs = pfNodes.map(n=>n.x), ys = pfNodes.map(n=>n.y);
   const x2 = pfNodes.map(n=>n.x+n.w), y2 = pfNodes.map(n=>n.y+n.h);
@@ -10713,49 +11014,26 @@ function pfBuildExportSVG() {
   const maxY = Math.max(...y2) + PAD;
   const w = maxX - minX, h = maxY - minY;
 
-  // Render edges as native SVG paths using the existing edge logic
+  // Edges — already pure SVG paths via pfRenderEdgesSVG
   const edgesSvg = pfRenderEdgesSVG();
-
-  // For each node, build a <foreignObject> containing the node HTML.
-  // This preserves text formatting, colors, borders, images — everything.
-  const nodesSvg = pfNodes.map(node => {
-    const rot = node.rotation||0;
-    const html = pfRenderNode(node);
-    // pfRenderNode returns a <div class="pf-node" style="left:Xpx;top:Ypx;...">
-    // For SVG embedding we need to neutralize the absolute positioning since
-    // the foreignObject already positions us. We swap the outer div's style.
-    const innerOnly = html.replace(/style="left:[^"]*"/, 'style="position:relative;width:100%;height:100%"');
-    return `<foreignObject x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}"
-      ${rot ? `transform="rotate(${rot} ${node.x+node.w/2} ${node.y+node.h/2})"` : ''}>
-      <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%">${innerOnly}</div>
-    </foreignObject>`;
-  }).join('\n');
-
-  // Inline minimal CSS so the exported SVG renders standalone
-  const inlineCss = `
-    .pf-node-inner{box-sizing:border-box;width:100%;height:100%;border:2px solid #888;border-radius:8px;background:#fff;
-      display:flex;align-items:center;justify-content:center;padding:6px;font-family:system-ui,-apple-system,sans-serif}
-    .pf-node.type-decision .pf-node-inner{transform:rotate(45deg);border-radius:6px}
-    .pf-node.type-decision .pf-node-text{transform:rotate(-45deg)}
-    .pf-node.type-start  .pf-node-inner,
-    .pf-node.type-end    .pf-node-inner{border-radius:999px}
-    .pf-node.type-note   .pf-node-inner{background:#fff8c4;border-color:#e0c97a}
-    .pf-node.type-start  .pf-node-inner{background:#d4edda}
-    .pf-node.type-end    .pf-node-inner{background:#f8d7da}
-    .pf-node-text{font-size:12px;text-align:center;color:#333;line-height:1.3}
-    .pf-edge{fill:none;stroke:#666;stroke-width:2}
-    .pf-edge.dashed{stroke-dasharray:6,3}
-    .pf-edge-label{font-size:11px;fill:#666;font-family:system-ui,sans-serif}
-    .pf-port,.pf-node-resize,.pf-resize-handle,.pf-node-rotate{display:none}`;
+  // Nodes — converted to native SVG primitives (no foreignObject)
+  const nodesSvg = pfNodes.map(pfNodeToSvg).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml"
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
      viewBox="${minX} ${minY} ${w} ${h}" width="${w}" height="${h}">
   <defs>
     <marker id="pf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#666"/>
     </marker>
-    <style><![CDATA[${inlineCss}]]></style>
+    <marker id="pf-arrow-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4f7cff"/>
+    </marker>
+    <style><![CDATA[
+      .pf-edge{fill:none;stroke:#666;stroke-width:2}
+      .pf-edge.dashed{stroke-dasharray:6,3}
+      .pf-edge-label{font-size:11px;fill:#666;font-family:system-ui,sans-serif}
+    ]]></style>
   </defs>
   <rect x="${minX}" y="${minY}" width="${w}" height="${h}" fill="#fff"/>
   ${edgesSvg}
