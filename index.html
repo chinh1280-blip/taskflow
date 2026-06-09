@@ -8894,24 +8894,34 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 .pf-node.type-cross .pf-node-text{display:none}
 /* Decision (diamond): rendered as inline SVG inside .pf-node-inner so that the
    border (stroke) renders correctly. Previously clip-path was used which CUTS OFF
-   the border. */
+   the border. SVG fills the entire bbox; text is centered on top via z-index. */
 .pf-node.type-decision .pf-node-inner{
   background:transparent;border:0;border-radius:0;
-  padding:14px 22px;position:relative;
+  padding:0;position:relative;
+  display:flex;align-items:center;justify-content:center;
 }
 .pf-node.type-decision .pf-shape-svg{
   position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+  z-index:0;
+}
+.pf-node.type-decision .pf-node-text{
+  position:relative;z-index:1;max-width:60%;padding:4px;
 }
 
-/* Arrow: same approach as decision */
+/* Arrow: same approach as decision — SVG fills bbox, text overlaid */
 .pf-node.type-arrow .pf-node-inner{
   background:transparent;border:0;border-radius:0;
-  padding:8px 20px;position:relative;
+  padding:0;position:relative;
+  display:flex;align-items:center;justify-content:center;
 }
 .pf-node.type-arrow .pf-shape-svg{
   position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+  z-index:0;
 }
-.pf-node.type-arrow .pf-node-text{font-size:10px}
+.pf-node.type-arrow .pf-node-text{
+  position:relative;z-index:1;max-width:55%;padding:0 4px;
+  font-size:10px;
+}
 .pf-node-rotate{
   position:absolute;top:-28px;left:50%;transform:translateX(-50%);
   background:var(--ac);color:#fff;border-radius:50%;
@@ -11268,21 +11278,27 @@ function pfInsertLink(nodeId) {
 function pfToggleShapePicker(e) {
   e?.stopPropagation();
   const picker = document.getElementById('pf-shape-picker');
-  if(!picker) return;
+  const btn = document.getElementById('pf-shape-picker-btn');
+  if(!picker || !btn) return;
   const isOpen = picker.style.display !== 'none';
-  picker.style.display = isOpen ? 'none' : 'block';
-  if(!isOpen) {
-    // Close on outside click
-    setTimeout(()=>{
-      const close = ev => {
-        if(!picker.contains(ev.target) && ev.target.id!=='pf-shape-picker-btn') {
-          picker.style.display='none';
-          document.removeEventListener('mousedown', close);
-        }
-      };
-      document.addEventListener('mousedown', close);
-    }, 0);
-  }
+  if(isOpen) { picker.style.display = 'none'; return; }
+  // Toolbar has overflow:hidden (for stable layout), so the dropdown must use
+  // position:fixed with computed coords to escape clipping.
+  const rect = btn.getBoundingClientRect();
+  picker.style.position = 'fixed';
+  picker.style.top = (rect.bottom + 4) + 'px';
+  picker.style.left = rect.left + 'px';
+  picker.style.display = 'block';
+  // Close on outside click
+  setTimeout(()=>{
+    const close = ev => {
+      if(!picker.contains(ev.target) && ev.target.id!=='pf-shape-picker-btn' && !ev.target.closest('#pf-shape-picker-btn')) {
+        picker.style.display='none';
+        document.removeEventListener('mousedown', close);
+      }
+    };
+    document.addEventListener('mousedown', close);
+  }, 0);
 }
 function pfAddNodeFromPicker(type) {
   document.getElementById('pf-shape-picker').style.display='none';
