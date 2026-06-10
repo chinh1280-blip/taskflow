@@ -11801,6 +11801,27 @@ function pfExportSVG() {
 // Preserves: rich text formatting, hyperlinks, CSS effects, image quality.
 // Used by PNG/JPG (via SVG foreignObject) and PDF (via popup print).
 
+/**
+ * Convert HTML to XHTML-compliant markup so it survives parsing inside
+ * <foreignObject> (which uses strict XML rules).
+ * Critical fix for: <br> dropping line breaks, <img> tags being stripped,
+ * which made multi-line text and image labels disappear from exports.
+ */
+function pfToXhtml(html) {
+  if(!html) return '';
+  // 1. Self-close all void HTML elements
+  const voidElements = 'br|hr|img|input|meta|link|area|base|col|embed|source|track|wbr';
+  const voidRe = new RegExp('<(' + voidElements + ')\\b([^>]*?)>', 'gi');
+  html = html.replace(voidRe, (match, tag, attrs) => {
+    if(attrs.trim().endsWith('/')) return match; // already self-closed
+    return '<' + tag.toLowerCase() + attrs + '/>';
+  });
+  // 2. Escape stray & in text content and attributes (not part of an existing entity)
+  // (safe — won't double-encode common entities)
+  // Skip this — too risky to do naively, and most modern HTML output is already escaped.
+  return html;
+}
+
 /** Compute bounding box of given (or current process) nodes plus padding */
 function pfExportBBox(nodes, pad) {
   pad = pad==null ? 40 : pad;
@@ -11812,32 +11833,71 @@ function pfExportBBox(nodes, pad) {
   return { minX, minY, w: maxX-minX, h: maxY-minY };
 }
 
-/** Inlined CSS for export (no CSS variables — fully resolved values). */
+/** Inlined CSS for export — must match the LIVE styles exactly so the exported
+    image looks identical to the on-screen canvas. */
 function pfExportCss() {
   return `
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1a1a}
     .pf-export-canvas{position:relative;background:#fff;font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+
+    /* Base node + inner — same as live */
     .pf-node{position:absolute;font-family:inherit}
-    .pf-node-inner{box-sizing:border-box;width:100%;height:100%;border:2px solid #888;border-radius:8px;background:#fff;
+    .pf-node-inner{box-sizing:border-box;width:100%;height:100%;
+      border:2px solid #888;border-radius:8px;background:#fff;
       display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;
       gap:4px;flex-direction:column}
-    .pf-node.type-decision .pf-node-inner{transform:rotate(45deg);border-radius:6px}
-    .pf-node.type-decision .pf-node-text{transform:rotate(-45deg)}
+
+    /* Decision — SVG-based, no transform:rotate (live v10 approach) */
+    .pf-node.type-decision .pf-node-inner{
+      background:transparent;border:0;border-radius:0;padding:0;position:relative;
+      display:flex;align-items:center;justify-content:center}
+    .pf-node.type-decision .pf-shape-svg{
+      position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:0}
+    .pf-node.type-decision .pf-node-text{
+      position:relative;z-index:1;max-width:60%;padding:4px}
+
+    /* Arrow — same SVG-based approach */
+    .pf-node.type-arrow .pf-node-inner{
+      background:transparent;border:0;border-radius:0;padding:0;position:relative;
+      display:flex;align-items:center;justify-content:center}
+    .pf-node.type-arrow .pf-shape-svg{
+      position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:0}
+    .pf-node.type-arrow .pf-node-text{
+      position:relative;z-index:1;max-width:55%;padding:0 4px;font-size:10px}
+
+    /* Pill shapes */
     .pf-node.type-start .pf-node-inner{border-radius:30px;background:rgba(22,163,74,.12);border-color:#16a34a}
-    .pf-node.type-end .pf-node-inner{border-radius:30px;background:rgba(239,68,68,.1);border-color:#ef4444}
-    .pf-node.type-note .pf-node-inner{background:#fff8c4;border-color:#e0c97a}
-    .pf-node.type-tick .pf-node-inner{border-radius:50%;background:#16a34a;border:0;position:relative}
+    .pf-node.type-end   .pf-node-inner{border-radius:30px;background:rgba(239,68,68,.1);border-color:#ef4444}
+    .pf-node.type-note  .pf-node-inner{background:#fff8c4;border-color:#e0c97a}
+
+    /* Tick/Cross — circular bg, SVG icon inside */
+    .pf-node.type-tick  .pf-node-inner{border-radius:50%;background:#16a34a;border:0;position:relative}
     .pf-node.type-cross .pf-node-inner{border-radius:50%;background:#ef4444;border:0;position:relative}
+    .pf-node.type-tick .pf-node-text,.pf-node.type-cross .pf-node-text{display:none}
+
+    /* Text — white-space:pre-wrap preserves newlines that come as plain text */
     .pf-node-text{font-size:12px;text-align:center;color:#333;line-height:1.3;
-      word-wrap:break-word;width:100%;white-space:pre-wrap}
+      word-wrap:break-word;width:100%;white-space:pre-wrap;
+      flex:1;min-width:0;position:relative;z-index:1}
+    /* Ensure block-level children create new lines */
+    .pf-node-text > div{display:block}
+    .pf-node-text br{display:block}
+
+    /* Links — preserve styling and clickability */
     .pf-link,a{color:#2563eb;text-decoration:underline}
+
+    /* Edges */
     .pf-edge{fill:none;stroke:#666;stroke-width:2}
     .pf-edge.dashed{stroke-dasharray:6,3}
     .pf-edge-label{font-size:11px;fill:#555;font-family:system-ui,sans-serif}
+
+    /* Hide all interactive handles */
     .pf-port,.pf-node-resize,.pf-resize-handle,.pf-node-rotate,
-    .pf-img-resize-handle,.pf-marquee,.pf-guide-line{display:none}
-    img{max-width:100%;display:block}`;
+    .pf-img-resize-handle,.pf-marquee,.pf-guide-line{display:none !important}
+
+    /* Images inside shapes */
+    img{max-width:100%;display:block;border-radius:4px}`;
 }
 
 /**
@@ -11881,6 +11941,8 @@ function pfBuildExportHTML(region) {
     html = html.replace(/onmousedown="[^"]*"/g, '')
                .replace(/ondblclick="[^"]*"/g, '')
                .replace(/onblur="[^"]*"/g, '')
+               .replace(/onkeydown="[^"]*"/g, '')
+               .replace(/contenteditable="[^"]*"/g, '')
                .replace(/id="pfn_[^"]+"/g, '')
                .replace(/id="pft_[^"]+"/g, '')
                .replace(/id="pfimg_[^"]+"/g, '');
@@ -11888,6 +11950,10 @@ function pfBuildExportHTML(region) {
     // Regex MUST handle negative numbers (shapes can be positioned at e.g. -10px)
     html = html.replace(/left:(-?\d+)px;top:(-?\d+)px/,
       (_, x, y) => `left:${parseInt(x)-bbox.minX}px;top:${parseInt(y)-bbox.minY}px`);
+    // CRITICAL: convert to XHTML so void elements (<br>, <img>) parse correctly
+    // inside foreignObject. Without this, <br> in shape text → dropped → line
+    // breaks disappear in exported image.
+    html = pfToXhtml(html);
     return html;
   }).join('\n');
 
