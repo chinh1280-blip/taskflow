@@ -9058,16 +9058,16 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 .pf-shape-prev.arrow{color:#4f7cff;font-size:18px}
 .pf-shape-prev.note{font-size:18px}
 
-/* Side format panel — pinned right, compact. Content-height so it doesn't waste space. */
+/* Side format panel — narrower (170px) so it takes less canvas space. */
 .pf-fmt-panel{
-  width:210px;min-width:210px;
+  width:170px;min-width:170px;
   background:var(--s1);border-left:1px solid var(--bd);
   display:flex;flex-direction:column;overflow:hidden;
   flex-shrink:0;
 }
 .pf-panel-head{
-  padding:7px 10px;border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;gap:6px;
+  padding:6px 9px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:5px;
 }
 .pf-panel-title{font-size:12px;font-weight:700;color:var(--tx);flex:1;line-height:1.1}
 .pf-panel-close{
@@ -9080,45 +9080,45 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 }
 .pf-panel-tab{
   flex:1;padding:4px 6px;border:1px solid var(--bd);border-radius:4px;
-  background:var(--s2);color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;
-  transition:all .12s;
+  background:var(--s2);color:var(--tx2);font-size:10px;font-weight:600;cursor:pointer;
+  transition:all .12s;white-space:nowrap;
 }
 .pf-panel-tab:hover{border-color:var(--ac);color:var(--tx)}
 .pf-panel-tab.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .pf-panel-body{
-  overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:8px;
+  overflow-y:auto;padding:6px 8px 10px;display:flex;flex-direction:column;gap:7px;
   max-height:calc(100vh - 200px);
 }
-.pf-panel-row{display:flex;align-items:center;gap:6px}
+.pf-panel-row{display:flex;align-items:center;gap:5px}
 .pf-panel-lab{
-  font-size:10px;color:var(--tx3);font-weight:600;
-  width:42px;flex-shrink:0;text-transform:uppercase;letter-spacing:.3px;
+  font-size:9px;color:var(--tx3);font-weight:600;
+  width:30px;flex-shrink:0;text-transform:uppercase;letter-spacing:.3px;
 }
 .pf-panel-sel{
-  flex:1;min-width:0;font-size:11px;background:var(--s2);border:1px solid var(--bd);
-  border-radius:4px;padding:2px 4px;color:var(--tx);height:24px;cursor:pointer;
+  flex:1;min-width:0;font-size:10px;background:var(--s2);border:1px solid var(--bd);
+  border-radius:4px;padding:1px 3px;color:var(--tx);height:22px;cursor:pointer;
 }
 .pf-panel-num{
-  width:100%;font-size:11px;background:var(--s2);border:1px solid var(--bd);
-  border-radius:4px;padding:2px 5px;color:var(--tx);height:22px;font-family:monospace;
+  width:100%;font-size:10px;background:var(--s2);border:1px solid var(--bd);
+  border-radius:4px;padding:2px 4px;color:var(--tx);height:22px;font-family:monospace;
   text-align:right;
 }
 .pf-panel-hex{
-  flex:1;font-size:10px;padding:3px 5px;border-radius:4px;height:22px;
+  flex:1;font-size:10px;padding:2px 5px;border-radius:4px;height:22px;
   border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:monospace;
 }
 .pf-color-swatch{
-  width:18px;height:18px;border-radius:3px;border:1px solid var(--bd);
+  width:16px;height:16px;border-radius:3px;border:1px solid var(--bd);
   cursor:pointer;flex-shrink:0;transition:transform .1s;
 }
 .pf-color-swatch:hover{transform:scale(1.2);border-color:var(--ac)}
-.pf-color-mini{  /* inline color picker square */
-  width:22px;height:22px;border-radius:4px;cursor:pointer;flex-shrink:0;position:relative;
+.pf-color-mini{
+  width:20px;height:20px;border-radius:4px;cursor:pointer;flex-shrink:0;position:relative;
   border:1px solid var(--bd);
 }
-.pf-panel-divider{height:1px;background:var(--bd);margin:2px 0}
+.pf-panel-divider{height:1px;background:var(--bd);margin:1px 0}
 .pf-panel-fmtbtns{display:flex;gap:2px;flex-wrap:wrap}
-.pf-panel-fmtbtns .pf-fmt-btn{min-width:24px;height:24px;padding:2px 5px;font-size:11px}
+.pf-panel-fmtbtns .pf-fmt-btn{min-width:22px;height:22px;padding:1px 4px;font-size:10px}
 
 /* Empty state */
 .pf-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--tx3)}
@@ -11189,13 +11189,31 @@ function pfFmtLineHeight(nodeId, val) {
 // ── New: numeric W/H input (Fix #7) ───────────────────────
 // ── Z-order: bring to front / send to back (PowerPoint style) ──
 // Order is stored in node.style.z. Render sorts ascending so higher z = on top.
+//
+// CRITICAL: pfRenderCanvas() is a PARTIAL render — it updates positions of
+// existing DOM elements but does NOT reorder them. Even though node.style.z
+// changes, the DOM order remains the same so visual stacking doesn't update.
+// Solution: explicitly reorder DOM children after every z change.
+function pfReorderDOM() {
+  const canvas = document.getElementById('pf-canvas');
+  if(!canvas) return;
+  // Sort by z ascending; appendChild() of an existing child moves it to the end.
+  // Doing this for each sorted node effectively reorders all .pf-node elements.
+  const sorted = [...pfNodes].sort((a,b)=>(a.style?.z||0)-(b.style?.z||0));
+  sorted.forEach(node => {
+    const el = document.getElementById('pfn_'+node.id);
+    if(el) canvas.appendChild(el);
+  });
+}
+
 function pfNodeBringToFront(nodeId) {
   if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfNodeBringToFront(id)); return; }
   const node = pfNodes.find(n=>n.id===nodeId); if(!node) return;
   const maxZ = Math.max(0, ...pfNodes.map(n=>n.style?.z||0));
   pfSnapshot('zorder-'+nodeId);
   node.style = {...(node.style||{}), z: maxZ + 1};
-  pfRenderCanvas(); pfSyncNode(node);
+  pfReorderDOM();
+  pfSyncNode(node);
   showNotif?.('ns','⬆ Lên trên cùng','');
 }
 function pfNodeSendToBack(nodeId) {
@@ -11204,19 +11222,20 @@ function pfNodeSendToBack(nodeId) {
   const minZ = Math.min(0, ...pfNodes.map(n=>n.style?.z||0));
   pfSnapshot('zorder-'+nodeId);
   node.style = {...(node.style||{}), z: minZ - 1};
-  pfRenderCanvas(); pfSyncNode(node);
+  pfReorderDOM();
+  pfSyncNode(node);
   showNotif?.('ns','⬇ Xuống dưới cùng','');
 }
 function pfNodeBringForward(nodeId) {
   if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfNodeBringForward(id)); return; }
   const node = pfNodes.find(n=>n.id===nodeId); if(!node) return;
-  // Find next higher z and step over
   const myZ = node.style?.z||0;
   const higher = pfNodes.filter(n=>n.id!==nodeId && (n.style?.z||0) > myZ).map(n=>n.style?.z||0).sort((a,b)=>a-b);
   if(!higher.length) return pfNodeBringToFront(nodeId);
   pfSnapshot('zorder-'+nodeId);
   node.style = {...(node.style||{}), z: higher[0] + 0.5};
-  pfRenderCanvas(); pfSyncNode(node);
+  pfReorderDOM();
+  pfSyncNode(node);
 }
 function pfNodeSendBackward(nodeId) {
   if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfNodeSendBackward(id)); return; }
@@ -11226,7 +11245,8 @@ function pfNodeSendBackward(nodeId) {
   if(!lower.length) return pfNodeSendToBack(nodeId);
   pfSnapshot('zorder-'+nodeId);
   node.style = {...(node.style||{}), z: lower[0] - 0.5};
-  pfRenderCanvas(); pfSyncNode(node);
+  pfReorderDOM();
+  pfSyncNode(node);
 }
 
 function pfSetSize(nodeId, prop, val) {
@@ -11804,21 +11824,39 @@ function pfExportSVG() {
 /**
  * Convert HTML to XHTML-compliant markup so it survives parsing inside
  * <foreignObject> (which uses strict XML rules).
- * Critical fix for: <br> dropping line breaks, <img> tags being stripped,
- * which made multi-line text and image labels disappear from exports.
+ *
+ * Handles 3 contentEditable quirks that broke export:
+ * 1. <br> not self-closed → line breaks lost
+ * 2. <img> not self-closed → images lost
+ * 3. <font color="X"> from execCommand('foreColor') → multi-color text lost
+ *    (browsers produce this deprecated tag; some XML parsers drop it)
  */
 function pfToXhtml(html) {
   if(!html) return '';
-  // 1. Self-close all void HTML elements
+
+  // 1. Convert deprecated <font color/face/size="X"> to modern <span style="...">.
+  //    Chrome's execCommand('foreColor') produces <font color="X"> which can be
+  //    silently dropped by strict XML parsers in foreignObject → only first
+  //    color survives.
+  html = html.replace(/<font\b([^>]*)>/gi, (match, attrs) => {
+    const colorMatch = attrs.match(/\bcolor\s*=\s*["']?([^"'\s>]+)/i);
+    const faceMatch  = attrs.match(/\bface\s*=\s*["']?([^"'>]+?)["'\s>]/i);
+    const sizeMatch  = attrs.match(/\bsize\s*=\s*["']?([0-9]+)/i);
+    const styles = [];
+    if(colorMatch) styles.push('color:' + colorMatch[1]);
+    if(faceMatch)  styles.push('font-family:' + faceMatch[1]);
+    if(sizeMatch)  styles.push('font-size:' + (parseInt(sizeMatch[1])*2 + 8) + 'px');
+    return '<span' + (styles.length ? ' style="' + styles.join(';') + '"' : '') + '>';
+  }).replace(/<\/font>/gi, '</span>');
+
+  // 2. Self-close all void HTML elements (XHTML requires this)
   const voidElements = 'br|hr|img|input|meta|link|area|base|col|embed|source|track|wbr';
   const voidRe = new RegExp('<(' + voidElements + ')\\b([^>]*?)>', 'gi');
   html = html.replace(voidRe, (match, tag, attrs) => {
     if(attrs.trim().endsWith('/')) return match; // already self-closed
     return '<' + tag.toLowerCase() + attrs + '/>';
   });
-  // 2. Escape stray & in text content and attributes (not part of an existing entity)
-  // (safe — won't double-encode common entities)
-  // Skip this — too risky to do naively, and most modern HTML output is already escaped.
+
   return html;
 }
 
@@ -11934,27 +11972,45 @@ function pfBuildExportHTML(region) {
   // Sort nodes by z-order (same as live render)
   const sorted = [...exportNodes].sort((a,b)=>(a.style?.z||0)-(b.style?.z||0));
 
-  // Render nodes as REAL HTML, translated so (minX, minY) → (0, 0)
+  // CRITICAL FIDELITY FIX: clone the LIVE DOM elements instead of re-generating
+  // via pfRenderNode. Why this matters:
+  //  - contentEditable adds <font color="X">…</font> for multi-color text — re-generating loses it
+  //  - <br> tags from Enter keys are preserved exactly as they exist on screen
+  //  - inline styles applied by pfFmt* (live changes) are already on the elements
+  //  - CSS-based shapes (border-radius, etc.) render identically because same classes apply
   const nodesHtml = sorted.map(node => {
-    let html = pfRenderNode(node);
-    // Strip event handlers and ID for safety
-    html = html.replace(/onmousedown="[^"]*"/g, '')
-               .replace(/ondblclick="[^"]*"/g, '')
-               .replace(/onblur="[^"]*"/g, '')
-               .replace(/onkeydown="[^"]*"/g, '')
-               .replace(/contenteditable="[^"]*"/g, '')
-               .replace(/id="pfn_[^"]+"/g, '')
-               .replace(/id="pft_[^"]+"/g, '')
-               .replace(/id="pfimg_[^"]+"/g, '');
-    // Translate position from absolute canvas coords → bbox-local coords
-    // Regex MUST handle negative numbers (shapes can be positioned at e.g. -10px)
-    html = html.replace(/left:(-?\d+)px;top:(-?\d+)px/,
-      (_, x, y) => `left:${parseInt(x)-bbox.minX}px;top:${parseInt(y)-bbox.minY}px`);
-    // CRITICAL: convert to XHTML so void elements (<br>, <img>) parse correctly
-    // inside foreignObject. Without this, <br> in shape text → dropped → line
-    // breaks disappear in exported image.
-    html = pfToXhtml(html);
-    return html;
+    const liveEl = document.getElementById('pfn_'+node.id);
+    if(!liveEl) {
+      // Shape not currently in DOM — fallback to generated HTML
+      let html = pfRenderNode(node);
+      html = html.replace(/onmousedown="[^"]*"|ondblclick="[^"]*"|onblur="[^"]*"|onkeydown="[^"]*"|contenteditable="[^"]*"|id="pf[a-z]+_[^"]+"/g, '');
+      html = html.replace(/left:(-?\d+)px;top:(-?\d+)px/,
+        (_, x, y) => `left:${parseInt(x)-bbox.minX}px;top:${parseInt(y)-bbox.minY}px`);
+      return pfToXhtml(html);
+    }
+    // Clone & sanitize
+    const clone = liveEl.cloneNode(true);
+    clone.removeAttribute('id');
+    clone.removeAttribute('onmousedown');
+    clone.classList.remove('selected','multi-selected','marquee-hit');
+    // Strip all interactive handles
+    clone.querySelectorAll('.pf-resize-handle,.pf-node-rotate,.pf-port,.pf-img-resize-handle')
+         .forEach(e=>e.remove());
+    // Strip event handlers and IDs from text element
+    const text = clone.querySelector('.pf-node-text');
+    if(text) {
+      text.removeAttribute('contenteditable');
+      text.removeAttribute('id');
+      ['ondblclick','onblur','onkeydown','onmousedown','onclick'].forEach(a=>text.removeAttribute(a));
+    }
+    // Strip id from image div if present
+    const imgDiv = clone.querySelector('[id^="pfimg_"]');
+    if(imgDiv) imgDiv.removeAttribute('id');
+    // Translate to bbox-local coords
+    clone.style.left = (node.x - bbox.minX) + 'px';
+    clone.style.top = (node.y - bbox.minY) + 'px';
+    // Serialize and XHTML-normalize (needed for void elements like <br>, <img>)
+    return pfToXhtml(clone.outerHTML);
   }).join('\n');
 
   // Render edges as SVG (only edges between exportNodes for non-visible region)
