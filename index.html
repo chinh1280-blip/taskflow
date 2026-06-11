@@ -8941,6 +8941,33 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
 .pf-node.type-brace-right .pf-node-text,
 .pf-node.type-bracket-left .pf-node-text,
 .pf-node.type-bracket-right .pf-node-text{display:none}
+
+/* Anchor — clickable jump-to-pair marker. Distinct visual (gradient circle + big symbol). */
+.pf-node.type-anchor .pf-node-inner{
+  border-radius:50%;border:2px solid #fff;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+  background:linear-gradient(135deg, var(--anchor-c1, #fbbf24), var(--anchor-c2, #f59e0b));
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.pf-node.type-anchor:hover .pf-node-inner{
+  transform:scale(1.1);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+.pf-node.type-anchor.pf-anchor-pulse .pf-node-inner{
+  animation:pf-anchor-pulse 0.6s ease 2;
+}
+@keyframes pf-anchor-pulse{
+  0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  50%{box-shadow:0 0 0 12px rgba(245,158,11,.35), 0 2px 8px rgba(0,0,0,.18)}
+}
+.pf-node.type-anchor .pf-node-text{
+  font-size:22px;color:#fff;font-weight:700;line-height:1;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+}
 .pf-node-rotate{
   position:absolute;top:-28px;left:50%;transform:translateX(-50%);
   background:var(--ac);color:#fff;border-radius:50%;
@@ -8957,8 +8984,10 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   font-size:12px;font-weight:600;color:var(--tx);text-align:center;
   width:100%;word-break:break-word;outline:none;
   min-height:16px;cursor:text;
-  /* Center text content vertically within its allocated flex space — same in live + export */
-  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  /* Vertical-center only (NOT horizontal) — children stretch full width so text-align
+     left/center/right works inside each line. Removing align-items:center was critical:
+     it was forcing every line to be centered horizontally regardless of text-align. */
+  display:flex;flex-direction:column;justify-content:center;
 }
 .pf-node-text > div{display:block;width:100%}
 .pf-node-text br{display:block}
@@ -9227,7 +9256,8 @@ async function pfSaveAll() {
       id: e.id, process_id: e.process_id,
       from_id: e.from_id, to_id: e.to_id,
       from_port: e.from_port||'bottom', to_port: e.to_port||'top',
-      label: e.label||'', style: e.style||'solid',
+      label: e.label||'',
+      style: pfEncodeEdgeStyle(e),  // packs line+curve+markers via JSON (Fix #B)
     });
     await Promise.all([
       ...pfNodes.map(n => dbPF.upsertNode(toDbNode(n))),
@@ -9280,7 +9310,7 @@ function pfLoadLocal() {
     pfProcesses = d.processes||[];
     pfCurrentId = d.currentId||null;
     pfNodes = pfRestoreImages((d.nodes||[]).filter(n=>n.process_id===pfCurrentId));
-    pfEdges = (d.edges||[]).filter(e=>e.process_id===pfCurrentId);
+    pfEdges = pfRestoreEdges((d.edges||[]).filter(e=>e.process_id===pfCurrentId));
   } catch {}
 }
 
@@ -9347,7 +9377,7 @@ async function pfLoadProcessData(pid) {
       rotation:      n.style?.rotation||0,
     }));
     pfNodes = pfRestoreImages(mappedNodes);
-    pfEdges = edges||[];
+    pfEdges = pfRestoreEdges(edges||[]);
     pfCurrentId = pid;
     pfSaveLocal();
   } catch(e){console.warn('[PF] load process:',e);}
@@ -9747,12 +9777,218 @@ function pfFmtBorder(nodeId, prop, val) {
   }
   pfSyncNode(node);
 }
+// ── Anchor markers: click-to-jump waypoints (Fix #C) ────
+// 10 distinct symbols; user places each symbol TWICE (one pair).
+// Clicking an anchor pans the canvas to its pair.
+const PF_ANCHOR_SYMBOLS = ['♠','♣','♥','♦','♚','♛','♜','♝','♞','♟'];
+const PF_ANCHOR_COLORS = {
+  '♠': {c1:'#1f2937', c2:'#374151'},  // spade — dark gray
+  '♣': {c1:'#065f46', c2:'#10b981'},  // club — green
+  '♥': {c1:'#9f1239', c2:'#ef4444'},  // heart — red
+  '♦': {c1:'#1e3a8a', c2:'#3b82f6'},  // diamond — blue
+  '♚': {c1:'#b45309', c2:'#fbbf24'},  // king — gold
+  '♛': {c1:'#7c2d12', c2:'#f97316'},  // queen — orange
+  '♜': {c1:'#581c87', c2:'#a855f7'},  // rook — purple
+  '♝': {c1:'#155e75', c2:'#06b6d4'},  // bishop — cyan
+  '♞': {c1:'#831843', c2:'#ec4899'},  // knight — pink
+  '♟': {c1:'#365314', c2:'#84cc16'},  // pawn — lime
+};
+function pfAnchorStyleForSymbol(symbol) {
+  return PF_ANCHOR_COLORS[symbol] || {c1:'#475569', c2:'#94a3b8'};
+}
+
+// Count how many anchors exist for each symbol (in current process)
+function pfAnchorCounts() {
+  const counts = {};
+  PF_ANCHOR_SYMBOLS.forEach(s => counts[s] = 0);
+  pfNodes.forEach(n => {
+    if(n.type==='anchor' && counts[n.label] !== undefined) counts[n.label]++;
+  });
+  return counts;
+}
+
+// Open the symbol picker
+function pfShowAnchorPicker() {
+  document.getElementById('pf-anchor-picker-modal')?.remove();
+  const counts = pfAnchorCounts();
+  const modal = document.createElement('div');
+  modal.id = 'pf-anchor-picker-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--s1);border-radius:10px;padding:18px;width:380px;max-width:92vw;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--tx)">
+      <h3 style="margin:0 0 6px 0;font-size:15px">📍 Đánh dấu vị trí (Mốc)</h3>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.5">
+        Chọn 1 ký tự để đặt mốc. Mỗi ký tự đặt được <b>2 lần</b> (mỗi đầu 1 mốc).<br>
+        Click vào mốc → tự nhảy tới mốc đôi.
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        ${PF_ANCHOR_SYMBOLS.map(s => {
+          const cnt = counts[s] || 0;
+          const full = cnt >= 2;
+          const col = PF_ANCHOR_COLORS[s];
+          return `<button onclick="pfPlaceAnchor('${s}')" ${full?'disabled':''}
+            style="display:flex;flex-direction:column;align-items:center;gap:4px;
+              padding:12px 4px;border:1px solid var(--bd);border-radius:8px;
+              background:${full?'var(--s2)':'transparent'};cursor:${full?'not-allowed':'pointer'};
+              opacity:${full?0.4:1};color:var(--tx);transition:all .12s"
+              onmouseover="if(!this.disabled){this.style.borderColor='var(--ac)';this.style.transform='scale(1.05)'}"
+              onmouseout="this.style.borderColor='var(--bd)';this.style.transform=''">
+              <div style="width:36px;height:36px;border-radius:50%;
+                background:linear-gradient(135deg,${col.c1},${col.c2});
+                color:#fff;font-size:20px;font-weight:700;
+                display:flex;align-items:center;justify-content:center;
+                box-shadow:0 2px 6px rgba(0,0,0,.2)">${s}</div>
+              <span style="font-size:10px;color:var(--tx3)">${cnt}/2</span>
+            </button>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button onclick="document.getElementById('pf-anchor-picker-modal').remove()"
+          style="padding:7px 14px;border:1px solid var(--bd);border-radius:5px;background:var(--s2);color:var(--tx);cursor:pointer;font-size:12px">Đóng</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+}
+
+// Place anchor at viewport center
+function pfPlaceAnchor(symbol) {
+  if(!pfCurrentId) return;
+  const counts = pfAnchorCounts();
+  if((counts[symbol]||0) >= 2) {
+    showNotif?.('nw', `⚠️ Ký tự ${symbol} đã có 2 mốc`, 'Chọn ký tự khác');
+    return;
+  }
+  // Use addNode flow but set label = symbol
+  const outer = document.getElementById('pf-canvas-outer');
+  const rect = outer ? outer.getBoundingClientRect() : {width:800, height:500};
+  const cx = (rect.width/2 - pfPan.x)/pfZoom;
+  const cy = (rect.height/2 - pfPan.y)/pfZoom;
+  const node = {
+    id: 'pfnode_'+Date.now(),
+    process_id: pfCurrentId,
+    type: 'anchor',
+    x: Math.round(cx - 25), y: Math.round(cy - 25),
+    w: 50, h: 50,
+    label: symbol,
+    style: {},
+    created_at: new Date().toISOString(),
+  };
+  pfSnapshot('anchor-add');
+  pfNodes.push(node);
+  pfSaveLocal(); pfRenderAll(); pfSyncNode(node);
+  const newCount = (counts[symbol]||0) + 1;
+  if(newCount === 1) {
+    showNotif?.('ns', `📍 Đã đặt mốc ${symbol}`, 'Đặt thêm 1 mốc nữa để có thể click nhảy giữa 2 mốc');
+  } else {
+    showNotif?.('ns', `📍 Mốc ${symbol} đầy đủ 2/2`, 'Giờ có thể click 1 mốc để nhảy tới cái kia');
+    document.getElementById('pf-anchor-picker-modal')?.remove();
+  }
+}
+
+// Jump to the OTHER anchor with the same symbol
+function pfJumpToAnchorPair(nodeId) {
+  const me = pfNodes.find(n=>n.id===nodeId);
+  if(!me || me.type !== 'anchor') return false;
+  const pair = pfNodes.find(n =>
+    n.type==='anchor' && n.label===me.label && n.id !== nodeId);
+  if(!pair) {
+    showNotif?.('nw', `⚠️ Chưa có mốc đôi cho ${me.label}`, 'Đặt thêm 1 mốc nữa');
+    return false;
+  }
+  // Animate pan to center the pair node in viewport
+  const outer = document.getElementById('pf-canvas-outer');
+  if(!outer) return false;
+  const rect = outer.getBoundingClientRect();
+  const targetPanX = rect.width/2 - (pair.x + pair.w/2)*pfZoom;
+  const targetPanY = rect.height/2 - (pair.y + pair.h/2)*pfZoom;
+  pfAnimatePan(targetPanX, targetPanY, 400);
+  // Flash the destination
+  setTimeout(()=>{
+    const el = document.getElementById('pfn_'+pair.id);
+    if(el) {
+      el.classList.add('pf-anchor-pulse');
+      setTimeout(()=>el.classList.remove('pf-anchor-pulse'), 1500);
+    }
+  }, 350);
+  showNotif?.('ns', `📍 Nhảy tới mốc ${me.label}`, '');
+  return true;
+}
+
+// Smooth pan animation
+function pfAnimatePan(targetX, targetY, durationMs) {
+  const startX = pfPan.x, startY = pfPan.y;
+  const startTime = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - startTime) / durationMs);
+    // ease-out cubic
+    const e = 1 - Math.pow(1 - t, 3);
+    pfPan.x = startX + (targetX - startX) * e;
+    pfPan.y = startY + (targetY - startY) * e;
+    const canvas = document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform = `translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+    if(t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Edge style encode/decode for cross-device persistence (Fix #B) ──
+// Edge has multiple visual props (line style, curve type, both end markers) but
+// DB only has a single `style` TEXT field. Encode all as JSON if any is non-default;
+// fall back to plain string for backward compat with legacy data.
+function pfEncodeEdgeStyle(edge) {
+  const line = edge.style || 'solid';
+  const curve = edge.curve || 'curved';
+  const ms = edge.markerStart || 'none';
+  const me = edge.markerEnd || 'arrow';
+  // If everything default, write plain 'solid'/'dashed' (legacy format)
+  if(curve==='curved' && ms==='none' && me==='arrow') return line;
+  // Otherwise pack as JSON
+  return JSON.stringify({ line, curve, markerStart: ms, markerEnd: me });
+}
+function pfDecodeEdgeStyle(s) {
+  // Plain string or empty → legacy format
+  if(!s || typeof s !== 'string') return { line: 'solid', curve: 'curved', markerStart: 'none', markerEnd: 'arrow' };
+  // JSON object format
+  if(s.startsWith('{')) {
+    try {
+      const p = JSON.parse(s);
+      if(p && typeof p === 'object') {
+        return {
+          line: p.line || 'solid',
+          curve: p.curve || 'curved',
+          markerStart: p.markerStart || 'none',
+          markerEnd: p.markerEnd || 'arrow',
+        };
+      }
+    } catch {}
+  }
+  // Plain 'solid' / 'dashed' legacy
+  return { line: s, curve: 'curved', markerStart: 'none', markerEnd: 'arrow' };
+}
+
+// Apply pfDecodeEdgeStyle to populate edge.curve/markerStart/markerEnd from stored style
+function pfRestoreEdges(edges) {
+  return (edges||[]).map(e => {
+    const decoded = pfDecodeEdgeStyle(e.style);
+    return {
+      ...e,
+      style: decoded.line,
+      curve: decoded.curve,
+      markerStart: decoded.markerStart,
+      markerEnd: decoded.markerEnd,
+    };
+  });
+}
+
 async function pfSyncEdge(edge) {
   pfSaveLocal();
   const edgeDb = { id: edge.id, process_id: edge.process_id,
     from_id: edge.from_id, to_id: edge.to_id,
     from_port: edge.from_port||'bottom', to_port: edge.to_port||'top',
-    label: edge.label||'', style: edge.style||'solid' };
+    label: edge.label||'',
+    style: pfEncodeEdgeStyle(edge),  // pack all visual props
+  };
   try { await dbPF.upsertEdge(edgeDb); } catch(e){console.warn('[PF] sync edge:',e);}
 }
 
@@ -10010,6 +10246,7 @@ function pfRenderToolbar() {
     <div class="pf-tool-sep"></div>
     <div class="pf-tool-group">
       <button class="pf-tool-btn" onclick="pfUploadImage()" title="Chèn ảnh">🖼 Ảnh</button>
+      <button class="pf-tool-btn" onclick="pfShowAnchorPicker()" title="Đặt mốc đánh dấu — click vào mốc để nhảy tới mốc đôi">📍 Mốc</button>
       <button class="pf-tool-btn${pfGridSnap?' active':''}" onclick="pfToggleGrid()" title="Bật/tắt snap lưới [G]">📐 Grid</button>
       <button class="pf-tool-btn" onclick="pfZoomIn()" title="Phóng to (Ctrl+Wheel)">＋</button>
       <button class="pf-tool-btn" onclick="pfZoomOut()" title="Thu nhỏ (Ctrl+Wheel)">－</button>
@@ -10122,12 +10359,17 @@ function pfRenderNode(node) {
     || node.type==='brace-left' || node.type==='brace-right'
     || node.type==='bracket-left' || node.type==='bracket-right';
 
+  // Anchor color from symbol — map of symbol → gradient stops
+  const isAnchor = node.type==='anchor';
+  const anchorStyle = isAnchor ? pfAnchorStyleForSymbol(node.label || '?') : null;
+
   const innerStyle = [
-    !isSvgShape && bg   ? `background:${bg}`   : '',
-    !isSvgShape && bc   ? `border-color:${bc}` : '',
-    !isSvgShape && bs   ? `border-style:${bs}` : '',
-    !isSvgShape && bw   ? `border-width:${bw}` : '',
+    !isSvgShape && !isAnchor && bg   ? `background:${bg}`   : '',
+    !isSvgShape && !isAnchor && bc   ? `border-color:${bc}` : '',
+    !isSvgShape && !isAnchor && bs   ? `border-style:${bs}` : '',
+    !isSvgShape && !isAnchor && bw   ? `border-width:${bw}` : '',
     imgFlex ? `flex-direction:${imgFlex};display:flex;align-items:center;gap:6px` : '',
+    anchorStyle ? `--anchor-c1:${anchorStyle.c1};--anchor-c2:${anchorStyle.c2}` : '',
   ].filter(Boolean).join(';');
 
   // Line-height from style (Fix #5 — was missing, so reload reset to default)
@@ -10299,14 +10541,16 @@ function pfAddNode(type) {
   const rect  = outer ? outer.getBoundingClientRect() : {width:800, height:500};
   const cx = (rect.width/2  - pfPan.x)/pfZoom + (Math.random()*40-20);
   const cy = (rect.height/2 - pfPan.y)/pfZoom + (Math.random()*40-20);
-  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú',tick:'',cross:'','brace-left':'','brace-right':'','bracket-left':'','bracket-right':''};
+  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú',tick:'',cross:'','brace-left':'','brace-right':'','bracket-left':'','bracket-right':'',anchor:''};
   const isBraceOrBracket = type==='brace-left'||type==='brace-right'||type==='bracket-left'||type==='bracket-right';
-  const w = type==='tick'||type==='cross' ? 70
+  const w = type==='anchor' ? 50
+          : type==='tick'||type==='cross' ? 70
           : isBraceOrBracket ? 40
           : type==='decision' ? 120
           : type==='start'||type==='end' ? 120
           : 160;
-  const h = type==='tick'||type==='cross' ? 70
+  const h = type==='anchor' ? 50
+          : type==='tick'||type==='cross' ? 70
           : isBraceOrBracket ? 120
           : type==='decision' ? 80
           : 60;
@@ -10781,6 +11025,41 @@ function pfNodeMouseDown(e, nodeId) {
   if(e.target.classList.contains('pf-node-rotate'))      return;
   if(e.target.classList.contains('pf-img-resize-handle'))return;
   if(pfTool==='connect') return;
+  // ── Anchor: click → jump to pair, no drag (Fix #C) ──
+  const anchorNode = pfNodes.find(n=>n.id===nodeId);
+  if(anchorNode?.type === 'anchor') {
+    // With shift/ctrl, allow multi-select instead of jumping (so user can still move/delete)
+    if(!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Differentiate quick click vs drag: jump on quick mouseup, drag on real movement
+      const startX = e.clientX, startY = e.clientY;
+      const mover = ev => {
+        if(Math.abs(ev.clientX-startX) > 4 || Math.abs(ev.clientY-startY) > 4) {
+          // Real drag — let pfDragging take over below
+          document.removeEventListener('mousemove', mover);
+          document.removeEventListener('mouseup', upper);
+          // Re-trigger normal node mousedown logic without the anchor intercept
+          pfNodeMouseDown.__dragging = true;
+        }
+      };
+      const upper = ev => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', upper);
+        if(!pfNodeMouseDown.__dragging) {
+          // Quick click — jump
+          pfJumpToAnchorPair(nodeId);
+        }
+        pfNodeMouseDown.__dragging = false;
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', upper);
+      // Also select the anchor (for delete/move via panel)
+      pfSelectedIds.clear();
+      pfSelectedIds.add(nodeId);
+      pfSelected = nodeId;
+      pfRenderCanvas();
+      return;
+    }
+  }
   // Don't drag when inside editing text
   const textEl=document.getElementById('pft_'+nodeId);
   if(textEl?.contentEditable==='true') return;
@@ -12206,13 +12485,13 @@ function pfExportCss() {
     .pf-node.type-cross .pf-node-inner{border-radius:50%;background:#ef4444;border:0;position:relative}
     .pf-node.type-tick .pf-node-text,.pf-node.type-cross .pf-node-text{display:none}
 
-    /* Text — flex centering so content sits MIDDLE of allocated space.
-       Without this, multi-line text in tall shapes hugged the top. */
+    /* Text — vertical-center only (Fix: align-items:center was forcing horizontal center
+       and breaking text-align left/right). Children stretch full width. */
     .pf-node-text{font-size:12px;text-align:center;color:#333;line-height:1.3;
       word-wrap:break-word;width:100%;white-space:pre-wrap;
       flex:1;min-width:0;position:relative;z-index:1;
-      display:flex;align-items:center;justify-content:center;flex-direction:column}
-    /* Ensure block-level children create new lines */
+      display:flex;flex-direction:column;justify-content:center}
+    /* Ensure block-level children create new lines and fill width */
     .pf-node-text > div{display:block;width:100%}
     .pf-node-text br{display:block}
 
