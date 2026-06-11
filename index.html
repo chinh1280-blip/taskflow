@@ -8922,6 +8922,25 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   position:relative;z-index:1;max-width:55%;padding:0 4px;
   font-size:10px;
 }
+
+/* Brace { } and Bracket [ ] shapes — decorative groupers.
+   Background transparent, stroke only via inline SVG. */
+.pf-node.type-brace-left .pf-node-inner,
+.pf-node.type-brace-right .pf-node-inner,
+.pf-node.type-bracket-left .pf-node-inner,
+.pf-node.type-bracket-right .pf-node-inner{
+  background:transparent;border:0;border-radius:0;padding:0;position:relative;
+}
+.pf-node.type-brace-left .pf-shape-svg,
+.pf-node.type-brace-right .pf-shape-svg,
+.pf-node.type-bracket-left .pf-shape-svg,
+.pf-node.type-bracket-right .pf-shape-svg{
+  position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:0;
+}
+.pf-node.type-brace-left .pf-node-text,
+.pf-node.type-brace-right .pf-node-text,
+.pf-node.type-bracket-left .pf-node-text,
+.pf-node.type-bracket-right .pf-node-text{display:none}
 .pf-node-rotate{
   position:absolute;top:-28px;left:50%;transform:translateX(-50%);
   background:var(--ac);color:#fff;border-radius:50%;
@@ -9664,7 +9683,7 @@ async function pfRefreshImagesFromIdb() {
 }
 
 function pfFmtBorder(nodeId, prop, val) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtBorder(id, prop, val)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtBorder(id, prop, val)); pfMarkDirty?.(); return; }
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
   pfSnapshot('fmt-border-'+prop+'-'+nodeId); // coalesces rapid color-picker drag
@@ -9916,6 +9935,18 @@ function pfRenderToolbar() {
           <button class="pf-shape-opt" onclick="pfAddNodeFromPicker('note')">
             <span class="pf-shape-prev note">📝</span><span>Ghi chú</span>
           </button>
+          <button class="pf-shape-opt" onclick="pfAddNodeFromPicker('bracket-left')">
+            <span class="pf-shape-prev" style="font-weight:700;font-size:18px;color:#444;font-family:Georgia,serif">[</span><span>Ngoặc vuông trái</span>
+          </button>
+          <button class="pf-shape-opt" onclick="pfAddNodeFromPicker('bracket-right')">
+            <span class="pf-shape-prev" style="font-weight:700;font-size:18px;color:#444;font-family:Georgia,serif">]</span><span>Ngoặc vuông phải</span>
+          </button>
+          <button class="pf-shape-opt" onclick="pfAddNodeFromPicker('brace-left')">
+            <span class="pf-shape-prev" style="font-weight:700;font-size:20px;color:#444;font-family:Georgia,serif">&#123;</span><span>Ngoặc nhọn trái</span>
+          </button>
+          <button class="pf-shape-opt" onclick="pfAddNodeFromPicker('brace-right')">
+            <span class="pf-shape-prev" style="font-weight:700;font-size:20px;color:#444;font-family:Georgia,serif">&#125;</span><span>Ngoặc nhọn phải</span>
+          </button>
         </div>
       </div>
     </div>
@@ -9936,6 +9967,14 @@ function pfRenderToolbar() {
       <button class="pf-tool-btn" onclick="pfCopySelected()"  title="Copy shape (Ctrl+C)">⎘ Copy</button>
       <button class="pf-tool-btn" onclick="pfPasteNode()"     title="Paste (Ctrl+V)">⎘ Paste</button>
       <button class="pf-tool-btn danger" onclick="pfDeleteSelected()" title="Xóa (Del)">🗑 Xóa</button>
+      <select onchange="pfSetAllEdgesCurve(this.value);this.selectedIndex=0" title="Kiểu đường nối các shape"
+        class="pf-tool-btn"
+        style="font-size:11px;padding:0 4px;background:var(--s2);border:1px solid var(--bd);color:var(--tx);cursor:pointer;height:30px">
+        <option value="">↬ Đường nối...</option>
+        <option value="curved">⌒ Cong (mặc định)</option>
+        <option value="soft">⌣ Cong nhẹ</option>
+        <option value="straight">— Thẳng</option>
+      </select>
       <div class="pf-tool-sep"></div>
       <button class="pf-tool-btn" onclick="pfExportSVG()" title="Xuất ra file SVG (mở được trong PowerPoint, Illustrator,...)">⬇ SVG</button>
       <button class="pf-tool-btn" onclick="pfExportPDF()" title="Xuất ra PDF (chọn 'Save as PDF' khi in)">⬇ PDF</button>
@@ -9998,6 +10037,26 @@ function pfRenderNode(node) {
         <polygon points="2,30 70,30 70,5 98,50 70,95 70,70 2,70" fill="${shapeFill}" stroke="${shapeStroke}"
           stroke-width="${shapeStrokeW}" ${shapeDash?`stroke-dasharray="${shapeDash}"`:''}
           vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      </svg>` :
+    node.type==='bracket-left' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M 80 5 L 20 5 L 20 95 L 80 95" fill="none" stroke="${bc||'#444'}"
+          stroke-width="${shapeStrokeW||3}" vector-effect="non-scaling-stroke"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>` :
+    node.type==='bracket-right' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M 20 5 L 80 5 L 80 95 L 20 95" fill="none" stroke="${bc||'#444'}"
+          stroke-width="${shapeStrokeW||3}" vector-effect="non-scaling-stroke"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>` :
+    node.type==='brace-left' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M 70 5 Q 35 5 35 25 Q 35 45 22 50 Q 35 55 35 75 Q 35 95 70 95" fill="none" stroke="${bc||'#444'}"
+          stroke-width="${shapeStrokeW||3}" vector-effect="non-scaling-stroke"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>` :
+    node.type==='brace-right' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M 30 5 Q 65 5 65 25 Q 65 45 78 50 Q 65 55 65 75 Q 65 95 30 95" fill="none" stroke="${bc||'#444'}"
+          stroke-width="${shapeStrokeW||3}" vector-effect="non-scaling-stroke"
+          stroke-linecap="round" stroke-linejoin="round"/>
       </svg>` : '';
 
   const innerStyle = [
@@ -10065,9 +10124,31 @@ function pfPortPoint(node, port) {
   return {x:mx, y:node.y+node.h}; // default bottom
 }
 
-function pfEdgePath(fx,fy,tx,ty,fromPort,toPort) {
-  // Control point offset based on port direction
-  const dist = Math.max(50, Math.abs(ty-fy)/2, Math.abs(tx-fx)/2);
+// Set curve type for ALL edges (Fix #4 — edge curve options)
+function pfSetAllEdgesCurve(curveType) {
+  if(!curveType || !pfEdges.length) return;
+  pfSnapshot('edges-curve');
+  pfEdges.forEach(e => { e.curve = curveType; });
+  pfUpdateSVG();
+  pfMarkDirty?.();
+  // Sync each edge to DB
+  pfEdges.forEach(e => {
+    if(typeof pfSyncEdge === 'function') pfSyncEdge(e);
+  });
+  const label = curveType==='straight'?'thẳng':curveType==='soft'?'cong nhẹ':'cong';
+  showNotif?.('ns', `Đường nối → ${label}`, `${pfEdges.length} đường`);
+}
+
+// Edge curve types: 'curved' (default cubic bezier), 'straight' (line),
+// 'soft' (gentle curve — control points pulled closer)
+function pfEdgePath(fx,fy,tx,ty,fromPort,toPort,curveType) {
+  curveType = curveType || 'curved';
+  if(curveType === 'straight') {
+    return `M${fx},${fy} L${tx},${ty}`;
+  }
+  // Distance for control-point projection; 'soft' uses smaller offset for gentler curve
+  const baseDist = Math.max(50, Math.abs(ty-fy)/2, Math.abs(tx-fx)/2);
+  const dist = curveType === 'soft' ? baseDist * 0.35 : baseDist;
   const fDir = fromPort==='top'?{dx:0,dy:-1}:fromPort==='left'?{dx:-1,dy:0}:fromPort==='right'?{dx:1,dy:0}:{dx:0,dy:1};
   const tDir = toPort==='bottom'?{dx:0,dy:1}:toPort==='right'?{dx:1,dy:0}:toPort==='left'?{dx:-1,dy:0}:{dx:0,dy:-1};
   const c1x=fx+fDir.dx*dist, c1y=fy+fDir.dy*dist;
@@ -10082,7 +10163,9 @@ function pfRenderEdgesSVG() {
     if(!from||!to) return '';
     const fp = pfPortPoint(from, edge.from_port||'bottom');
     const tp = pfPortPoint(to,   edge.to_port||'top');
-    const path = pfEdgePath(fp.x,fp.y,tp.x,tp.y,edge.from_port||'bottom',edge.to_port||'top');
+    // Read curve type from edge.curve (stored on edge) — default to 'curved'
+    const curveType = edge.curve || 'curved';
+    const path = pfEdgePath(fp.x,fp.y,tp.x,tp.y,edge.from_port||'bottom',edge.to_port||'top',curveType);
     const sel = pfSelected===edge.id;
     const mx=(fp.x+tp.x)/2, my=(fp.y+tp.y)/2;
     return `
@@ -10142,12 +10225,15 @@ function pfAddNode(type) {
   const rect  = outer ? outer.getBoundingClientRect() : {width:800, height:500};
   const cx = (rect.width/2  - pfPan.x)/pfZoom + (Math.random()*40-20);
   const cy = (rect.height/2 - pfPan.y)/pfZoom + (Math.random()*40-20);
-  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú',tick:'',cross:''};
+  const defaultLabels={step:'Bước mới',decision:'Quyết định',start:'Bắt đầu',end:'Kết thúc',note:'Ghi chú',tick:'',cross:'','brace-left':'','brace-right':'','bracket-left':'','bracket-right':''};
+  const isBraceOrBracket = type==='brace-left'||type==='brace-right'||type==='bracket-left'||type==='bracket-right';
   const w = type==='tick'||type==='cross' ? 70
+          : isBraceOrBracket ? 40
           : type==='decision' ? 120
           : type==='start'||type==='end' ? 120
           : 160;
   const h = type==='tick'||type==='cross' ? 70
+          : isBraceOrBracket ? 120
           : type==='decision' ? 80
           : 60;
   const node = {
@@ -10846,20 +10932,22 @@ function pfNodeClick(e, nodeId) {
 }
 
 function pfEndEdit(nodeId, e) {
-  const bar=document.getElementById('pf-fmt-bar');
-  if(bar && e?.relatedTarget && bar.contains(e.relatedTarget)) return;
+  // If blur is caused by clicking inside the format panel, do not actually end editing —
+  // user is just interacting with format controls; keep contentEditable on so selection persists.
+  const panel = document.getElementById('pf-fmt-panel');
+  if(panel && e?.relatedTarget && panel.contains(e.relatedTarget)) return;
   const el=document.getElementById('pft_'+nodeId);
   if(!el) return;
   el.contentEditable='false';
   const node=pfNodes.find(n=>n.id===nodeId);
   if(node){ node.label=el.innerHTML||''; pfSyncNode(node); }
-  // Switch format bar back to SHAPE mode if shape is still selected
+  // Preserve panel's CURRENT mode — don't switch back to 'shape'.
+  // If user was editing text and clicked a control, panel stays in 'text' mode
+  // so subsequent clicks remain coherent (was bug #1: bouncing back to shape).
   setTimeout(()=>{
-    const fmtBar = document.getElementById('pf-fmt-bar');
-    const fmtFocused = fmtBar?.contains(document.activeElement);
-    if(fmtFocused) return; // user is interacting with format bar — don't hide
-    if(pfSelected === nodeId) pfShowFmtBar(nodeId, 'shape');
-    else pfHideFmtBar();
+    if(pfSelected !== nodeId) { pfHideFmtBar(); return; }
+    const currentMode = panel?.dataset.mode || 'shape';
+    pfShowFmtBar(nodeId, currentMode);
   }, 250);
 }
 // ── Format SIDE panel (replaces floating bar) ───────────
@@ -11083,7 +11171,7 @@ function pfPanelBodyShape(nodeId, node, isMulti) {
 function pfFmt(cmd) { document.execCommand(cmd,false,null); }
 
 function pfFmtSize(nodeId, size) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtSize(id, size)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtSize(id, size)); pfMarkDirty?.(); return; }
   const textEl=document.getElementById('pft_'+nodeId);
   if(textEl?.contentEditable==='true') {
     const sel=window.getSelection();
@@ -11104,7 +11192,7 @@ function pfFmtSize(nodeId, size) {
   pfSyncNode(node);
 }
 function pfFmtColor(nodeId, color) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtColor(id, color)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtColor(id, color)); pfMarkDirty?.(); return; }
   // Apply to selection if active, else apply to whole text
   const el=document.getElementById('pft_'+nodeId);
   if(el && el.contentEditable==='true') {
@@ -11119,7 +11207,7 @@ function pfFmtColor(nodeId, color) {
 }
 
 function pfFmtImgPos(nodeId, pos) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtImgPos(id, pos)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtImgPos(id, pos)); pfMarkDirty?.(); return; }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   pfSnapshot('fmt-imgpos-'+nodeId);
@@ -11130,7 +11218,7 @@ function pfFmtImgPos(nodeId, pos) {
 }
 
 function pfFmtAlign(nodeId, align) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtAlign(id, align)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtAlign(id, align)); pfMarkDirty?.(); return; }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   pfSnapshot('fmt-align-'+nodeId);
@@ -11141,14 +11229,14 @@ function pfFmtAlign(nodeId, align) {
 }
 
 function pfInsertDivider(nodeId) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfInsertDivider(id)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfInsertDivider(id)); return; }
   const el=document.getElementById('pft_'+nodeId);
   if(!el||el.contentEditable!=='true') return;
   document.execCommand('insertHTML',false,
     '<hr style="border:none;border-top:1.5px solid #aaaaaa;margin:4px 0;display:block">');
 }
 function pfFmtHex(nodeId, val) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtHex(id, val)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtHex(id, val)); pfMarkDirty?.(); return; }
   const v=val.trim();
   if(!v) return;
   if(v.startsWith('#')||v.startsWith('rgb')) {
@@ -11157,7 +11245,7 @@ function pfFmtHex(nodeId, val) {
 }
 
 function pfFmtBg(nodeId, color) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtBg(id, color)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtBg(id, color)); pfMarkDirty?.(); return; }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   pfSnapshot('fmt-bg-'+nodeId);
@@ -11176,7 +11264,7 @@ function pfFmtBg(nodeId, color) {
 
 // ── New: line-height (Fix #4) ────────────────────────────
 function pfFmtLineHeight(nodeId, val) {
-  if(nodeId === "ALL") { pfSelectedIds.forEach(id => pfFmtLineHeight(id, val)); return; }
+  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtLineHeight(id, val)); pfMarkDirty?.(); return; }
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
   pfSnapshot('fmt-lh-'+nodeId);
