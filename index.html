@@ -8957,7 +8957,11 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   font-size:12px;font-weight:600;color:var(--tx);text-align:center;
   width:100%;word-break:break-word;outline:none;
   min-height:16px;cursor:text;
+  /* Center text content vertically within its allocated flex space — same in live + export */
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
 }
+.pf-node-text > div{display:block;width:100%}
+.pf-node-text br{display:block}
 .pf-node-text[contenteditable=true]{
   cursor:text;
   background:rgba(79,124,255,.05);border-radius:3px;
@@ -9683,30 +9687,62 @@ async function pfRefreshImagesFromIdb() {
 }
 
 function pfFmtBorder(nodeId, prop, val) {
-  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtBorder(id, prop, val)); pfMarkDirty?.(); return; }
+  if(nodeId === "ALL") {
+    const ids = [...pfSelectedIds];
+    if(!ids.length) {
+      showNotif?.('nw','⚠️','Không có shape nào được chọn');
+      return;
+    }
+    pfSnapshot('fmt-border-multi');
+    ids.forEach(id => {
+      const n = pfNodes.find(x=>x.id===id);
+      if(!n) return;
+      n.style = {...(n.style||{})};
+      if(prop==='style')  n.style.borderStyle = val;
+      if(prop==='width')  n.style.borderWidth = val;
+      if(prop==='color')  n.style.borderColor = val;
+      const inner = document.querySelector(`#pfn_${id} .pf-node-inner`);
+      if(inner) {
+        if(prop==='style') inner.style.borderStyle = val;
+        if(prop==='width') inner.style.borderWidth = val;
+        if(prop==='color') inner.style.borderColor = val;
+      }
+      const svgShape = document.querySelector(`#pfn_${id} .pf-shape-svg polygon, #pfn_${id} .pf-shape-svg path`);
+      if(svgShape) {
+        if(prop==='color') svgShape.setAttribute('stroke', val);
+        if(prop==='width') svgShape.setAttribute('stroke-width', parseFloat(val)||2);
+        if(prop==='style') {
+          const dash = val==='dashed'?'6,3':val==='dotted'?'2,3':'';
+          if(dash) svgShape.setAttribute('stroke-dasharray', dash);
+          else svgShape.removeAttribute('stroke-dasharray');
+        }
+      }
+      pfSyncNode(n);
+    });
+    pfMarkDirty?.();
+    return;
+  }
   const node = pfNodes.find(n=>n.id===nodeId);
   if(!node) return;
-  pfSnapshot('fmt-border-'+prop+'-'+nodeId); // coalesces rapid color-picker drag
+  pfSnapshot('fmt-border-'+prop+'-'+nodeId);
   node.style = {...(node.style||{})};
   if(prop==='style')  node.style.borderStyle = val;
   if(prop==='width')  node.style.borderWidth = val;
   if(prop==='color')  node.style.borderColor = val;
-  // Apply directly to DOM
   const inner = document.querySelector('#pfn_'+nodeId+' .pf-node-inner');
   if(inner) {
     if(prop==='style') inner.style.borderStyle = val;
     if(prop==='width') inner.style.borderWidth = val;
     if(prop==='color') inner.style.borderColor = val;
   }
-  // ALSO update inline SVG polygon stroke for decision/arrow (border was invisible due to clip-path before; now SVG-based)
-  const polygon = document.querySelector('#pfn_'+nodeId+' .pf-shape-svg polygon');
-  if(polygon) {
-    if(prop==='color') polygon.setAttribute('stroke', val);
-    if(prop==='width') polygon.setAttribute('stroke-width', parseFloat(val)||2);
+  const svgShape = document.querySelector('#pfn_'+nodeId+' .pf-shape-svg polygon, #pfn_'+nodeId+' .pf-shape-svg path');
+  if(svgShape) {
+    if(prop==='color') svgShape.setAttribute('stroke', val);
+    if(prop==='width') svgShape.setAttribute('stroke-width', parseFloat(val)||2);
     if(prop==='style') {
       const dash = val==='dashed'?'6,3':val==='dotted'?'2,3':'';
-      if(dash) polygon.setAttribute('stroke-dasharray', dash);
-      else polygon.removeAttribute('stroke-dasharray');
+      if(dash) svgShape.setAttribute('stroke-dasharray', dash);
+      else svgShape.removeAttribute('stroke-dasharray');
     }
   }
   pfSyncNode(node);
@@ -9879,6 +9915,27 @@ function pfRenderAll() {
               <marker id="pf-arrow-sel" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                 <polygon points="0 0,10 3.5,0 7" fill="var(--ac)"/>
               </marker>
+              <!-- Reversed arrow (for start markers) -->
+              <marker id="pf-arrow-rev" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+                <polygon points="10 0,0 3.5,10 7" fill="var(--tx2)"/>
+              </marker>
+              <marker id="pf-arrow-rev-sel" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+                <polygon points="10 0,0 3.5,10 7" fill="var(--ac)"/>
+              </marker>
+              <!-- Circle markers -->
+              <marker id="pf-circle" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                <circle cx="4" cy="4" r="3" fill="var(--tx2)"/>
+              </marker>
+              <marker id="pf-circle-sel" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                <circle cx="4" cy="4" r="3" fill="var(--ac)"/>
+              </marker>
+              <!-- Square markers -->
+              <marker id="pf-square" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                <rect x="1" y="1" width="6" height="6" fill="var(--tx2)"/>
+              </marker>
+              <marker id="pf-square-sel" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                <rect x="1" y="1" width="6" height="6" fill="var(--ac)"/>
+              </marker>
             </defs>
             ${pfRenderEdgesSVG()}
           </svg>
@@ -10039,12 +10096,12 @@ function pfRenderNode(node) {
           vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
       </svg>` :
     node.type==='bracket-left' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path d="M 80 5 L 20 5 L 20 95 L 80 95" fill="none" stroke="${bc||'#444'}"
+        <path d="M 80 5 L 30 5 Q 20 5 20 15 L 20 85 Q 20 95 30 95 L 80 95" fill="none" stroke="${bc||'#444'}"
           stroke-width="${shapeStrokeW||3}" vector-effect="non-scaling-stroke"
           stroke-linecap="round" stroke-linejoin="round"/>
       </svg>` :
     node.type==='bracket-right' ? `<svg class="pf-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path d="M 20 5 L 80 5 L 80 95 L 20 95" fill="none" stroke="${bc||'#444'}"
+        <path d="M 20 5 L 70 5 Q 80 5 80 15 L 80 85 Q 80 95 70 95 L 20 95" fill="none" stroke="${bc||'#444'}"
           stroke-width="${shapeStrokeW||3}" vector-effect="non-scaling-stroke"
           stroke-linecap="round" stroke-linejoin="round"/>
       </svg>` :
@@ -10059,11 +10116,17 @@ function pfRenderNode(node) {
           stroke-linecap="round" stroke-linejoin="round"/>
       </svg>` : '';
 
+  // SVG-based shapes draw their own border/fill via the polygon/path; applying
+  // inline border on .pf-node-inner would create a SECOND bounding-box border.
+  const isSvgShape = node.type==='decision' || node.type==='arrow'
+    || node.type==='brace-left' || node.type==='brace-right'
+    || node.type==='bracket-left' || node.type==='bracket-right';
+
   const innerStyle = [
-    bg   ? `background:${bg}`   : '',
-    bc   ? `border-color:${bc}` : '',
-    bs   ? `border-style:${bs}` : '',
-    bw   ? `border-width:${bw}` : '',
+    !isSvgShape && bg   ? `background:${bg}`   : '',
+    !isSvgShape && bc   ? `border-color:${bc}` : '',
+    !isSvgShape && bs   ? `border-style:${bs}` : '',
+    !isSvgShape && bw   ? `border-width:${bw}` : '',
     imgFlex ? `flex-direction:${imgFlex};display:flex;align-items:center;gap:6px` : '',
   ].filter(Boolean).join(';');
 
@@ -10163,14 +10226,25 @@ function pfRenderEdgesSVG() {
     if(!from||!to) return '';
     const fp = pfPortPoint(from, edge.from_port||'bottom');
     const tp = pfPortPoint(to,   edge.to_port||'top');
-    // Read curve type from edge.curve (stored on edge) — default to 'curved'
     const curveType = edge.curve || 'curved';
     const path = pfEdgePath(fp.x,fp.y,tp.x,tp.y,edge.from_port||'bottom',edge.to_port||'top',curveType);
     const sel = pfSelected===edge.id;
     const mx=(fp.x+tp.x)/2, my=(fp.y+tp.y)/2;
+    // Marker selection — per-edge configurable
+    const markerEnd = edge.markerEnd || 'arrow';   // default: arrow at end
+    const markerStart = edge.markerStart || 'none'; // default: none at start
+    const suf = sel ? '-sel' : '';
+    const endRef   = markerEnd==='arrow'  ? `pf-arrow${suf}`
+                   : markerEnd==='circle' ? `pf-circle${suf}`
+                   : markerEnd==='square' ? `pf-square${suf}` : '';
+    const startRef = markerStart==='arrow'  ? `pf-arrow-rev${suf}`
+                   : markerStart==='circle' ? `pf-circle${suf}`
+                   : markerStart==='square' ? `pf-square${suf}` : '';
+    const endAttr   = endRef   ? `marker-end="url(#${endRef})"` : '';
+    const startAttr = startRef ? `marker-start="url(#${startRef})"` : '';
     return `
       <path class="pf-edge${edge.style==='dashed'?' dashed':''}${sel?' selected':''}"
-        d="${path}" marker-end="url(#${sel?'pf-arrow-sel':'pf-arrow'})"
+        d="${path}" ${endAttr} ${startAttr}
         onclick="pfSelectEdge('${edge.id}')" style="pointer-events:stroke"/>
       ${edge.label?`<text class="pf-edge-label" x="${mx}" y="${my-6}" text-anchor="middle">${esc(edge.label)}</text>`:''}`;
   }).join('');
@@ -10869,6 +10943,118 @@ function pfSelectEdge(id) {
   pfSelected=id;
   pfSelectedIds.clear();
   pfRenderCanvas();
+  // Show edge-specific format panel (Fix #E per-edge curve + Fix #F endpoint markers)
+  pfShowEdgePanel(id);
+}
+
+// ── Edge format panel ───────────────────────────────────
+function pfShowEdgePanel(edgeId) {
+  const panel = document.getElementById('pf-fmt-panel');
+  const edge = pfEdges.find(e=>e.id===edgeId);
+  if(!panel || !edge) return;
+  const curve = edge.curve || 'curved';
+  const lineStyle = edge.style || 'solid';
+  const markerEnd = edge.markerEnd || 'arrow';
+  const markerStart = edge.markerStart || 'none';
+  panel.style.display = 'flex';
+  panel.dataset.mode = 'edge';
+  panel.dataset.edgeId = edgeId;
+  panel.innerHTML = `
+    <div class="pf-panel-head">
+      <div class="pf-panel-title">↬ Đường nối</div>
+      <button class="pf-panel-close" onclick="pfHideFmtBar()" title="Đóng">✕</button>
+    </div>
+    <div class="pf-panel-body">
+      <div class="pf-panel-row">
+        <span class="pf-panel-lab">Cong</span>
+        <select onmousedown="event.stopPropagation()" onchange="pfSetEdgeCurve('${edgeId}',this.value)" class="pf-panel-sel">
+          <option value="curved"   ${curve==='curved'  ?'selected':''}>⌒ Cong</option>
+          <option value="soft"     ${curve==='soft'    ?'selected':''}>⌣ Cong nhẹ</option>
+          <option value="straight" ${curve==='straight'?'selected':''}>— Thẳng</option>
+        </select>
+      </div>
+      <div class="pf-panel-row">
+        <span class="pf-panel-lab">Kiểu</span>
+        <select onmousedown="event.stopPropagation()" onchange="pfSetEdgeStyle('${edgeId}',this.value)" class="pf-panel-sel">
+          <option value="solid"  ${lineStyle==='solid' ?'selected':''}>━ Liền</option>
+          <option value="dashed" ${lineStyle==='dashed'?'selected':''}>╌ Đứt</option>
+        </select>
+      </div>
+      <div class="pf-panel-row">
+        <span class="pf-panel-lab">Đầu</span>
+        <select onmousedown="event.stopPropagation()" onchange="pfSetEdgeMarker('${edgeId}','start',this.value)" class="pf-panel-sel">
+          <option value="none"   ${markerStart==='none'   ?'selected':''}>○ Không</option>
+          <option value="arrow"  ${markerStart==='arrow'  ?'selected':''}>← Mũi tên</option>
+          <option value="circle" ${markerStart==='circle' ?'selected':''}>● Tròn</option>
+          <option value="square" ${markerStart==='square' ?'selected':''}>■ Vuông</option>
+        </select>
+      </div>
+      <div class="pf-panel-row">
+        <span class="pf-panel-lab">Cuối</span>
+        <select onmousedown="event.stopPropagation()" onchange="pfSetEdgeMarker('${edgeId}','end',this.value)" class="pf-panel-sel">
+          <option value="none"   ${markerEnd==='none'   ?'selected':''}>○ Không</option>
+          <option value="arrow"  ${markerEnd==='arrow'  ?'selected':''}>→ Mũi tên</option>
+          <option value="circle" ${markerEnd==='circle' ?'selected':''}>● Tròn</option>
+          <option value="square" ${markerEnd==='square' ?'selected':''}>■ Vuông</option>
+        </select>
+      </div>
+      <div class="pf-panel-divider"></div>
+      <div class="pf-panel-row">
+        <span class="pf-panel-lab">Label</span>
+        <input type="text" value="${(edge.label||'').replace(/"/g,'&quot;')}" placeholder="Tên..."
+          onmousedown="event.stopPropagation()" onkeydown="event.stopPropagation()"
+          onchange="pfSetEdgeLabel('${edgeId}',this.value)" class="pf-panel-hex" style="font-family:inherit">
+      </div>
+      <div class="pf-panel-row">
+        <button class="pf-fmt-btn" style="flex:1;color:#ef4444" onclick="pfDeleteEdge('${edgeId}')">🗑 Xóa đường nối</button>
+      </div>
+    </div>`;
+}
+
+function pfSetEdgeCurve(edgeId, val) {
+  const e = pfEdges.find(x=>x.id===edgeId);
+  if(!e) return;
+  pfSnapshot('edge-curve-'+edgeId);
+  e.curve = val;
+  pfUpdateSVG();
+  pfMarkDirty?.();
+  if(typeof pfSyncEdge==='function') pfSyncEdge(e);
+}
+function pfSetEdgeStyle(edgeId, val) {
+  const e = pfEdges.find(x=>x.id===edgeId);
+  if(!e) return;
+  pfSnapshot('edge-style-'+edgeId);
+  e.style = val;
+  pfUpdateSVG();
+  pfMarkDirty?.();
+  if(typeof pfSyncEdge==='function') pfSyncEdge(e);
+}
+function pfSetEdgeMarker(edgeId, end, val) {
+  const e = pfEdges.find(x=>x.id===edgeId);
+  if(!e) return;
+  pfSnapshot('edge-marker-'+edgeId);
+  if(end==='start') e.markerStart = val;
+  else              e.markerEnd   = val;
+  pfUpdateSVG();
+  pfMarkDirty?.();
+  if(typeof pfSyncEdge==='function') pfSyncEdge(e);
+}
+function pfSetEdgeLabel(edgeId, val) {
+  const e = pfEdges.find(x=>x.id===edgeId);
+  if(!e) return;
+  pfSnapshot('edge-label-'+edgeId);
+  e.label = val;
+  pfUpdateSVG();
+  pfMarkDirty?.();
+  if(typeof pfSyncEdge==='function') pfSyncEdge(e);
+}
+function pfDeleteEdge(edgeId) {
+  pfSnapshot('edge-delete-'+edgeId);
+  pfEdges = pfEdges.filter(e=>e.id!==edgeId);
+  if(pfSelected===edgeId) pfSelected=null;
+  pfUpdateSVG();
+  pfHideFmtBar();
+  pfMarkDirty?.();
 }
 
 // ── Edge management ──────────────────────────────────────
@@ -11245,18 +11431,36 @@ function pfFmtHex(nodeId, val) {
 }
 
 function pfFmtBg(nodeId, color) {
-  if(nodeId === "ALL") { const ids = [...pfSelectedIds]; ids.forEach(id => pfFmtBg(id, color)); pfMarkDirty?.(); return; }
+  if(nodeId === "ALL") {
+    // CRITICAL: explicit inline loop, no recursion. Each shape updated atomically
+    // within this single function call — no race with re-render or focus events.
+    const ids = [...pfSelectedIds];
+    if(!ids.length) {
+      showNotif?.('nw','⚠️','Không có shape nào được chọn');
+      return;
+    }
+    pfSnapshot('fmt-bg-multi');
+    ids.forEach(id => {
+      const n = pfNodes.find(x=>x.id===id);
+      if(!n) return;
+      n.style = {...(n.style||{}), background: color};
+      const inner = document.querySelector(`#pfn_${id} .pf-node-inner`);
+      if(inner) inner.style.background = color;
+      const svgShape = document.querySelector(`#pfn_${id} .pf-shape-svg polygon, #pfn_${id} .pf-shape-svg path`);
+      if(svgShape) svgShape.setAttribute('fill', color);
+      pfSyncNode(n);
+    });
+    pfMarkDirty?.();
+    return;
+  }
   const node=pfNodes.find(n=>n.id===nodeId);
   if(!node)return;
   pfSnapshot('fmt-bg-'+nodeId);
   node.style={...(node.style||{}),background:color};
-  // Direct DOM update (fast)
   const inner=document.querySelector(`#pfn_${nodeId} .pf-node-inner`);
   if(inner) inner.style.background=color;
-  // ALSO update SVG polygon fill for decision/arrow shapes (they use SVG, not the inner background)
-  const polygon = document.querySelector('#pfn_'+nodeId+' .pf-shape-svg polygon');
-  if(polygon) polygon.setAttribute('fill', color);
-  // Update background swatch preview in format bar (specific ID to avoid matching text-color swatch)
+  const svgShape = document.querySelector(`#pfn_${nodeId} .pf-shape-svg polygon, #pfn_${nodeId} .pf-shape-svg path`);
+  if(svgShape) svgShape.setAttribute('fill', color);
   const swatch=document.getElementById('pf-fmt-bg-swatch');
   if(swatch) swatch.style.background=color;
   pfSyncNode(node);
@@ -12002,12 +12206,14 @@ function pfExportCss() {
     .pf-node.type-cross .pf-node-inner{border-radius:50%;background:#ef4444;border:0;position:relative}
     .pf-node.type-tick .pf-node-text,.pf-node.type-cross .pf-node-text{display:none}
 
-    /* Text — white-space:pre-wrap preserves newlines that come as plain text */
+    /* Text — flex centering so content sits MIDDLE of allocated space.
+       Without this, multi-line text in tall shapes hugged the top. */
     .pf-node-text{font-size:12px;text-align:center;color:#333;line-height:1.3;
       word-wrap:break-word;width:100%;white-space:pre-wrap;
-      flex:1;min-width:0;position:relative;z-index:1}
+      flex:1;min-width:0;position:relative;z-index:1;
+      display:flex;align-items:center;justify-content:center;flex-direction:column}
     /* Ensure block-level children create new lines */
-    .pf-node-text > div{display:block}
+    .pf-node-text > div{display:block;width:100%}
     .pf-node-text br{display:block}
 
     /* Links — preserve styling and clickability */
