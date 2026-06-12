@@ -23,7 +23,19 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .app{display:flex;height:100vh;overflow:hidden;position:relative}
 .grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,124,255,.03)1px,transparent 1px),linear-gradient(90deg,rgba(79,124,255,.03)1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
 /* SIDEBAR */
-.sidebar{width:250px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow:hidden;flex-shrink:0;z-index:50;position:relative;transition:transform .3s ease}
+.sidebar{width:250px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow:hidden;flex-shrink:0;z-index:50;position:relative;transition:width .25s ease, transform .3s ease}
+/* Collapsed state (desktop) — narrow rail with toggle only */
+.sidebar.collapsed{width:38px}
+.sidebar.collapsed .sidebar-scroll,
+.sidebar.collapsed .sidebar-footer{display:none}
+.sidebar-collapse-btn{
+  position:absolute;top:6px;right:4px;z-index:51;
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  background:var(--s2);border:1px solid var(--bd);border-radius:5px;cursor:pointer;
+  font-size:14px;color:var(--tx2);transition:background .15s;
+}
+.sidebar-collapse-btn:hover{background:var(--ac);color:#fff;border-color:var(--ac)}
+.sidebar.collapsed .sidebar-collapse-btn{right:5px}
 .side-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;backdrop-filter:blur(4px)}
 @media(max-width:767px){.sidebar{position:fixed;top:0;left:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.side-overlay.open{display:block}.menu-btn{display:flex!important}}
 .logo{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid var(--bd)}
@@ -65,6 +77,12 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
 .topbar{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--bd);background:rgba(13,15,20,.92);backdrop-filter:blur(12px);flex-wrap:wrap;flex-shrink:0}
+
+/* Compact topbar in Process Flow view — drop unnecessary controls so canvas fills the screen.
+   The toolbar inside PF view has all the actions needed; the top app bar is just navigation. */
+body.pf-mode .topbar{padding:4px 10px;min-height:0;backdrop-filter:none}
+body.pf-mode .topbar .page-title{font-size:13px}
+body.pf-mode #topbar-task-row{display:none}
 .menu-btn{display:none;background:none;border:none;color:var(--tx2);font-size:22px;padding:4px;align-items:center}
 .page-title{font-size:17px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-row2{display:flex;align-items:center;gap:8px;width:100%}
@@ -1492,6 +1510,7 @@ body.light-theme .daily-card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
   <div class="grid-bg"></div>
   <div class="side-overlay" id="sideOverlay" onclick="closeSide()"></div>
   <aside class="sidebar" id="sidebar">
+    <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Thu gọn / Mở rộng (Ctrl+\\)">‹</button>
     <div class="logo">
       <div class="logo-icon" id="logo-dart" onclick="toggleLogoSpin()" title="Click để bật/tắt xoay"><span id="logo-bolt" style="display:inline-block;line-height:1">⚡</span></div>
       <div class="logo-text">Task<span>Flow</span></div>
@@ -4260,6 +4279,34 @@ async function updateConfig(){
 }
 function openSide(){document.getElementById('sidebar').classList.add('open');document.getElementById('sideOverlay').classList.add('open');}
 function closeSide(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sideOverlay').classList.remove('open');}
+
+// App sidebar collapse — narrow rail mode (Fix #7)
+function toggleSidebarCollapse() {
+  const sb = document.getElementById('sidebar');
+  if(!sb) return;
+  const isCollapsed = sb.classList.toggle('collapsed');
+  // Persist preference
+  try { localStorage.setItem('tf_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch {}
+  // Update button arrow
+  const btn = sb.querySelector('.sidebar-collapse-btn');
+  if(btn) btn.textContent = isCollapsed ? '›' : '‹';
+}
+// Restore collapse state on load
+(function(){
+  try {
+    if(localStorage.getItem('tf_sidebar_collapsed') === '1') {
+      // Defer until DOM ready
+      window.addEventListener('DOMContentLoaded', () => {
+        const sb = document.getElementById('sidebar');
+        if(sb) {
+          sb.classList.add('collapsed');
+          const btn = sb.querySelector('.sidebar-collapse-btn');
+          if(btn) btn.textContent = '›';
+        }
+      });
+    }
+  } catch {}
+})();
 
 // ─── POMODORO ──────────────────────────
 function startPom(id){const t=tasks.find(t=>t.id===id);if(!t)return;clearInterval(pom.interval);pom.running=true;pom.taskId=id;pom.sec=25*60;pom.interval=setInterval(tickPom,1000);renderContent();showNotif('ni','🍅 Bắt đầu!',`25 phút cho "${t.name}".`);}
@@ -8963,10 +9010,11 @@ window.addEventListener('DOMContentLoaded',()=>{applyTheme();initApp();setTimeou
   50%{box-shadow:0 0 0 12px rgba(245,158,11,.35), 0 2px 8px rgba(0,0,0,.18)}
 }
 .pf-node.type-anchor .pf-node-text{
-  font-size:22px;color:#fff;font-weight:700;line-height:1;
-  text-shadow:0 1px 2px rgba(0,0,0,.4);
+  font-size:32px;color:#fff;font-weight:700;line-height:1;
+  text-shadow:0 2px 4px rgba(0,0,0,.45);
   display:flex;align-items:center;justify-content:center;
   pointer-events:none;
+  width:100%;height:100%;
 }
 .pf-node-rotate{
   position:absolute;top:-28px;left:50%;transform:translateX(-50%);
@@ -9188,6 +9236,7 @@ let pfNodes       = [];   // [{id,type,x,y,w,h,label,style,imageUrl}]
 let pfEdges       = [];   // [{id,fromId,toId,label,style}]
 let pfSelected    = null; // selected node/edge id (for compat — primary selection)
 let pfSelectedIds = new Set(); // multi-selection: set of node ids
+let pfGestureStart = null;     // {x,y,moved} — click vs drag detection (anchor jump)
 let pfTool        = 'select'; // select|connect|pan
 let pfZoom        = 1;
 let pfPan         = {x:0,y:0};
@@ -9250,7 +9299,10 @@ async function pfSaveAll() {
         imageHeight:   n.imageHeight,
         rotation:      n.rotation,
       },
-      image_url: n.imageUrl ? '__local__' : null,
+      // Image URL handling for cloud sync: http URL → keep as-is (cross-device), data: → placeholder.
+      image_url: n.imageUrl
+        ? (n.imageUrl.startsWith('http') ? n.imageUrl : '__local__')
+        : null,
     });
     const toDbEdge = e => ({
       id: e.id, process_id: e.process_id,
@@ -9330,6 +9382,7 @@ function switchToProcessFlowView() {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('nav-processflow')?.classList.add('active');
   isProcessFlowView=true;
+  document.body.classList.add('pf-mode');  // Compact topbar
   pfLoadLocal();
   pfRenderAll();
   pfLoadFromSupabase().then(()=>pfRefreshImagesFromIdb());
@@ -9344,6 +9397,7 @@ function switchFromProcessFlowView() {
   }
   clearTimeout(pfAutoSaveTimer);
   isProcessFlowView=false;
+  document.body.classList.remove('pf-mode');  // Restore full topbar
   pfHideFmtBar();
   const v=document.getElementById('processflow-view');
   if(v)v.style.display='none';
@@ -9399,7 +9453,9 @@ async function pfSyncNode(node) {
       imageHeight:   node.imageHeight,
       rotation:      node.rotation,
     },
-    image_url: node.imageUrl ? '__local__' : null,
+    image_url: node.imageUrl
+      ? (node.imageUrl.startsWith('http') ? node.imageUrl : '__local__')
+      : null,
   };
   try {
     await dbPF.upsertNode(nodeDb);
@@ -9565,10 +9621,13 @@ async function pfShowStorageInfo() {
 
   html += `<div style="margin-top:12px;padding:10px;background:var(--s2);border-radius:6px;color:var(--tx3);font-size:11px;line-height:1.5">
     💡 <b>Về Supabase:</b> Hiện tại Supabase CHỈ lưu metadata shape (vị trí, text, màu...).
-    Ảnh được lưu LOCAL trong browser (IndexedDB ~500MB-1GB).
-    Vì vậy mở app từ device khác sẽ không thấy ảnh.<br>
-    <b>Nếu muốn sync ảnh giữa device:</b> cần dùng Supabase Storage (1GB free tier).
-    Liên hệ nếu cần tích hợp.<br><br>
+    Ảnh lưu cả LOCAL (IndexedDB ~500MB-1GB) và CLOUD (Supabase Storage, nếu setup).
+    Cloud sync giúp ảnh hiển thị trên mọi thiết bị.<br><br>
+    <b>Setup Cloud Storage:</b><br>
+    1. Mở Supabase Dashboard → Storage<br>
+    2. New bucket → tên: <code style="background:var(--s2);padding:1px 4px;border-radius:3px">pf-images</code><br>
+    3. Bật <b>Public bucket</b> để ảnh hiển thị được<br>
+    4. Click <b>"☁️ Sync all → Cloud"</b> bên dưới để upload các ảnh đã có<br><br>
     <b>Khi lưu ảnh fail:</b> Code hiện tại KHÔNG bao giờ auto-delete ảnh process khác nữa
     (bug đã fix v8). Nếu IndexedDB đầy, app sẽ báo lỗi rõ ràng.
   </div></div>`;
@@ -9582,7 +9641,10 @@ async function pfShowStorageInfo() {
     <div style="background:var(--s1);border-radius:10px;padding:20px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);color:var(--tx)">
       <h3 style="margin:0 0 14px 0;font-size:15px">💾 Tình trạng lưu trữ</h3>
       ${html}
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap">
+        <button onclick="pfSyncAllImagesToCloud()"
+          style="padding:8px 14px;border:1px solid var(--ac);border-radius:5px;background:transparent;color:var(--ac);cursor:pointer;font-size:12px;font-weight:600"
+          title="Upload tất cả ảnh local lên Supabase Storage">☁️ Sync all → Cloud</button>
         <button onclick="pfClearOrphanImages()"
           style="padding:8px 14px;border:1px solid var(--bd);border-radius:5px;background:var(--s2);color:var(--tx);cursor:pointer;font-size:12px"
           title="CHỈ xóa ảnh không thuộc bất kỳ shape nào (kiểm tra ALL processes từ DB)">🧹 Dọn ảnh orphan</button>
@@ -9634,8 +9696,157 @@ async function pfClearOrphanImages() {
 // Initialize IndexedDB on script load
 pfIdbInit();
 
-function pfSaveImage(nodeId, dataUrl) {
-  // Try IndexedDB first (much bigger quota ~500MB+)
+// ── Cloud image sync via Supabase Storage (Fix #3) ──────
+// Uploads dataUrl to bucket 'pf-images' under path {processId}/{nodeId}.{ext}.
+// Returns public URL on success, or { error: 'bucket-missing' } if bucket DNE.
+// Bucket setup needed (one-time): Supabase Dashboard → Storage → New bucket "pf-images" → make PUBLIC.
+async function pfUploadToStorage(nodeId, dataUrl) {
+  if(!SB_URL || !SB_KEY || !pfCurrentId) return null;
+  if(!dataUrl?.startsWith?.('data:')) return null;
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    // Cap upload size at 5MB to avoid hitting Supabase limits
+    if(blob.size > 5 * 1024 * 1024) {
+      console.warn('[Cloud] Image >5MB, skipping cloud upload');
+      return null;
+    }
+    const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
+    const path = `${pfCurrentId}/${nodeId}.${ext}`;
+    const url = `${SB_URL}/storage/v1/object/pf-images/${path}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SB_KEY,
+        'apikey': SB_KEY,
+        'Content-Type': blob.type || 'application/octet-stream',
+        'x-upsert': 'true',                         // overwrite existing
+        'Cache-Control': '3600',
+      },
+      body: blob,
+    });
+    if(!r.ok) {
+      const errText = await r.text();
+      console.warn('[Cloud] Upload failed:', r.status, errText);
+      // Bucket not found OR not configured → guide user
+      if(r.status === 404 || r.status === 400) {
+        return { error: 'bucket-missing', detail: errText };
+      }
+      // RLS policy denied
+      if(r.status === 403) {
+        return { error: 'policy-denied', detail: errText };
+      }
+      return null;
+    }
+    return `${SB_URL}/storage/v1/object/public/pf-images/${path}`;
+  } catch(e) {
+    console.warn('[Cloud] Upload exception:', e);
+    return null;
+  }
+}
+
+// One-time notice flag — show bucket-setup instructions only once per session
+let pfCloudNoticeShown = false;// Backfill: upload all local images to cloud in one go.
+// Use this once after creating the pf-images bucket to migrate existing photos.
+async function pfSyncAllImagesToCloud() {
+  if(!SB_URL || !SB_KEY) {
+    showNotif?.('nw', '⚠️ Chưa kết nối Supabase', 'Setup Supabase URL/key trước');
+    return;
+  }
+  // Get all nodes with local images across ALL processes (not just current)
+  const localNodes = [];
+  if(pfIdbReady && pfIdbDb) {
+    try {
+      const tx = pfIdbDb.transaction('images', 'readonly');
+      const store = tx.objectStore('images');
+      const req = store.getAllKeys();
+      await new Promise((res, rej) => { req.onsuccess = res; req.onerror = rej; });
+      for(const key of req.result) {
+        const dataReq = store.get(key);
+        await new Promise(r => dataReq.onsuccess = r);
+        if(dataReq.result) localNodes.push({ id: key, dataUrl: dataReq.result });
+      }
+    } catch(e) { console.warn('IDB scan:', e); }
+  }
+  if(!localNodes.length) {
+    showNotif?.('nw', '⚠️ Không có ảnh local', 'Không có ảnh nào để sync');
+    return;
+  }
+  // Confirm
+  if(!confirm(`Upload ${localNodes.length} ảnh lên Supabase Storage (bucket: pf-images)?\nẢnh local vẫn giữ nguyên.`)) return;
+
+  // Process in batches with progress
+  let okCount = 0, failCount = 0, bucketMissing = false;
+  showNotif?.('ns', '☁️ Đang sync...', `0/${localNodes.length} ảnh`);
+  for(let i = 0; i < localNodes.length; i++) {
+    const { id, dataUrl } = localNodes[i];
+    // Find the node in our in-memory list (might not be in CURRENT process)
+    const node = pfNodes.find(n => n.id === id);
+    // For nodes outside current process, we need their process_id from DB
+    const pid = node?.process_id || pfCurrentId;
+    if(!pid) { failCount++; continue; }
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      if(blob.size > 5 * 1024 * 1024) { failCount++; continue; }
+      const ext = blob.type.includes('png') ? 'png' : 'jpg';
+      const path = `${pid}/${id}.${ext}`;
+      const r = await fetch(`${SB_URL}/storage/v1/object/pf-images/${path}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + SB_KEY,
+          'apikey': SB_KEY,
+          'Content-Type': blob.type || 'application/octet-stream',
+          'x-upsert': 'true',
+        },
+        body: blob,
+      });
+      if(r.ok) {
+        okCount++;
+        // If node is in current process, update its imageUrl + DB row
+        if(node) {
+          node.imageUrl = `${SB_URL}/storage/v1/object/public/pf-images/${path}`;
+          pfSyncNode(node);
+        } else {
+          // Outside current process — patch the DB row directly
+          try {
+            await sbFetch(`pf_nodes?id=eq.${id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ image_url: `${SB_URL}/storage/v1/object/public/pf-images/${path}` }),
+            });
+          } catch(e) { console.warn('Patch:', e); }
+        }
+      } else {
+        failCount++;
+        if(r.status === 404 || r.status === 400) bucketMissing = true;
+      }
+    } catch(e) { failCount++; console.warn('Upload exception:', e); }
+    // Brief throttle so we don't hammer Supabase
+    if(i % 5 === 4) await new Promise(r => setTimeout(r, 100));
+  }
+  pfSaveLocal();
+  pfRenderAll();
+
+  if(bucketMissing) {
+    alert('❌ Bucket "pf-images" chưa tồn tại.\n\nTạo bucket trong Supabase Dashboard:\n1. Storage → New bucket\n2. Name: pf-images\n3. Tích Public bucket\n4. Save\n\nSau đó thử lại.');
+  } else {
+    showNotif?.('ns', '☁️ Sync hoàn thành',
+      `✅ ${okCount} ảnh upload thành công${failCount ? `, ❌ ${failCount} fail` : ''}`);
+  }
+}
+
+function pfShowCloudSetupNotice(reason) {
+  if(pfCloudNoticeShown) return;
+  pfCloudNoticeShown = true;
+  if(typeof showNotif === 'function') {
+    const msg = reason === 'bucket-missing'
+      ? 'Tạo bucket "pf-images" trong Supabase → Storage để đồng bộ ảnh cross-device. Hiện tại ảnh chỉ lưu local.'
+      : reason === 'policy-denied'
+      ? 'Bucket "pf-images" cần set Public hoặc RLS policy cho phép upload. Đang dùng local IDB.'
+      : 'Cloud sync ảnh không hoạt động. Đang dùng local IndexedDB.';
+    showNotif('nw', '☁️ Cloud ảnh chưa setup', msg);
+  }
+}
+
+function pfSaveImage(nodeId, dataUrl) {  // Try IndexedDB first (much bigger quota ~500MB+)
   if(pfIdbReady) {
     return pfIdbPutImage(nodeId, dataUrl).then(()=>true).catch(err=>{
       console.warn('pfSaveImage IDB:', err);
@@ -9886,9 +10097,18 @@ function pfPlaceAnchor(symbol) {
   }
 }
 
+// Click handler for anchor nodes. Only jumps if the gesture was a click
+// (no significant mouse movement between mousedown and click).
+function pfAnchorClick(e, nodeId) {
+  // If user shift/ctrl-clicked, treat as multi-select instead of jump
+  if(e.shiftKey || e.ctrlKey || e.metaKey) return;
+  // If gesture moved > 4px, it was a drag — don't jump
+  if(pfGestureStart?.moved) return;
+  pfJumpToAnchorPair(nodeId);
+}
+
 // Jump to the OTHER anchor with the same symbol
-function pfJumpToAnchorPair(nodeId) {
-  const me = pfNodes.find(n=>n.id===nodeId);
+function pfJumpToAnchorPair(nodeId) {  const me = pfNodes.find(n=>n.id===nodeId);
   if(!me || me.type !== 'anchor') return false;
   const pair = pfNodes.find(n =>
     n.type==='anchor' && n.label===me.label && n.id !== nodeId);
@@ -10378,7 +10598,8 @@ function pfRenderNode(node) {
   return `<div class="pf-node type-${node.type}${sel?' selected':''}${multi&&!sel?' multi-selected':''}"
     id="pfn_${node.id}"
     style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;${rot?`transform:rotate(${rot}deg);transform-origin:center center`:''}"
-    onmousedown="pfNodeMouseDown(event,'${node.id}')">
+    onmousedown="pfNodeMouseDown(event,'${node.id}')"
+    ontouchstart="pfNodeTouchStart(event,'${node.id}')"${node.type==='anchor' ? ` onclick="pfAnchorClick(event,'${node.id}')"` : ''}>
     <div class="pf-node-inner" style="${innerStyle}">
       ${shapeSvg}
       ${node.type==='tick' ? `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"
@@ -10713,6 +10934,11 @@ function pfSnapNodePosition(node, targetX, targetY, others, opts) {
 }
 
 function pfCanvasMouseMove(e) {
+  // Track gesture movement (for anchor click-vs-drag detection)
+  if(pfGestureStart && !pfGestureStart.moved) {
+    if(Math.abs(e.clientX - pfGestureStart.x) > 4 || Math.abs(e.clientY - pfGestureStart.y) > 4)
+      pfGestureStart.moved = true;
+  }
   // Marquee selection (highest priority — supersedes default behavior on empty canvas)
   if(pfMarquee) {
     const pos = pfGetCanvasPos(e);
@@ -10894,6 +11120,107 @@ function pfCanvasMouseUp(e) {
   }
 }
 
+// ── Touch event support for mobile (Fix #4 + #5) ────────
+// Convert touch events to mouse-like calls so existing drag/click logic works.
+let pfPinch = null; // {dist0, midX, midY, zoom0, panX0, panY0}
+
+function pfMakeSyntheticMouseEvent(touch, baseTarget) {
+  return {
+    clientX: touch.clientX, clientY: touch.clientY,
+    target: baseTarget || touch.target,
+    stopPropagation: ()=>{}, preventDefault: ()=>{},
+    shiftKey: false, ctrlKey: false, metaKey: false, altKey: false,
+  };
+}
+
+// Touch on a node — single finger = drag (Fix #4)
+function pfNodeTouchStart(e, nodeId) {
+  if(e.touches.length !== 1) {
+    // Two-finger gesture on a node — let it bubble to canvas-outer for pinch
+    return;
+  }
+  e.stopPropagation();
+  // Don't preventDefault yet: we need touchstart's default to NOT block contentEditable focus on text dblclick
+  const t = e.touches[0];
+  const baseTarget = e.target;
+  pfNodeMouseDown(pfMakeSyntheticMouseEvent(t, baseTarget), nodeId);
+
+  const tmove = (ev) => {
+    if(ev.touches.length !== 1) return;
+    ev.preventDefault();
+    pfCanvasMouseMove(pfMakeSyntheticMouseEvent(ev.touches[0], baseTarget));
+  };
+  const tend = (ev) => {
+    const lastTouch = ev.changedTouches[0] || t;
+    pfCanvasMouseUp(pfMakeSyntheticMouseEvent(lastTouch, baseTarget));
+    document.removeEventListener('touchmove', tmove);
+    document.removeEventListener('touchend', tend);
+    document.removeEventListener('touchcancel', tend);
+  };
+  document.addEventListener('touchmove', tmove, {passive:false});
+  document.addEventListener('touchend', tend);
+  document.addEventListener('touchcancel', tend);
+}
+
+// Pinch zoom on canvas-outer (Fix #5)
+function pfCanvasTouchStart(e) {
+  if(!isProcessFlowView) return;
+  if(e.touches.length === 2) {
+    e.preventDefault();
+    const [t1, t2] = e.touches;
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    const outer = document.getElementById('pf-canvas-outer');
+    const rect = outer ? outer.getBoundingClientRect() : {left:0, top:0};
+    pfPinch = {
+      dist0: Math.hypot(dx, dy),
+      midX: (t1.clientX + t2.clientX) / 2 - rect.left,
+      midY: (t1.clientY + t2.clientY) / 2 - rect.top,
+      zoom0: pfZoom,
+      panX0: pfPan.x,
+      panY0: pfPan.y,
+    };
+  } else if(e.touches.length === 1) {
+    // Single touch on empty canvas → pan
+    const target = e.target;
+    if(target.classList.contains('pf-canvas-outer') || target.id === 'pf-canvas' || target.classList.contains('pf-svg')) {
+      pfPanning = true;
+      pfPanStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, panX: pfPan.x, panY: pfPan.y };
+    }
+  }
+}
+function pfCanvasTouchMove(e) {
+  if(!isProcessFlowView) return;
+  if(e.touches.length === 2 && pfPinch) {
+    e.preventDefault();
+    const [t1, t2] = e.touches;
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    const dist = Math.hypot(dx, dy);
+    const newZoom = Math.max(0.2, Math.min(3, pfPinch.zoom0 * dist / pfPinch.dist0));
+    const ratio = newZoom / pfPinch.zoom0;
+    // Keep the midpoint between fingers in the same spot on screen
+    pfPan.x = pfPinch.midX - (pfPinch.midX - pfPinch.panX0) * ratio;
+    pfPan.y = pfPinch.midY - (pfPinch.midY - pfPinch.panY0) * ratio;
+    pfZoom = newZoom;
+    const canvas = document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform = `translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+    const ind = document.querySelector('.pf-zoom-indicator');
+    if(ind) ind.textContent = Math.round(pfZoom*100) + '%';
+  } else if(e.touches.length === 1 && pfPanning && pfPanStart) {
+    e.preventDefault();
+    const t = e.touches[0];
+    pfPan.x = pfPanStart.panX + (t.clientX - pfPanStart.x);
+    pfPan.y = pfPanStart.panY + (t.clientY - pfPanStart.y);
+    const canvas = document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform = `translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+  }
+}
+function pfCanvasTouchEnd(e) {
+  if(e.touches.length < 2) pfPinch = null;
+  if(e.touches.length === 0) pfPanning = false;
+}
+
 /**
  * PowerPoint-style wheel handling:
  *   - Ctrl/Cmd + wheel  → zoom centered on cursor
@@ -11025,41 +11352,8 @@ function pfNodeMouseDown(e, nodeId) {
   if(e.target.classList.contains('pf-node-rotate'))      return;
   if(e.target.classList.contains('pf-img-resize-handle'))return;
   if(pfTool==='connect') return;
-  // ── Anchor: click → jump to pair, no drag (Fix #C) ──
-  const anchorNode = pfNodes.find(n=>n.id===nodeId);
-  if(anchorNode?.type === 'anchor') {
-    // With shift/ctrl, allow multi-select instead of jumping (so user can still move/delete)
-    if(!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      // Differentiate quick click vs drag: jump on quick mouseup, drag on real movement
-      const startX = e.clientX, startY = e.clientY;
-      const mover = ev => {
-        if(Math.abs(ev.clientX-startX) > 4 || Math.abs(ev.clientY-startY) > 4) {
-          // Real drag — let pfDragging take over below
-          document.removeEventListener('mousemove', mover);
-          document.removeEventListener('mouseup', upper);
-          // Re-trigger normal node mousedown logic without the anchor intercept
-          pfNodeMouseDown.__dragging = true;
-        }
-      };
-      const upper = ev => {
-        document.removeEventListener('mousemove', mover);
-        document.removeEventListener('mouseup', upper);
-        if(!pfNodeMouseDown.__dragging) {
-          // Quick click — jump
-          pfJumpToAnchorPair(nodeId);
-        }
-        pfNodeMouseDown.__dragging = false;
-      };
-      document.addEventListener('mousemove', mover);
-      document.addEventListener('mouseup', upper);
-      // Also select the anchor (for delete/move via panel)
-      pfSelectedIds.clear();
-      pfSelectedIds.add(nodeId);
-      pfSelected = nodeId;
-      pfRenderCanvas();
-      return;
-    }
-  }
+  // Track gesture start (used by anchor onclick to distinguish click vs drag)
+  pfGestureStart = { x: e.clientX, y: e.clientY, moved: false };
   // Don't drag when inside editing text
   const textEl=document.getElementById('pft_'+nodeId);
   if(textEl?.contentEditable==='true') return;
@@ -12005,10 +12299,9 @@ function pfHandleImageUpload(e) {
     node.imageHeight   = node.imageHeight||80;
     node.w = Math.max(node.w, node.imageWidth+40);
     node.h = Math.max(node.h, node.imageHeight+60);
-    // Persist image to localStorage/IndexedDB; warn if all paths fail
+    // Step 1: persist locally (IndexedDB / localStorage) — fast, always works
     const ok = await pfSaveImage(node.id, dataUrl);
     if(!ok) {
-      // Image not persisted — try smaller compression once
       const smaller = await pfCompressImage(ev.target.result, 600, 0.7);
       const ok2 = await pfSaveImage(node.id, smaller);
       if(ok2) node.imageUrl = smaller;
@@ -12017,6 +12310,22 @@ function pfHandleImageUpload(e) {
     pfMarkDirty?.();
     pfRenderAll();
     pfSyncNode(node);
+
+    // Step 2: upload to cloud asynchronously (Fix #3) — failures fall back silently to local
+    (async () => {
+      const result = await pfUploadToStorage(node.id, node.imageUrl);
+      if(typeof result === 'string') {
+        // Got a public URL — replace local-only marker with URL for cross-device sync
+        node.imageUrl = result;
+        // Re-sync node so DB stores the URL (was '__local__' or data:)
+        pfSaveLocal();
+        pfSyncNode(node);
+        if(typeof showNotif === 'function')
+          showNotif('ns', '☁️ Ảnh đồng bộ cloud', 'Ảnh đã upload, sẽ hiển thị trên mọi thiết bị');
+      } else if(result?.error) {
+        pfShowCloudSetupNotice(result.error);
+      }
+    })();
   };
   reader.readAsDataURL(file);
   e.target.value='';
@@ -12154,25 +12463,73 @@ function pfBindNodeEvents(nodeId) {
   // Already bound via inline handlers
 }
 
-// ── Touch support ─────────────────────────────────────────
+// ── Touch support (unified mobile handling) ─────────────
 let pfLastTouch=null;
 function pfTouchStart(e) {
-  if(e.touches.length===1){
-    const t=e.touches[0];
-    pfCanvasMouseDown({target:e.target,clientX:t.clientX,clientY:t.clientY,button:0,altKey:pfTool==='pan'});
+  // Multi-finger → pinch zoom (Fix #5)
+  if(e.touches.length === 2) {
+    e.preventDefault();
+    const [t1, t2] = e.touches;
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    const outer = document.getElementById('pf-canvas-outer');
+    const rect = outer ? outer.getBoundingClientRect() : {left:0, top:0};
+    pfPinch = {
+      dist0: Math.hypot(dx, dy),
+      midX: (t1.clientX + t2.clientX)/2 - rect.left,
+      midY: (t1.clientY + t2.clientY)/2 - rect.top,
+      zoom0: pfZoom, panX0: pfPan.x, panY0: pfPan.y,
+    };
+    pfPanning = false; // cancel any pending pan
+    return;
+  }
+  // Single finger — only handle if touch was on empty canvas (not a shape).
+  // For shapes, pfNodeTouchStart handles drag and we don't want both firing.
+  if(e.touches.length === 1) {
+    const target = e.target;
+    if(target.closest('.pf-node')) return; // shape's own handler will take over
+    const t = e.touches[0];
+    pfCanvasMouseDown({target,clientX:t.clientX,clientY:t.clientY,button:0,
+      altKey:pfTool==='pan',shiftKey:false,ctrlKey:false,metaKey:false,
+      stopPropagation:()=>{},preventDefault:()=>{}});
     pfLastTouch={x:t.clientX,y:t.clientY};
   }
 }
 function pfTouchMove(e) {
-  e.preventDefault();
-  if(e.touches.length===1){
-    const t=e.touches[0];
-    pfLastTouch={x:t.clientX,y:t.clientY}; // Track latest position for accurate touchEnd
-    pfCanvasMouseMove({clientX:t.clientX,clientY:t.clientY});
+  // Pinch zoom (Fix #5)
+  if(e.touches.length === 2 && pfPinch) {
+    e.preventDefault();
+    const [t1, t2] = e.touches;
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    const dist = Math.hypot(dx, dy);
+    const newZoom = Math.max(0.2, Math.min(3, pfPinch.zoom0 * dist / pfPinch.dist0));
+    const ratio = newZoom / pfPinch.zoom0;
+    pfPan.x = pfPinch.midX - (pfPinch.midX - pfPinch.panX0) * ratio;
+    pfPan.y = pfPinch.midY - (pfPinch.midY - pfPinch.panY0) * ratio;
+    pfZoom = newZoom;
+    const canvas = document.getElementById('pf-canvas');
+    if(canvas) canvas.style.transform = `translate(${pfPan.x}px,${pfPan.y}px) scale(${pfZoom})`;
+    const ind = document.querySelector('.pf-zoom-indicator');
+    if(ind) ind.textContent = Math.round(pfZoom*100) + '%';
+    return;
+  }
+  if(e.touches.length === 1) {
+    e.preventDefault();
+    const t = e.touches[0];
+    pfLastTouch={x:t.clientX,y:t.clientY};
+    pfCanvasMouseMove({clientX:t.clientX,clientY:t.clientY,
+      shiftKey:false,ctrlKey:false,metaKey:false,altKey:false,
+      preventDefault:()=>{},stopPropagation:()=>{}});
   }
 }
 function pfTouchEnd(e) {
-  pfCanvasMouseUp({clientX:pfLastTouch?.x||0,clientY:pfLastTouch?.y||0});
+  if(e.touches.length < 2) pfPinch = null;
+  if(e.touches.length === 0) {
+    pfCanvasMouseUp({clientX:pfLastTouch?.x||0,clientY:pfLastTouch?.y||0,
+      shiftKey:false,ctrlKey:false,metaKey:false,altKey:false,
+      preventDefault:()=>{},stopPropagation:()=>{}});
+  }
 }
 
 // ── Sidebar collapse ─────────────────────────────────────
